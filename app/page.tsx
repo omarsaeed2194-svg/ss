@@ -2,6 +2,7 @@
 
 import useSWR from "swr";
 import { useMemo } from "react";
+import Link from "next/link";
 import { Card } from "@/components/Card";
 import { StatTile } from "@/components/StatTile";
 import { TrendChart } from "@/components/TrendChart";
@@ -50,6 +51,13 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-3 text-xs" style={{ color: "var(--text-muted)" }}>
           {data ? <span>Generated {new Date(data.generatedAt).toLocaleTimeString()}</span> : null}
+          <Link
+            href="/connect"
+            className="rounded-md border px-2.5 py-1 font-medium"
+            style={{ borderColor: "var(--card-border)", color: "var(--text-secondary)" }}
+          >
+            Connect GA4 / Search Console
+          </Link>
           <button
             onClick={() => mutate()}
             className="rounded-md border px-2.5 py-1 font-medium"
@@ -59,6 +67,19 @@ export default function DashboardPage() {
           </button>
         </div>
       </header>
+
+      {data && (data.ga4.meta.status === "demo" || data.searchConsole.meta.status === "demo") ? (
+        <div
+          className="mb-6 rounded-lg border px-3 py-2 text-sm"
+          style={{ borderColor: "var(--card-border)", color: "var(--text-secondary)" }}
+        >
+          GA4 and/or Search Console are showing demo data.{" "}
+          <Link href="/connect" style={{ color: "var(--series-1)" }}>
+            Connect your Google account
+          </Link>{" "}
+          to see your real numbers.
+        </div>
+      ) : null}
 
       {error ? (
         <Card title="Error">

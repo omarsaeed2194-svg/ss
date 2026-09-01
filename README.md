@@ -32,30 +32,45 @@ up. Ubersuggest panels always show the real snapshot committed in
 
 ## Connecting live data
 
-### 1. Google Analytics 4 & Search Console (shared service account)
+### 1. Google Analytics 4 & Search Console (one-click Google sign-in)
 
-Both connectors use the same Google service account:
+Both connectors share a single OAuth connection — sign in once with the
+Google account that already has access to your GA4 property and Search
+Console site, then pick which property/site to show. No service account,
+JSON key, or granting a robot-account access to your properties.
 
-1. In Google Cloud Console, create (or reuse) a project and a service
-   account. Enable the **Google Analytics Data API** and the
-   **Search Console API** for that project.
-2. Create a JSON key for the service account and copy its `client_email`
-   and `private_key`.
-3. In **GA4 Admin → Property Access Management**, add the service account
-   email as a **Viewer** on the `localization.saudisoft.com` property.
-4. In **Search Console → Settings → Users and permissions**, add the same
-   service account email as a **Restricted** (or Full) user on the
-   `localization.saudisoft.com` property.
-5. Copy `.env.example` to `.env.local` and fill in:
-   - `GA4_PROPERTY_ID` — the numeric GA4 property ID.
-   - `GSC_SITE_URL` — the exact property string as shown in Search Console
-     (a URL-prefix property like `https://localization.saudisoft.com/`, or
-     `sc-domain:saudisoft.com` for a domain property).
-   - `GOOGLE_CLIENT_EMAIL` / `GOOGLE_PRIVATE_KEY` — from the service account
-     key JSON (keep the `\n` escapes in the private key as a single-line
-     env var).
-6. Restart the dev server (or redeploy). Once credentials resolve, both
-   panels switch their badge from `Demo data` to `Live`.
+One-time setup (you, in Google Cloud Console):
+
+1. Create/select a project at console.cloud.google.com.
+2. **APIs & Services → Library**: enable **Google Analytics Data API**,
+   **Google Analytics Admin API**, and **Search Console API**.
+3. **APIs & Services → Credentials → Create Credentials → OAuth client ID**
+   (Application type: **Web application**). Add an **Authorized redirect
+   URI** for every place this app runs:
+   - `https://<your-vercel-domain>/api/auth/google/callback`
+   - `http://localhost:3000/api/auth/google/callback` (for local dev)
+4. Copy the Client ID and Client Secret into your environment (`.env.local`
+   locally, or Vercel → Project → Settings → Environment Variables):
+   - `GOOGLE_OAUTH_CLIENT_ID`
+   - `GOOGLE_OAUTH_CLIENT_SECRET`
+   - `SESSION_SECRET` — any random string, e.g. `openssl rand -hex 32`
+     (encrypts the stored refresh token in a cookie)
+5. Redeploy (or restart `npm run dev`).
+
+Then, in the app itself:
+
+1. Open `/connect` (or click **Connect GA4 / Search Console** on the
+   dashboard).
+2. Click **Connect Google account** and sign in with the Google account
+   that has access to the GA4 property and Search Console site for
+   `localization.saudisoft.com`.
+3. Pick the GA4 property and Search Console site from the dropdowns (auto
+   populated from your account) and click **Save selection**.
+
+The dashboard panels switch their badge from `Demo data` to `Live` as soon
+as both are configured. The connection (an encrypted refresh token) lives
+in an httpOnly cookie in your browser — nothing is stored server-side, so
+reconnecting is one click if you ever clear cookies or switch browsers.
 
 ### 2. Ubersuggest
 
@@ -82,14 +97,20 @@ dashboard (types, UI, API route) doesn't need to change.
 
 ```
 app/
-  page.tsx            Dashboard UI (client component, polls /api/overview)
-  api/overview/route.ts  Combines all three connectors into one JSON response
+  page.tsx                     Dashboard UI (client component, polls /api/overview)
+  connect/page.tsx             Google sign-in + GA4 property / Search Console site picker
+  api/overview/route.ts        Combines all three connectors into one JSON response
+  api/auth/google/             OAuth start / callback / disconnect routes
+  api/connections/             Connection status, property/site listing, selection save
 lib/
   connectors/
     ubersuggest.ts     Reads data/ubersuggest-snapshot.json
-    ga4.ts              GA4 Data API via @google-analytics/data, falls back to demo data
-    gsc.ts              Search Console API via googleapis, falls back to demo data
-  demo-data.ts          Deterministic placeholder data used before credentials exist
+    ga4.ts              GA4 Data API via googleapis, using the stored OAuth session
+    gsc.ts              Search Console API via googleapis, using the stored OAuth session
+  google/
+    oauth.ts             Builds auth URLs, exchanges codes, builds API clients from a refresh token
+    session.ts            Encrypted-cookie storage for the connection + selected property/site
+  demo-data.ts          Deterministic placeholder data used before a Google account is connected
   types.ts              Shared types for all three sources + combined overview
 data/
   ubersuggest-snapshot.json  Latest Ubersuggest pull for the domain

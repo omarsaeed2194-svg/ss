@@ -1,29 +1,25 @@
-import type { GA4Data, GA4Channel, GA4TopPage, GA4TrendPoint } from "@/lib/types";
+import { google } from "googleapis";
+import type { GA4Channel, GA4Data, GA4TopPage, GA4TrendPoint } from "@/lib/types";
 import { demoGA4Trend, demoGA4Channels, demoGA4TopPages } from "@/lib/demo-data";
+import { getConnection, getSelection } from "@/lib/google/session";
+import { clientFromRefreshToken } from "@/lib/google/oauth";
 
-function getCredentials() {
-  const propertyId = process.env.GA4_PROPERTY_ID;
-  const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
-  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
-
-  if (!propertyId || !clientEmail || !privateKey) return null;
-  return { propertyId, clientEmail, privateKey };
-}
-
-function sum(rows: { metricValues?: { value?: string | null }[] | null }[] | undefined, index: number) {
-  if (!rows) return 0;
+function sumMetric(rows: { metricValues?: { value?: string | null }[] | null }[], index: number) {
   return rows.reduce((acc, row) => acc + Number(row.metricValues?.[index]?.value ?? 0), 0);
 }
 
 export async function getGA4Data(): Promise<GA4Data> {
-  const creds = getCredentials();
+  const connection = getConnection();
+  const propertyId = getSelection()?.ga4PropertyId;
 
-  if (!creds) {
+  if (!connection || !propertyId) {
     return {
       meta: {
         status: "demo",
         asOf: new Date().toISOString(),
-        message: "Set GA4_PROPERTY_ID, GOOGLE_CLIENT_EMAIL and GOOGLE_PRIVATE_KEY to connect live GA4 data.",
+        message: connection
+          ? "Pick a GA4 property on the Connect page to see live data."
+          : "Connect your Google account on the Connect page to see live GA4 data.",
       },
       totals: {
         sessions: demoGA4Trend.reduce((a, p) => a + p.sessions, 0),
@@ -38,40 +34,44 @@ export async function getGA4Data(): Promise<GA4Data> {
   }
 
   try {
-    // Lazy import so the package is only required when live credentials exist.
-    const { BetaAnalyticsDataClient } = await import("@google-analytics/data");
-    const client = new BetaAnalyticsDataClient({
-      credentials: { client_email: creds.clientEmail, private_key: creds.privateKey },
-    });
-    const property = `properties/${creds.propertyId}`;
+    const auth = clientFromRefreshToken(connection.refreshToken);
+    const analyticsData = google.analyticsdata({ version: "v1beta", auth });
+    const property = `properties/${propertyId}`;
 
-    const [trendReport] = await client.runReport({
-      property,
-      dateRanges: [{ startDate: "28daysAgo", endDate: "today" }],
-      dimensions: [{ name: "date" }],
-      metrics: [{ name: "sessions" }, { name: "activeUsers" }, { name: "conversions" }],
-      orderBys: [{ dimension: { dimensionName: "date" } }],
-    });
+    const [trendRes, channelRes, pagesRes] = await Promise.all([
+      analyticsData.properties.runReport({
+        property,
+        requestBody: {
+          dateRanges: [{ startDate: "28daysAgo", endDate: "today" }],
+          dimensions: [{ name: "date" }],
+          metrics: [{ name: "sessions" }, { name: "activeUsers" }, { name: "conversions" }],
+          orderBys: [{ dimension: { dimensionName: "date" } }],
+        },
+      }),
+      analyticsData.properties.runReport({
+        property,
+        requestBody: {
+          dateRanges: [{ startDate: "28daysAgo", endDate: "today" }],
+          dimensions: [{ name: "sessionDefaultChannelGroup" }],
+          metrics: [{ name: "sessions" }, { name: "engagementRate" }],
+          orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
+          limit: "8",
+        },
+      }),
+      analyticsData.properties.runReport({
+        property,
+        requestBody: {
+          dateRanges: [{ startDate: "28daysAgo", endDate: "today" }],
+          dimensions: [{ name: "pagePath" }],
+          metrics: [{ name: "sessions" }, { name: "activeUsers" }],
+          orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
+          limit: "10",
+        },
+      }),
+    ]);
 
-    const [channelReport] = await client.runReport({
-      property,
-      dateRanges: [{ startDate: "28daysAgo", endDate: "today" }],
-      dimensions: [{ name: "sessionDefaultChannelGroup" }],
-      metrics: [{ name: "sessions" }, { name: "engagementRate" }],
-      orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
-      limit: 8,
-    });
-
-    const [pagesReport] = await client.runReport({
-      property,
-      dateRanges: [{ startDate: "28daysAgo", endDate: "today" }],
-      dimensions: [{ name: "pagePath" }],
-      metrics: [{ name: "sessions" }, { name: "activeUsers" }],
-      orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
-      limit: 10,
-    });
-
-    const trend: GA4TrendPoint[] = (trendReport.rows ?? []).map((row) => {
+    const trendRows = trendRes.data.rows ?? [];
+    const trend: GA4TrendPoint[] = trendRows.map((row) => {
       const raw = row.dimensionValues?.[0]?.value ?? "";
       const date = `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
       return {
@@ -82,30 +82,27 @@ export async function getGA4Data(): Promise<GA4Data> {
       };
     });
 
-    const channels: GA4Channel[] = (channelReport.rows ?? []).map((row) => ({
+    const channels: GA4Channel[] = (channelRes.data.rows ?? []).map((row) => ({
       channel: row.dimensionValues?.[0]?.value ?? "Unknown",
       sessions: Number(row.metricValues?.[0]?.value ?? 0),
       engagementRate: Number(row.metricValues?.[1]?.value ?? 0),
     }));
 
-    const topPages: GA4TopPage[] = (pagesReport.rows ?? []).map((row) => ({
+    const topPages: GA4TopPage[] = (pagesRes.data.rows ?? []).map((row) => ({
       path: row.dimensionValues?.[0]?.value ?? "/",
       sessions: Number(row.metricValues?.[0]?.value ?? 0),
       activeUsers: Number(row.metricValues?.[1]?.value ?? 0),
     }));
 
-    const totalSessions = sum(trendReport.rows ?? undefined, 0);
-    const totalUsers = sum(trendReport.rows ?? undefined, 1);
-    const totalConversions = sum(trendReport.rows ?? undefined, 2);
     const avgEngagement =
       channels.length > 0 ? channels.reduce((a, c) => a + c.engagementRate, 0) / channels.length : 0;
 
     return {
       meta: { status: "live", asOf: new Date().toISOString() },
       totals: {
-        sessions: totalSessions,
-        activeUsers: totalUsers,
-        conversions: totalConversions,
+        sessions: sumMetric(trendRows, 0),
+        activeUsers: sumMetric(trendRows, 1),
+        conversions: sumMetric(trendRows, 2),
         engagementRate: avgEngagement,
       },
       trend,

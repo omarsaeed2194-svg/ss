@@ -1,14 +1,8 @@
+import { google } from "googleapis";
 import type { GSCData, GSCPage, GSCQuery, GSCTrendPoint } from "@/lib/types";
 import { demoGSCTrend, demoGSCQueries, demoGSCPages } from "@/lib/demo-data";
-
-function getCredentials() {
-  const siteUrl = process.env.GSC_SITE_URL;
-  const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
-  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
-
-  if (!siteUrl || !clientEmail || !privateKey) return null;
-  return { siteUrl, clientEmail, privateKey };
-}
+import { getConnection, getSelection } from "@/lib/google/session";
+import { clientFromRefreshToken } from "@/lib/google/oauth";
 
 function totals(rows: { clicks?: number; impressions?: number; ctr?: number; position?: number }[]) {
   const clicks = rows.reduce((a, r) => a + (r.clicks ?? 0), 0);
@@ -18,15 +12,24 @@ function totals(rows: { clicks?: number; impressions?: number; ctr?: number; pos
   return { clicks, impressions, ctr, position };
 }
 
-export async function getGSCData(): Promise<GSCData> {
-  const creds = getCredentials();
+function dateNDaysAgo(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0, 10);
+}
 
-  if (!creds) {
+export async function getGSCData(): Promise<GSCData> {
+  const connection = getConnection();
+  const siteUrl = getSelection()?.gscSiteUrl;
+
+  if (!connection || !siteUrl) {
     return {
       meta: {
         status: "demo",
         asOf: new Date().toISOString(),
-        message: "Set GSC_SITE_URL, GOOGLE_CLIENT_EMAIL and GOOGLE_PRIVATE_KEY to connect live Search Console data.",
+        message: connection
+          ? "Pick a Search Console site on the Connect page to see live data."
+          : "Connect your Google account on the Connect page to see live Search Console data.",
       },
       totals: totals(demoGSCTrend),
       trend: demoGSCTrend,
@@ -36,40 +39,21 @@ export async function getGSCData(): Promise<GSCData> {
   }
 
   try {
-    const { google } = await import("googleapis");
-    const auth = new google.auth.JWT({
-      email: creds.clientEmail,
-      key: creds.privateKey,
-      scopes: ["https://www.googleapis.com/auth/webmasters.readonly"],
-    });
+    const auth = clientFromRefreshToken(connection.refreshToken);
     const searchconsole = google.searchconsole({ version: "v1", auth });
 
     const [trendRes, queryRes, pageRes] = await Promise.all([
       searchconsole.searchanalytics.query({
-        siteUrl: creds.siteUrl,
-        requestBody: {
-          startDate: dateNDaysAgo(28),
-          endDate: dateNDaysAgo(1),
-          dimensions: ["date"],
-        },
+        siteUrl,
+        requestBody: { startDate: dateNDaysAgo(28), endDate: dateNDaysAgo(1), dimensions: ["date"] },
       }),
       searchconsole.searchanalytics.query({
-        siteUrl: creds.siteUrl,
-        requestBody: {
-          startDate: dateNDaysAgo(28),
-          endDate: dateNDaysAgo(1),
-          dimensions: ["query"],
-          rowLimit: 20,
-        },
+        siteUrl,
+        requestBody: { startDate: dateNDaysAgo(28), endDate: dateNDaysAgo(1), dimensions: ["query"], rowLimit: 20 },
       }),
       searchconsole.searchanalytics.query({
-        siteUrl: creds.siteUrl,
-        requestBody: {
-          startDate: dateNDaysAgo(28),
-          endDate: dateNDaysAgo(1),
-          dimensions: ["page"],
-          rowLimit: 15,
-        },
+        siteUrl,
+        requestBody: { startDate: dateNDaysAgo(28), endDate: dateNDaysAgo(1), dimensions: ["page"], rowLimit: 15 },
       }),
     ]);
 
@@ -117,10 +101,4 @@ export async function getGSCData(): Promise<GSCData> {
       topPages: [],
     };
   }
-}
-
-function dateNDaysAgo(n: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d.toISOString().slice(0, 10);
 }
