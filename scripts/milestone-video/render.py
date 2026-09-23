@@ -27,11 +27,16 @@ BOLD = FONT_DIR + "LiberationSans-Bold.ttf"
 REG = FONT_DIR + "LiberationSans-Regular.ttf"
 SERIF_IT = FONT_DIR + "LiberationSerif-BoldItalic.ttf"
 
-GOLD = (255, 200, 87)
-ORANGE = (255, 128, 64)
-RED = (255, 59, 59)
-WHITE = (245, 244, 250)
-GREY = (150, 148, 170)
+# brand palette (from logo.png)
+YELLOW = (255, 222, 89)
+AMBER = (240, 176, 30)
+CHAR = (78, 85, 91)
+INK = (44, 48, 53)
+MUTED = (132, 137, 143)
+LIGHT = (208, 210, 213)
+RED = (232, 64, 64)
+WHITE = (255, 255, 255)
+LOGO = Path(__file__).with_name("logo.png")
 
 _fonts = {}
 
@@ -95,64 +100,27 @@ def paste(canvas, img, cx, cy, alpha=1.0, scale=1.0):
 
 # ---------------------------------------------------------------- static assets
 def build_logo():
-    """Eye (sight) with a waveform (sound) as its iris, plus wordmark."""
-    S = 1200  # supersampled
-    mark = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    d = ImageDraw.Draw(mark)
-    cx, cy = S / 2, S / 2
-    half, h = 0.44 * S, 0.27 * S
-    top, bot = [], []
-    for i in range(121):
-        u = -1 + 2 * i / 120
-        x = cx + u * half
-        k = (1 - u * u) ** 1.15
-        top.append((x, cy - h * k))
-        bot.append((x, cy + h * k))
-    outline = top + bot[::-1] + [top[0]]
-    d.line(outline, fill=GOLD + (255,), width=int(0.034 * S), joint="curve")
-    r = 0.2 * S
-    d.ellipse((cx - r, cy - r, cx + r, cy + r), outline=WHITE + (255,), width=int(0.026 * S))
-    heights = [0.28, 0.52, 0.78, 1.0, 0.78, 0.52, 0.28]
-    bw, gap = 0.028 * S, 0.02 * S
-    x0 = cx - (len(heights) * bw + (len(heights) - 1) * gap) / 2
-    for i, hh in enumerate(heights):
-        bh = hh * 0.27 * S
-        x = x0 + i * (bw + gap)
-        col = GOLD if i == 3 else WHITE
-        d.rounded_rectangle((x, cy - bh / 2, x + bw, cy + bh / 2), radius=bw / 2, fill=col + (255,))
-    mark = mark.resize((520, 520), Image.LANCZOS)
+    img = Image.open(LOGO).convert("RGBA")
+    return img.crop(img.getbbox())
 
-    # wordmark: SOUND and SIGHT
-    sound = text_image("SOUND", font(BOLD, 104), WHITE, tracking=10)
-    sight = text_image("SIGHT", font(BOLD, 104), WHITE, tracking=10)
-    amp = text_image("and", font(SERIF_IT, 92), GOLD)
-    gap = 26
-    ww = sound.width + amp.width + sight.width + 2 * gap
-    wh = max(sound.height, amp.height, sight.height)
-    word = Image.new("RGBA", (ww, wh), (0, 0, 0, 0))
-    word.alpha_composite(sound, (0, wh - sound.height))
-    word.alpha_composite(amp, (sound.width + gap, wh - amp.height - 4))
-    word.alpha_composite(sight, (sound.width + amp.width + 2 * gap, wh - sight.height))
-    sub = text_image("RECORDING STUDIO", font(REG, 34), GREY, tracking=14)
 
-    gw = max(mark.width, word.width, sub.width) + 20
-    gh = mark.height - 110 + word.height + 30 + sub.height
-    group = Image.new("RGBA", (gw, gh), (0, 0, 0, 0))
-    group.alpha_composite(mark, ((gw - mark.width) // 2, -55))
-    y = mark.height - 110
-    group.alpha_composite(word, ((gw - word.width) // 2, y))
-    group.alpha_composite(sub, ((gw - sub.width) // 2, y + word.height + 30))
-    return group
+def pill(text_img, color, pad_x=34, pad_y=14):
+    """Text on a rounded brand-coloured highlight."""
+    w, h = text_img.width + 2 * pad_x, text_img.height + 2 * pad_y
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    ImageDraw.Draw(img).rounded_rectangle((0, 0, w - 1, h - 1), radius=h // 2, fill=color + (255,))
+    img.alpha_composite(text_img, (pad_x, pad_y))
+    return img
 
 
 def build_background():
     y, x = np.mgrid[0:H, 0:W].astype(np.float32)
     t = (y / H)[..., None]
-    top = np.array([10, 9, 20], np.float32)
-    bottom = np.array([22, 12, 30], np.float32)
+    top = np.array([251, 250, 246], np.float32)
+    bottom = np.array([241, 239, 233], np.float32)
     bg = top * (1 - t) + bottom * t
     r = np.sqrt((x - W / 2) ** 2 + (y - 1020) ** 2) / (W * 0.9)
-    bg *= (1.0 - 0.45 * np.clip(r - 0.4, 0, 1))[..., None]  # vignette
+    bg *= (1.0 - 0.10 * np.clip(r - 0.4, 0, 1))[..., None]  # vignette
     return bg
 
 
@@ -180,7 +148,7 @@ p_vx, p_vy = np.cos(p_ang) * p_spd, np.sin(p_ang) * p_spd - 350
 p_size = rng.uniform(8, 20, N_P)
 p_rot = rng.uniform(0, 360, N_P)
 p_spin = rng.uniform(-540, 540, N_P)
-p_col = [(GOLD, ORANGE, WHITE, RED)[i] for i in rng.integers(0, 4, N_P)]
+p_col = [(YELLOW, AMBER, CHAR, LIGHT)[i] for i in rng.integers(0, 4, N_P)]
 p_life = rng.uniform(1.8, 3.2, N_P)
 
 
@@ -243,22 +211,22 @@ def render_frame(t, assets):
     # warm glow behind the ring, swelling at the milestone
     hitglow = math.exp(-2.0 * (t - HIT)) if t > HIT else 0
     glow_amt = main_a * (0.25 + 0.5 * count_p + 0.8 * hitglow)
-    arr += assets["glow"] * glow_amt
+    arr += (np.array(YELLOW, np.float32) - arr) * assets["glow"] * 0.35 * glow_amt
 
     # ring (numpy, anti-aliased)
     if main_a > 0:
         ox, oy = RING_C[0] - rsize // 2, RING_C[1] - rsize // 2
         sub = arr[oy:oy + rsize, ox:ox + rsize]
         track = band * 0.10 * main_a
-        sub += (np.array([255, 255, 255], np.float32) - sub) * track[..., None]
+        sub += (np.array(CHAR, np.float32) - sub) * track[..., None]
         prog = np.clip((count_p - ang) * 600, 0, 1) * band * main_a
         mix = 0.5 - 0.5 * np.cos(2 * np.pi * ang)  # seamless around the loop
-        grad = np.stack([ORANGE[c] + (GOLD[c] - ORANGE[c]) * mix for c in range(3)], -1)
+        grad = np.stack([YELLOW[c] + (AMBER[c] - YELLOW[c]) * mix for c in range(3)], -1)
         sub += (grad - sub) * prog[..., None]
 
     # flash at the milestone
     if HIT < t < HIT + 0.6:
-        arr += assets["glow"] * 2.2 * (1 - (t - HIT) / 0.6) ** 2
+        arr += (np.array(YELLOW, np.float32) - arr) * assets["glow"] * 0.7 * (1 - (t - HIT) / 0.6) ** 2
 
     img = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8)).convert("RGBA")
     d = ImageDraw.Draw(img)
@@ -269,7 +237,7 @@ def render_frame(t, assets):
         gd = ImageDraw.Draw(g)
         cx, cy, r = RING_C[0] / 4, RING_C[1] / 4, RING_R / 4
         gd.arc((cx - r, cy - r, cx + r, cy + r), -90, -90 + 360 * count_p,
-               fill=GOLD + (int(200 * main_a * (0.6 + hitglow)),), width=8)
+               fill=YELLOW + (int(200 * main_a * (0.6 + hitglow)),), width=8)
         g = g.filter(ImageFilter.GaussianBlur(6)).resize((W, H), Image.BILINEAR)
         img = Image.alpha_composite(img, g)
         d = ImageDraw.Draw(img)
@@ -282,8 +250,8 @@ def render_frame(t, assets):
             lit = count_p >= a
             r1, r2 = RING_R + 34, RING_R + (52 if k % 10 == 0 else 44)
             sx, sy = math.sin(th), -math.cos(th)
-            col = GOLD if lit else GREY
-            al = main_a * (1 if lit else 0.35)
+            col = AMBER if lit else LIGHT
+            al = main_a
             d.line((RING_C[0] + sx * r1, RING_C[1] + sy * r1, RING_C[0] + sx * r2, RING_C[1] + sy * r2),
                    fill=col + (int(255 * al),), width=4)
 
@@ -293,7 +261,7 @@ def render_frame(t, assets):
         pulse = 1 + 0.16 * math.exp(-6 * (t - HIT)) * math.sin(min(math.pi, (t - HIT) * 9)) if t > HIT else 1
         num = assets["num_cache"].get(value)
         if num is None:
-            num = assets["num_cache"][value] = text_image(str(value), font(BOLD, 250), WHITE, tracking=-4)
+            num = assets["num_cache"][value] = text_image(str(value), font(BOLD, 250), INK, tracking=-4)
         paste(img, num, RING_C[0], RING_C[1] - 30, main_a, pulse)
         paste(img, assets["label"], RING_C[0], RING_C[1] + 125, main_a)
 
@@ -302,7 +270,7 @@ def render_frame(t, assets):
     dock = ease_in_out(seg(t, 2.4, 3.3))
     if t < 12.8:
         la = seg(t, 0.5, 1.2)
-        scale = (0.78 + 0.12 * intro) * (1 - dock) + 0.44 * dock
+        scale = (1.15 + 0.15 * intro) * (1 - dock) + 0.5 * dock
         cy = 900 * (1 - dock) + 330 * dock
         paste(img, logo, W / 2, cy, la * (1 - ending), scale)
 
@@ -314,7 +282,7 @@ def render_frame(t, assets):
         paste(img, assets["rec"], 150, 97, hud_a)
         frames = int(t * FPS)
         tc = f"00:{int(t) // 60:02d}:{int(t) % 60:02d}:{frames % FPS:02d}"
-        paste(img, text_image(tc, font(REG, 32), GREY, tracking=3), W - 170, 97, hud_a)
+        paste(img, text_image(tc, font(REG, 32), MUTED, tracking=3), W - 170, 97, hud_a)
 
     # messages after the milestone
     def line(key, start, y):
@@ -328,22 +296,22 @@ def render_frame(t, assets):
 
     # bottom visualiser
     vis_a = seg(t, 0.0, 1.0) * (1 - seg(t, 14.0, 14.5))
-    vcol = tuple(int(WHITE[i] + (GOLD[i] - WHITE[i]) * seg(t, HIT, HIT + 0.5)) for i in range(3))
+    vcol = tuple(int(CHAR[i] + (AMBER[i] - CHAR[i]) * seg(t, HIT, HIT + 0.5)) for i in range(3))
     vis_y = 1830
-    draw_visualiser(d, t, 0.45 * vis_a, vis_y, 150, vcol)
+    draw_visualiser(d, t, 0.55 * vis_a, vis_y, 150, vcol)
 
     draw_particles(img, t)
 
     # end card
     end = ease_out(seg(t, 12.7, 13.4)) * (1 - seg(t, 14.1, 14.6))
     if end > 0:
-        paste(img, logo, W / 2, 800, end, 0.78 + 0.04 * seg(t, 12.7, 14.6))
+        paste(img, logo, W / 2, 780, end, 1.2 + 0.05 * seg(t, 12.7, 14.6))
         paste(img, assets["e1"], W / 2, 1270 + 30 * (1 - end), end)
-        paste(img, assets["e2"], W / 2, 1345 + 30 * (1 - end), end)
+        paste(img, assets["e2"], W / 2, 1365 + 30 * (1 - end), end)
 
     # intro fade from black
     fade_in = seg(t, 0, 0.5)
-    out = np.asarray(img.convert("RGB"), np.float32) * fade_in
+    out = 255 - (255 - np.asarray(img.convert("RGB"), np.float32)) * fade_in
     return out.astype(np.uint8)
 
 
@@ -484,7 +452,7 @@ def build_audio(path):
 def main():
     y, x = np.mgrid[0:H, 0:W].astype(np.float32)
     r = np.sqrt((x - RING_C[0]) ** 2 + (y - RING_C[1]) ** 2)
-    glow = np.exp(-(r / 420) ** 2)[..., None] * np.array([70, 42, 12], np.float32)
+    glow = np.exp(-(r / 420) ** 2)[..., None]
 
     assets = {
         "bg": build_background(),
@@ -492,14 +460,14 @@ def main():
         "logo": build_logo(),
         "ring": build_ring_fields(),
         "num_cache": {},
-        "label": text_image("RECORDING MINUTES", font(BOLD, 36), GREY, tracking=9),
-        "rec": text_image("REC", font(BOLD, 32), WHITE, tracking=4),
-        "m1": text_image("MILESTONE REACHED", font(BOLD, 54), GOLD, tracking=10),
-        "m2": text_image("Thank you to every artist & creator", font(REG, 42), WHITE),
-        "m3": text_image("who pressed record with us.", font(REG, 42), WHITE),
-        "m4": text_image("Here's to the next 400.", font(BOLD, 48), WHITE),
-        "e1": text_image("400 MINUTES RECORDED", font(BOLD, 52), GOLD, tracking=8),
-        "e2": text_image("Thank you.", font(SERIF_IT, 56), WHITE),
+        "label": text_image("RECORDING MINUTES", font(BOLD, 36), MUTED, tracking=9),
+        "rec": text_image("REC", font(BOLD, 32), CHAR, tracking=4),
+        "m1": pill(text_image("MILESTONE REACHED", font(BOLD, 50), INK, tracking=10), YELLOW),
+        "m2": text_image("Thank you to every artist & creator", font(REG, 42), CHAR),
+        "m3": text_image("who pressed record with us.", font(REG, 42), CHAR),
+        "m4": text_image("Here's to the next 400.", font(BOLD, 48), INK),
+        "e1": pill(text_image("400 MINUTES RECORDED", font(BOLD, 48), INK, tracking=8), YELLOW),
+        "e2": text_image("Thank you.", font(SERIF_IT, 56), CHAR),
     }
 
     audio = WORK / "_audio.wav"
