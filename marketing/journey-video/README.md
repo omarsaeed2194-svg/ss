@@ -11,7 +11,7 @@ localization.saudisoft.com story, built to autoplay silently on a web page.
 | 17–28s | The journey of every project: Source → Analysis → Translate → Edit & proof → Engineer → Test → Launch (TEP) |
 | 28–34s | Services: software, websites, games, eLearning, subtitling, voiceover, transcreation, interpretation |
 | 34–41s | 100+ languages: greetings in 22 scripts, arcs from Jeddah across the globe |
-| 41–46s | ISO 17100 & ISO 9001 certified |
+| 41–46s | ISO 17100 certified |
 | 46–52s | CTA: localization.saudisoft.com |
 
 ## Files
@@ -46,5 +46,6 @@ ffmpeg -i dist/master.mp4 -vf scale=1280:720 -c:v libx264 -crf 23 -pix_fmt yuv42
 ffmpeg -i dist/master.mp4 -c:v libvpx-vp9 -b:v 0 -crf 34 -row-mt 1 -an dist/saudisoft-localization-journey-1080p.webm
 ```
 
-The "S" tile is a placeholder mark. Swap in the official Saudisoft logo
-(`.mark` in `journey.html`) before publishing.
+Brand: colours come from the Saudisoft logo (`saudisoft-logo.png`): green
+`#0B6D40`, yellow `#FADC29`, grey `#67696B`, on a light background. For a
+sharper logo, replace `saudisoft-logo.png` with a larger or SVG version.

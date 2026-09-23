@@ -6,16 +6,19 @@
 <link rel="stylesheet" href="fonts.css">
 <style>
   :root {
-    --navy: #07172e;
-    --navy-2: #0c2547;
-    --blue: #2f7df6;
-    --green: #22c08a;
-    --gold: #f4b740;
-    --ink: #eaf2ff;
-    --muted: #93a8c7;
+    /* Saudisoft brand palette (from the logo) */
+    --green: #0b6d40;
+    --green-2: #2e9a57;
+    --yellow: #fadc29;
+    --grey: #67696b;
+    --bg: #ffffff;
+    --bg-2: #f3f6f2;
+    --ink: #2c2e30;
+    --muted: #67696b;
+    --line: rgba(11,109,64,.14);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--navy); }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
   body {
     font-family: Montserrat, Cairo, "Noto Sans", sans-serif;
     color: var(--ink);
@@ -23,7 +26,7 @@
   }
   #stage {
     position: relative; width: 1920px; height: 1080px; overflow: hidden;
-    background: radial-gradient(1200px 800px at 75% 40%, #123a6e 0%, var(--navy-2) 40%, var(--navy) 100%);
+    background: radial-gradient(1300px 900px at 72% 38%, #ffffff 0%, #f7f9f5 45%, #e9f0e8 100%);
   }
   #globe { position: absolute; inset: 0; }
   .scene { position: absolute; inset: 0; opacity: 0; }
@@ -35,30 +38,27 @@
   .h1 { font-size: 104px; font-weight: 800; line-height: 1.02; letter-spacing: -.02em; }
   .h2 { font-size: 72px; font-weight: 800; line-height: 1.08; letter-spacing: -.015em; }
   .lead { font-size: 36px; font-weight: 500; line-height: 1.4; color: var(--muted); }
-  .grad { background: linear-gradient(90deg, var(--blue), var(--green)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .grad { background: linear-gradient(90deg, var(--green), var(--green-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .ar { font-family: Cairo, sans-serif; direction: rtl; }
 
   /* Wordmark */
   .wordmark { display: flex; align-items: center; gap: 28px; }
-  .mark {
-    width: 120px; height: 120px; border-radius: 30px;
-    background: linear-gradient(135deg, var(--blue), var(--green));
-    display: grid; place-items: center; box-shadow: 0 20px 60px rgba(47,125,246,.45);
-    font-size: 72px; font-weight: 800; color: white;
-  }
-  .wm-text { font-size: 84px; font-weight: 800; letter-spacing: -.02em; }
-  .wm-sub { font-size: 30px; font-weight: 500; color: var(--muted); letter-spacing: .28em; text-transform: uppercase; margin-top: 6px; }
+  .wordmark { flex-direction: column; gap: 18px; }
+  .logo { display: block; width: 602px; height: 138px; }
+  .wm-sub { font-size: 26px; font-weight: 600; color: var(--muted); letter-spacing: .3em; text-transform: uppercase; }
+  .wm-sub::before, .wm-sub::after { content: ""; display: inline-block; width: 60px; height: 4px; border-radius: 2px;
+    background: var(--yellow); vertical-align: middle; margin: 0 22px 5px; }
 
   /* S2 year counter */
   .year { font-size: 300px; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
 
   /* S3 milestones */
   .miles { position: absolute; left: 160px; top: 330px; width: 1600px; }
-  .mile-line { position: absolute; left: 36px; top: 30px; width: 4px; height: 560px; background: rgba(255,255,255,.12); border-radius: 2px; }
-  .mile-fill { position: absolute; left: 36px; top: 30px; width: 4px; height: 0; background: linear-gradient(var(--blue), var(--green)); border-radius: 2px; }
+  .mile-line { position: absolute; left: 36px; top: 30px; width: 4px; height: 560px; background: var(--line); border-radius: 2px; }
+  .mile-fill { position: absolute; left: 36px; top: 30px; width: 4px; height: 0; background: linear-gradient(var(--green), var(--yellow)); border-radius: 2px; }
   .mile { position: relative; display: flex; align-items: center; gap: 44px; height: 150px; }
   .dot { width: 76px; height: 76px; border-radius: 50%; flex: none; display: grid; place-items: center;
-         background: var(--navy-2); border: 4px solid var(--green); font-size: 30px; font-weight: 800; color: var(--green); }
+         background: #fff; border: 4px solid var(--green); font-size: 30px; font-weight: 800; color: var(--green); box-shadow: 0 0 0 8px rgba(250,220,41,.35); }
   .mile h3 { font-size: 48px; font-weight: 700; }
   .mile p { font-size: 30px; color: var(--muted); margin-top: 6px; }
 
@@ -69,40 +69,40 @@
   .node-label .t { font-size: 34px; font-weight: 700; margin-top: 8px; line-height: 1.15; }
   .node-label .d { font-size: 22px; color: var(--muted); margin-top: 8px; line-height: 1.35; }
   .tep { position: absolute; left: 0; right: 0; margin: 0 auto; width: fit-content; top: 965px; display: flex; gap: 18px; align-items: center;
-         padding: 18px 34px; border-radius: 999px; background: rgba(34,192,138,.12); border: 2px solid rgba(34,192,138,.5);
+         padding: 18px 34px; border-radius: 999px; background: #fff; border: 2px solid var(--green); box-shadow: 0 12px 40px rgba(11,109,64,.12);
          font-size: 28px; font-weight: 600; white-space: nowrap; }
 
   /* S5 services */
   .grid { position: absolute; left: 160px; top: 380px; width: 1600px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; }
-  .card { height: 240px; border-radius: 28px; padding: 36px; background: rgba(255,255,255,.05);
-          border: 1.5px solid rgba(255,255,255,.12); display: flex; flex-direction: column; justify-content: space-between; }
+  .card { height: 240px; border-radius: 28px; padding: 36px; background: #fff;
+          border: 1.5px solid var(--line); box-shadow: 0 16px 40px rgba(11,109,64,.08); display: flex; flex-direction: column; justify-content: space-between; }
   .card .ic { width: 72px; height: 72px; border-radius: 20px; display: grid; place-items: center;
-              background: linear-gradient(135deg, rgba(47,125,246,.3), rgba(34,192,138,.3)); }
+              background: var(--green); box-shadow: inset 0 -6px 0 var(--yellow); }
   .card .ic svg { width: 40px; height: 40px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .card h4 { font-size: 36px; font-weight: 700; }
   .card small { display: block; font-size: 22px; color: var(--muted); margin-top: 6px; font-weight: 500; }
 
   /* S6 languages */
   .pill { position: absolute; padding: 16px 30px; border-radius: 999px; font-size: 40px; font-weight: 700; white-space: nowrap;
-          background: rgba(12,37,71,.8); border: 2px solid rgba(255,255,255,.14); transform: translate(-50%, -50%); }
-  .pill.hi { border-color: var(--green); }
+          background: #fff; border: 2px solid var(--line); color: var(--ink); box-shadow: 0 10px 30px rgba(11,109,64,.08); transform: translate(-50%, -50%); }
+  .pill.hi { border-color: var(--yellow); background: #fffbe0; }
   .big100 { font-size: 260px; font-weight: 800; line-height: 1; letter-spacing: -.04em; }
   .sc { font-family: "Noto Sans SC"; } .jp { font-family: "Noto Sans JP"; } .kr { font-family: "Noto Sans KR"; }
   .hi-dev { font-family: "Noto Sans Devanagari"; } .he { font-family: "Noto Sans Hebrew"; } .th { font-family: "Noto Sans Thai"; }
   .gr { font-family: "Noto Sans"; }
 
   /* S7 ISO */
-  .badges { position: absolute; left: 0; right: 0; top: 400px; display: flex; justify-content: center; gap: 90px; }
-  .badge { width: 560px; padding: 56px 48px; border-radius: 36px; text-align: center; background: rgba(255,255,255,.05);
-           border: 2px solid rgba(244,183,64,.5); }
+  .badges { position: absolute; left: 0; right: 0; top: 370px; display: flex; justify-content: center; }
+  .badge { width: 760px; padding: 60px 56px; border-radius: 36px; text-align: center; background: #fff;
+           border: 2px solid var(--line); border-top: 10px solid var(--yellow); box-shadow: 0 24px 60px rgba(11,109,64,.12); }
   .seal { width: 150px; height: 150px; border-radius: 50%; margin: 0 auto 30px; display: grid; place-items: center;
-          border: 5px solid var(--gold); color: var(--gold); font-size: 34px; font-weight: 800; line-height: 1.05; }
+          border: 6px solid var(--green); color: var(--green); box-shadow: 0 0 0 10px var(--yellow); font-size: 34px; font-weight: 800; line-height: 1.05; }
   .badge h3 { font-size: 60px; font-weight: 800; }
   .badge p { font-size: 28px; color: var(--muted); margin-top: 10px; }
 
   /* S8 CTA */
   .url { display: inline-block; margin-top: 50px; padding: 26px 56px; border-radius: 999px; font-size: 52px; font-weight: 700;
-         background: linear-gradient(90deg, var(--blue), var(--green)); color: #fff; box-shadow: 0 24px 80px rgba(34,192,138,.35); }
+         background: var(--green); color: #fff; border-bottom: 8px solid var(--yellow); box-shadow: 0 24px 70px rgba(11,109,64,.3); }
   .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
 </style>
 </head>
@@ -117,8 +117,8 @@
       <div class="h1" style="margin-top:34px" data-in="0.6">Every market speaks<br><span class="grad">its own language.</span></div>
       <div class="lead ar" style="margin-top:36px;font-size:44px" data-in="1.4">لكل سوقٍ لغته الخاصة</div>
       <div class="wordmark" style="margin-top:70px" data-in="2.4" data-anim="scale">
-        <div class="mark">S</div>
-        <div style="text-align:left"><div class="wm-text">Saudisoft</div><div class="wm-sub">Localization &amp; Translation</div></div>
+        <img class="logo" src="saudisoft-logo.png" alt="Saudisoft">
+        <div class="wm-sub">Localization &amp; Translation</div>
       </div>
     </div>
   </section>
@@ -156,11 +156,11 @@
     </div>
     <svg id="path-svg" width="1920" height="1080">
       <defs>
-        <linearGradient id="pg" x1="0" x2="1"><stop offset="0" stop-color="#2f7df6"/><stop offset="1" stop-color="#22c08a"/></linearGradient>
-        <radialGradient id="glow"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="#22c08a"/><stop offset="1" stop-color="#22c08a" stop-opacity="0"/></radialGradient>
+        <linearGradient id="pg" x1="0" x2="1"><stop offset="0" stop-color="#0b6d40"/><stop offset="1" stop-color="#2e9a57"/></linearGradient>
+        <radialGradient id="glow"><stop offset="0" stop-color="#fff"/><stop offset=".3" stop-color="#fadc29"/><stop offset="1" stop-color="#fadc29" stop-opacity="0"/></radialGradient>
       </defs>
       <path id="track" d="M 150 620 C 330 480, 420 480, 560 580 S 800 740, 960 620 S 1200 480, 1360 580 S 1600 740, 1770 620"
-            fill="none" stroke="rgba(255,255,255,.12)" stroke-width="6" stroke-linecap="round"/>
+            fill="none" stroke="rgba(11,109,64,.12)" stroke-width="6" stroke-linecap="round"/>
       <path id="track-fill" d="M 150 620 C 330 480, 420 480, 560 580 S 800 740, 960 620 S 1200 480, 1360 580 S 1600 740, 1770 620"
             fill="none" stroke="url(#pg)" stroke-width="8" stroke-linecap="round"/>
       <g id="nodes"></g>
@@ -168,7 +168,7 @@
     </svg>
     <div id="node-labels"></div>
     <div class="tep" data-in="7.6">
-      <span style="color:var(--green)">●</span> TEP quality process: Translation → Editing → Proofreading, by native linguists
+      <span style="color:var(--yellow);font-size:34px">●</span> TEP quality process: Translation → Editing → Proofreading, by native linguists
     </div>
   </section>
 
@@ -195,11 +195,10 @@
   <section class="scene" data-start="41" data-end="46">
     <div style="position:absolute;left:0;right:0;top:150px;text-align:center">
       <div class="eyebrow" data-in="0.2">Certified quality</div>
-      <div class="h2" style="margin-top:18px" data-in="0.4">Built on international standards</div>
+      <div class="h2" style="margin-top:18px" data-in="0.4">Certified to the global translation standard</div>
     </div>
     <div class="badges">
-      <div class="badge" data-in="0.9" data-anim="scale"><div class="seal">ISO<br>17100</div><h3>ISO 17100</h3><p>Translation Services</p></div>
-      <div class="badge" data-in="1.4" data-anim="scale"><div class="seal">ISO<br>9001</div><h3>ISO 9001</h3><p>Quality Management Systems</p></div>
+      <div class="badge" data-in="0.9" data-anim="scale"><div class="seal">ISO<br>17100</div><h3>ISO 17100</h3><p>Translation Services: qualified linguists and independent revision</p></div>
     </div>
   </section>
 
@@ -207,8 +206,8 @@
   <section class="scene" data-start="46" data-end="52">
     <div class="center">
       <div class="wordmark" data-in="0.2" data-anim="scale">
-        <div class="mark">S</div>
-        <div style="text-align:left"><div class="wm-text">Saudisoft</div><div class="wm-sub">Localization &amp; Translation</div></div>
+        <img class="logo" src="saudisoft-logo.png" alt="Saudisoft">
+        <div class="wm-sub">Localization &amp; Translation</div>
       </div>
       <div class="h1" style="margin-top:70px;font-size:88px" data-in="0.7">Your journey to every market<br><span class="grad">starts here.</span></div>
       <div class="url" data-in="1.5" data-anim="scale">localization.saudisoft.com</div>
@@ -244,7 +243,7 @@ const nodes = STEPS.map((s, i) => {
   const p = track.getPointAtLength(LEN * i / (STEPS.length - 1));
   const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
   ring.setAttribute("cx", p.x); ring.setAttribute("cy", p.y); ring.setAttribute("r", 26);
-  ring.setAttribute("fill", "#0c2547"); ring.setAttribute("stroke", "rgba(255,255,255,.25)"); ring.setAttribute("stroke-width", 5);
+  ring.setAttribute("fill", "#fff"); ring.setAttribute("stroke", "rgba(11,109,64,.25)"); ring.setAttribute("stroke-width", 5);
   nodeG.appendChild(ring);
   const lab = document.createElement("div");
   lab.className = "node-label";
@@ -322,12 +321,12 @@ function drawGlobe(t, cx, cy, R, alpha, arcs) {
   ctx.save();
   ctx.globalAlpha = alpha;
   const g = ctx.createRadialGradient(cx - R * .3, cy - R * .3, R * .1, cx, cy, R * 1.05);
-  g.addColorStop(0, "rgba(47,125,246,.18)"); g.addColorStop(1, "rgba(7,23,46,0)");
+  g.addColorStop(0, "rgba(250,220,41,.16)"); g.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R * 1.05, 0, 7); ctx.fill();
   for (const p of PTS) {
     const [x, y, z] = proj(toVec(p));
     if (z < 0) continue;
-    ctx.fillStyle = `rgba(147,190,255,${0.15 + z * 0.55})`;
+    ctx.fillStyle = `rgba(11,109,64,${0.08 + z * 0.4})`;
     ctx.beginPath(); ctx.arc(x, y, 1.4 + z * 1.6, 0, 7); ctx.fill();
   }
   const J = toVec(JEDDAH);
@@ -344,20 +343,20 @@ function drawGlobe(t, cx, cy, R, alpha, arcs) {
         if (z < -0.05) { started = false; continue; }
         started ? ctx.lineTo(x, y) : ctx.moveTo(x, y); started = true;
       }
-      ctx.strokeStyle = i % 2 ? "rgba(34,192,138,.85)" : "rgba(47,125,246,.9)";
+      ctx.strokeStyle = i % 2 ? "rgba(232,196,0,.95)" : "rgba(11,109,64,.9)";
       ctx.lineWidth = 3; ctx.stroke();
       if (pr >= 1) {
         const [x, y, z] = proj(B);
-        if (z > 0) { ctx.fillStyle = "#22c08a"; ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.fill(); }
+        if (z > 0) { ctx.fillStyle = "#0b6d40"; ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.fill(); }
       }
     });
   }
   const [jx, jy, jz] = proj(J);
   if (jz > 0) {
     const pulse = (t * 0.8) % 1;
-    ctx.strokeStyle = `rgba(244,183,64,${1 - pulse})`; ctx.lineWidth = 3;
+    ctx.strokeStyle = `rgba(11,109,64,${1 - pulse})`; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(jx, jy, 10 + pulse * 40, 0, 7); ctx.stroke();
-    ctx.fillStyle = "#f4b740"; ctx.beginPath(); ctx.arc(jx, jy, 10, 0, 7); ctx.fill();
+    ctx.fillStyle = "#fadc29"; ctx.beginPath(); ctx.arc(jx, jy, 11, 0, 7); ctx.fill(); ctx.strokeStyle = "#0b6d40"; ctx.lineWidth = 3; ctx.stroke();
   }
   ctx.restore();
 }
@@ -426,8 +425,8 @@ window.render = function (t) {
   nodes.forEach((nd, i) => {
     const reached = jp >= nd.frac - 0.001;
     const k = clamp((jp - nd.frac) * 12);
-    nd.ring.setAttribute("stroke", reached ? "#22c08a" : "rgba(255,255,255,.25)");
-    nd.ring.setAttribute("fill", reached ? "#123a6e" : "#0c2547");
+    nd.ring.setAttribute("stroke", reached ? "#0b6d40" : "rgba(11,109,64,.25)");
+    nd.ring.setAttribute("fill", reached ? "#fadc29" : "#fff");
     nd.ring.setAttribute("r", 26 + 6 * Math.sin(Math.PI * k));
     const lp = easeOut(clamp((jp - nd.frac + 0.04) * 10));
     nd.lab.style.opacity = t < 18 ? 0 : lp;
