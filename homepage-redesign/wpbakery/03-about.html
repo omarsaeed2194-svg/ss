@@ -1,0 +1,48 @@
+<!--
+  Saudisoft homepage — 03 ABOUT
+  HOW TO USE (WPBakery):
+   1. Add a Row. Row settings > Type: "Full Width Content", Padding top/bottom: 0.
+   2. Inside the (single, 1/1) column add a "Raw HTML" element and paste this whole file.
+   3. The "00-global-styles.html" block must be on the same page ONCE, above all sections.
+-->
+
+<style>
+.ss.ss .about{background:#fff}
+.ss.ss .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center}
+.ss.ss .about-visual{position:relative;border-radius:28px;overflow:hidden;aspect-ratio:5/4;background:url("https://localization.saudisoft.com/wp-content/uploads/2025/06/2-2.webp") center/cover}
+.ss.ss .about-visual .since{position:absolute;left:24px;bottom:24px;background:var(--yellow);color:var(--green-deep);border-radius:20px;padding:18px 24px}
+.ss.ss .about-visual .since strong{display:block;font-size:52px;line-height:.9}
+.ss.ss .about h2{margin:12px 0 20px}
+.ss.ss .about p{color:var(--muted);margin-bottom:16px}
+.ss.ss .checks{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:26px 0 32px}
+.ss.ss .checks li{display:flex;gap:10px;align-items:flex-start;font-weight:700;list-style:none}
+.ss.ss .checks li::before{content:"✓";flex:0 0 26px;height:26px;border-radius:50%;background:#e4f1ea;color:var(--green);display:grid;place-items:center;font-size:15px}
+@media (max-width:1100px){
+.ss.ss .about-grid{grid-template-columns:1fr}
+}
+@media (max-width:680px){
+.ss.ss .checks{grid-template-columns:1fr}
+}
+</style>
+<div class="ss">
+<section class="about">
+  <div class="wrap about-grid">
+    <div class="about-visual reveal" role="img" aria-label="Saudisoft localization team">
+      <div class="since"><strong>1983</strong>Localizing for the world</div>
+    </div>
+    <div class="reveal">
+      <span class="eyebrow">Who we are</span>
+      <h2>Localization is the gateway to globalization. We've known that since 1983.</h2>
+      <p>More than 40 years ago, Saudisoft was founded with one mission: help businesses around the world become universally understood.</p>
+      <p>World-class linguists, pioneering technology, industry-leading scalability, rigorous security and hands-on support are how our partners compete — and win — internationally.</p>
+      <ul class="checks">
+        <li>Native, subject-matter linguists</li>
+        <li>ISO 17100 &amp; 9001 certified</li>
+        <li>Arabic &amp; RTL specialists</li>
+        <li>AI-assisted, human-verified</li>
+      </ul>
+      <a class="btn btn-line" href="https://localization.saudisoft.com/about/">About Saudisoft <span class="ss-arr">→</span></a>
+    </div>
+  </div>
+</section>
+</div>

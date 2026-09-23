@@ -1,0 +1,53 @@
+<!--
+  Saudisoft homepage — 08 WHY SAUDISOFT + CERTIFICATIONS
+  HOW TO USE (WPBakery):
+   1. Add a Row. Row settings > Type: "Full Width Content", Padding top/bottom: 0.
+   2. Inside the (single, 1/1) column add a "Raw HTML" element and paste this whole file.
+   3. The "00-global-styles.html" block must be on the same page ONCE, above all sections.
+-->
+
+<style>
+.ss.ss .why-sec{background:#fff}
+.ss.ss .why-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.ss.ss .why{padding:30px;border-radius:var(--radius);background:var(--bg-soft)}
+.ss.ss .why .num{font-size:15px;font-weight:800;color:var(--green);letter-spacing:.1em}
+.ss.ss .why h3{font-size:22px;margin:14px 0 8px}
+.ss.ss .why p{color:var(--muted);font-size:17px}
+.ss.ss .why:nth-child(2){background:#fff9d6}
+.ss.ss .why:nth-child(3){background:#e4f1ea}
+.ss.ss .certs{margin-top:28px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;padding:24px 28px;border:1px dashed var(--line);border-radius:var(--radius)}
+.ss.ss .certs strong{font-size:20px}
+.ss.ss .certs a:hover{color:var(--green)}
+.ss.ss .certs .pill{padding:8px 16px;border-radius:999px;background:var(--green);color:#fff;font-weight:700;font-size:16px}
+@media (max-width:1100px){
+.ss.ss .why-grid{grid-template-columns:1fr 1fr}
+}
+@media (max-width:680px){
+.ss.ss .why-grid{grid-template-columns:1fr}
+}
+</style>
+<div class="ss">
+<section class="why-sec">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <span class="eyebrow">Why Saudisoft</span>
+        <h2>Bringing out the best in every business</h2>
+      </div>
+    </div>
+    <div class="why-grid">
+      <div class="why reveal"><span class="num">01</span><h3>Business-first technology</h3><p>We bring technology into the context of your business and recognise your challenges.</p></div>
+      <div class="why reveal"><span class="num">02</span><h3>Opportunity-ready</h3><p>We help you anticipate and capitalise on emerging market opportunities.</p></div>
+      <div class="why reveal"><span class="num">03</span><h3>Your success, centre stage</h3><p>Dedicated project management and support around the clock.</p></div>
+      <div class="why reveal"><span class="num">04</span><h3>Trusted worldwide</h3><p>Leading clients rely on us to deliver excellence and innovation.</p></div>
+    </div>
+    <div class="certs reveal">
+      <strong>Certified &amp; connected:</strong>
+      <span class="pill">ISO 17100</span><span class="pill">ISO 9001</span>
+      <a href="https://www.gala-global.org/" target="_blank" rel="noopener">GALA member</a> ·
+      <a href="https://www.sap.com/" target="_blank" rel="noopener">SAP translation partner</a> ·
+      <a href="https://eagls.org/home-en/" target="_blank" rel="noopener">EAGLS member</a>
+    </div>
+  </div>
+</section>
+</div>

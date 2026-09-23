@@ -1,0 +1,61 @@
+<!--
+  Saudisoft homepage — 09 TESTIMONIALS
+  HOW TO USE (WPBakery):
+   1. Add a Row. Row settings > Type: "Full Width Content", Padding top/bottom: 0.
+   2. Inside the (single, 1/1) column add a "Raw HTML" element and paste this whole file.
+   3. The "00-global-styles.html" block must be on the same page ONCE, above all sections.
+-->
+
+<style>
+.ss.ss .testi{background:var(--bg-soft)}
+.ss.ss .t-track{display:flex;gap:20px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding-bottom:6px}
+.ss.ss .t-track::-webkit-scrollbar{display:none}
+.ss.ss .t-card{flex:0 0 calc((100% - 40px)/3);scroll-snap-align:start;background:#fff;border-radius:var(--radius);padding:30px;border:1px solid var(--line);display:flex;flex-direction:column;gap:20px}
+.ss.ss .t-card .q{font-size:60px;line-height:.5;color:var(--yellow);font-weight:800;height:24px}
+.ss.ss .t-card p{flex:1;font-size:18px}
+.ss.ss .t-card img{height:54px;width:auto;object-fit:contain;align-self:flex-start}
+.ss.ss .t-nav{display:flex;gap:10px}
+.ss.ss .t-nav button{width:50px;height:50px;padding:0;border-radius:50%!important;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:20px;cursor:pointer;transition:.2s}
+.ss.ss .t-nav button:hover{background:var(--green);color:#fff;border-color:var(--green)}
+@media (max-width:1100px){
+.ss.ss .t-card{flex-basis:calc((100% - 20px)/2)}
+}
+@media (max-width:680px){
+.ss.ss .t-card{flex-basis:88%}
+}
+</style>
+<div class="ss">
+<section class="testi">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <span class="eyebrow">Testimonials</span>
+        <h2>What our clients say</h2>
+      </div>
+      <div class="t-nav">
+        <button id="tPrev" aria-label="Previous testimonials">←</button>
+        <button id="tNext" aria-label="Next testimonials">→</button>
+      </div>
+    </div>
+    <div class="t-track" id="tTrack">
+      <figure class="t-card"><div class="q">“</div><p>Saudisoft is an SAP committed translation partner with deep knowledge of the subject matter. As language testers, they have never failed to impress with their thorough testing capabilities and smooth project management.</p><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Tes2.png.png" alt="SAP" loading="lazy"></figure>
+      <figure class="t-card"><div class="q">“</div><p>We were very impressed by your solid in-house team and well-established processes, as well as the expertise demonstrated by your dubbing studio. We look forward to bringing our games to the Arabic market with an epic localization.</p><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Tes3.png.png" alt="Client logo" loading="lazy"></figure>
+      <figure class="t-card"><div class="q">“</div><p>Saudisoft with their Arabic skills has played a major role in Posiflex becoming the number 1 POS manufacturer in the Arabic-speaking world, and we are very grateful for our association.</p><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/pos-150x150.png.png" alt="Posiflex" loading="lazy"></figure>
+      <figure class="t-card"><div class="q">“</div><p>A perfectly professional translation service with on-time delivery. As always, I was extremely pleased with the cooperation of the team at Saudisoft, which never ceases to exceed all expectations.</p><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/uni-150x150.png.png" alt="Client logo" loading="lazy"></figure>
+      <figure class="t-card"><div class="q">“</div><p>Great company with great people who care about their customers and endeavour to deliver the best quality in a timely and professional manner.</p><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Tes1.png.png" alt="Client logo" loading="lazy"></figure>
+      <figure class="t-card"><div class="q">“</div><p>Saudisoft has been a highly reliable language services partner. Our projects were delivered on time and with high quality, and communication always goes smoothly. I certainly recommend Saudisoft.</p><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Tes2.png.png" alt="SAP" loading="lazy"></figure>
+    </div>
+  </div>
+</section>
+</div>
+<script>
+(function(){
+function run(){
+var tt = document.querySelector('.ss #tTrack'); if (!tt || tt.dataset.init) return; tt.dataset.init = 1;
+function step(){ return tt.querySelector('.t-card').offsetWidth + 20; }
+document.querySelector('.ss #tPrev').onclick = function(){ tt.scrollBy({left:-step(), behavior:'smooth'}); };
+document.querySelector('.ss #tNext').onclick = function(){ tt.scrollBy({left: step(), behavior:'smooth'}); };
+}
+if(document.readyState!=="loading")run();else document.addEventListener("DOMContentLoaded",run);
+})();
+</script>

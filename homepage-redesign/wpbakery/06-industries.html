@@ -1,0 +1,53 @@
+<!--
+  Saudisoft homepage — 06 INDUSTRIES
+  HOW TO USE (WPBakery):
+   1. Add a Row. Row settings > Type: "Full Width Content", Padding top/bottom: 0.
+   2. Inside the (single, 1/1) column add a "Raw HTML" element and paste this whole file.
+   3. The "00-global-styles.html" block must be on the same page ONCE, above all sections.
+-->
+
+<style>
+.ss.ss .industries{background:#fff}
+.ss.ss .ind-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.ss.ss .ind{display:block;border:1px solid var(--line);border-radius:var(--radius);padding:24px;transition:.3s;background:#fff}
+.ss.ss .ind:hover{border-color:var(--green);transform:translateY(-3px);box-shadow:var(--shadow)}
+.ss.ss .ind .ic{width:58px;height:58px;border-radius:16px;background:var(--bg-soft);display:grid;place-items:center;margin-bottom:16px}
+.ss.ss .ind .ic img{width:40px;height:40px;object-fit:contain}
+.ss.ss .ind h3{font-size:21px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.ss.ss .ind h3::after{content:"→";color:var(--green);opacity:0;transform:translateX(-6px);transition:.3s}
+.ss.ss .ind:hover h3::after{opacity:1;transform:none}
+.ss.ss .ind p{font-size:16px;color:var(--muted);line-height:1.45}
+@media (max-width:1100px){
+.ss.ss .ind-grid{grid-template-columns:1fr 1fr}
+}
+@media (max-width:680px){
+.ss.ss .ind-grid{grid-template-columns:1fr}
+}
+</style>
+<div class="ss">
+<section class="industries">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <span class="eyebrow">Industries</span>
+        <h2>Deep expertise in the industries we serve</h2>
+      </div>
+      <a class="btn btn-line" href="https://localization.saudisoft.com/industries/">All industries <span class="ss-arr">→</span></a>
+    </div>
+    <div class="ind-grid">
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/software-localization-services/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Software.png" alt="" loading="lazy"></div><h3>Software</h3><p>A consistent brand experience for international users, technically and linguistically.</p></a>
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/video-games-localization-services/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2022/09/Gaming.webp" alt="" loading="lazy"></div><h3>Gaming</h3><p>Games that feel native to every local player community.</p></a>
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/language-solutions-for-education/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/E-Learning.png.png" alt="" loading="lazy"></div><h3>Education</h3><p>The same quality of learning for every student, in their native language.</p></a>
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/media-translation-services/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Media.png" alt="" loading="lazy"></div><h3>Media</h3><p>Viewing experiences that break language barriers and drive engagement.</p></a>
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/financial-translation-services/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Banking-Finance.png.png" alt="" loading="lazy"></div><h3>Banking &amp; Finance</h3><p>Precise financial content aligned with local regulations and culture.</p></a>
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/marketing-localization/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Marketing.png" alt="" loading="lazy"></div><h3>Marketing</h3><p>Brand messages that build trust and loyalty in every culture.</p></a>
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/e-commerce-translation/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/E-commerce@2x.png" alt="" loading="lazy"></div><h3>E-commerce</h3><p>Native shopping experiences, from UI to multilingual SEO.</p></a>
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/government-translation-services/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Government-1.png" alt="" loading="lazy"></div><h3>Government</h3><p>Accessible public services that meet every standard of governance.</p></a>
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/legal-translations-services/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Legal.png" alt="" loading="lazy"></div><h3>Legal</h3><p>Accurate legal translation that satisfies local authorities.</p></a>
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/medical-translation-services/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Healthcare.png" alt="" loading="lazy"></div><h3>Medical</h3><p>Clear communication between healthcare providers and patients.</p></a>
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/aviation-translations/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Airport-Translators.webp" alt="" loading="lazy"></div><h3>Aviation</h3><p>Content that meets diverse service standards and regulations.</p></a>
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/manufacturing-translation-services/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Manufacturing-Translation-Services.webp" alt="" loading="lazy"></div><h3>Manufacturing</h3><p>Manuals and safety guidelines adapted for global compliance.</p></a>
+    </div>
+  </div>
+</section>
+</div>

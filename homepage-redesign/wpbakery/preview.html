@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Section preview</title><style>body{margin:0;background:#fff}</style></head><body>
+<!-- Local preview only: all WPBakery section files stacked in page order. Do not paste this file into WordPress. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zain:wght@300;400;700;800&display=swap" rel="stylesheet">
+<style>
+/* hide-until-visible only when JS is running, so content never stays invisible */
+html.ss-js .ss .reveal{opacity:0;transform:translateY(24px)}
+html.ss-js .ss .reveal.in{opacity:1;transform:none}
+/* remove WPBakery/Salient spacing around our Raw HTML blocks */
+.wpb_raw_code:has(.ss){margin-bottom:0!important}
+.wpb_row:has(.ss){margin-bottom:0!important}
+@media (prefers-reduced-motion:reduce){html.ss-js .ss .reveal{opacity:1;transform:none}}
+</style>
+<style>
+.ss.ss{--green:#0c6c42;--green-deep:#063d26;--teal:#006055;--yellow:#fadc29;--ink:#10201a;--muted:#56655e;--line:#e3e9e5;--bg-soft:#f4f7f5;--dark:#141a17;--radius:18px;--shadow:0 18px 40px -18px rgba(6,61,38,.28);
+  font-family:"Zain",system-ui,sans-serif;font-size:19px;line-height:1.55;color:var(--ink);-webkit-font-smoothing:antialiased;text-align:left;width:100%;max-width:100%;overflow-x:clip}
+.ss.ss *,.ss.ss *::before,.ss.ss *::after{box-sizing:border-box;margin:0;padding:0}
+.ss.ss img{max-width:100%;display:block;margin:0;border:0;box-shadow:none}
+.ss.ss a{color:inherit;text-decoration:none;background-image:none}
+.ss.ss a:hover,.ss.ss a:focus{text-decoration:none}
+.ss.ss ul,.ss.ss ol{list-style:none;margin:0}
+.ss.ss figure{margin:0}
+.ss.ss p{color:inherit;padding:0;font-size:inherit;line-height:inherit}
+.ss.ss h1,.ss.ss h2,.ss.ss h3,.ss.ss h4,.ss.ss h5{font-family:"Zain",system-ui,sans-serif;line-height:1.1;letter-spacing:-.02em;font-weight:800;color:inherit;text-transform:none;margin:0;padding:0}
+.ss.ss h2{font-size:clamp(34px,4.2vw,54px)}
+.ss.ss h3{font-size:24px}
+.ss.ss button{font-family:inherit;box-shadow:none}
+.ss.ss section{padding:100px 0}
+.ss.ss .wrap{max-width:1240px;margin:0 auto;padding:0 24px}
+.ss.ss .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--green)}
+.ss.ss .eyebrow::before{content:"";width:22px;height:3px;border-radius:3px;background:var(--yellow)}
+.ss.ss .sec-head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:48px;flex-wrap:wrap}
+.ss.ss .sec-head h2{margin-top:10px;max-width:720px}
+.ss.ss .btn{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:18px;line-height:1.2;padding:14px 26px;border-radius:999px;border:2px solid transparent;cursor:pointer;transition:transform .25s,box-shadow .25s,background .25s,color .25s}
+.ss.ss .btn:hover{transform:translateY(-2px)}
+.ss.ss .btn-primary,.ss.ss .btn-primary:hover{background:var(--yellow);color:var(--green-deep)}
+.ss.ss .btn-primary:hover{box-shadow:0 12px 26px -10px rgba(250,220,41,.8)}
+.ss.ss .btn-green,.ss.ss .btn-green:hover{background:var(--green);color:#fff}
+.ss.ss .btn-ghost{border-color:rgba(255,255,255,.5);color:#fff}
+.ss.ss .btn-ghost:hover{background:#fff;color:var(--green-deep)}
+.ss.ss .btn-line{border-color:var(--green);color:var(--green)}
+.ss.ss .btn-line:hover{background:var(--green);color:#fff}
+.ss.ss .ss-arr{transition:transform .25s}
+.ss.ss a:hover .ss-arr{transform:translateX(4px)}
+.ss.ss .reveal{transition:opacity .8s ease,transform .8s ease}
+@keyframes ss-scroll{to{transform:translateX(-50%)}}
+@keyframes ss-rise{from{opacity:0;transform:translateY(40%)}to{opacity:1;transform:none}}
+@media (max-width:680px){
+.ss.ss{font-size:18px}
+.ss.ss section{padding:70px 0}
+}
+@media (prefers-reduced-motion:reduce){
+.ss.ss *,.ss.ss *::before,.ss.ss *::after{animation:none!important;transition:none!important}
+}
+</style>
+<script>
+document.documentElement.classList.add('ss-js');
+(function(){
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function go(){
+    var els = document.querySelectorAll('.ss .reveal');
+    if (!('IntersectionObserver' in window)) { els.forEach(function(e){e.classList.add('in')}); return; }
+    var io = new IntersectionObserver(function(entries){ entries.forEach(function(e){
+      if (!e.isIntersecting) return;
+      e.target.classList.add('in');
+      var n = e.target.querySelector('[data-count]');
+      if (n && !reduce) {
+        var end = +n.dataset.count, suf = n.dataset.suffix || '', t0 = performance.now();
+        (function tick(t){ var p = Math.min((t - t0) / 1400, 1); n.textContent = Math.round(end * (1 - Math.pow(1 - p, 3))) + suf; if (p < 1) requestAnimationFrame(tick); })(t0);
+      }
+      io.unobserve(e.target);
+    }); }, {threshold:.15});
+    els.forEach(function(e){ io.observe(e); });
+  }
+  if (document.readyState !== 'loading') go(); else document.addEventListener('DOMContentLoaded', go);
+})();
+</script>
+<style>
+.ss.ss .hero{position:relative;overflow:hidden;background:var(--green-deep);color:#fff;padding:0}
+.ss.ss .hero-slides{position:absolute;inset:0}
+.ss.ss .hero-slide{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transform:scale(1.06);transition:opacity 1.2s ease,transform 7s ease}
+.ss.ss .hero-slide.active{opacity:1;transform:scale(1)}
+.ss.ss .hero::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,rgba(6,40,25,.94) 0%,rgba(6,61,38,.82) 45%,rgba(6,61,38,.25) 100%)}
+.ss.ss .hero .wrap{position:relative;z-index:2;display:grid;grid-template-columns:1.25fr .75fr;gap:48px;align-items:center;min-height:min(86vh,760px);padding-top:80px;padding-bottom:80px}
+.ss.ss .badge{display:inline-flex;align-items:center;gap:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);padding:7px 16px 7px 8px;border-radius:999px;font-size:16px;font-weight:700}
+.ss.ss .badge b{background:var(--yellow);color:var(--green-deep);padding:2px 10px;border-radius:999px}
+.ss.ss .hero h1{font-size:clamp(44px,6vw,82px);margin:22px 0 18px;color:#fff}
+.ss.ss .hero h1 .rot{color:var(--yellow);display:inline-block;min-width:4ch}
+.ss.ss .hero .rot span{display:inline-block;animation:ss-rise .5s ease}
+.ss.ss .hero p.sub{font-size:22px;color:#d6e6dd;max-width:600px}
+.ss.ss .hero-ctas{display:flex;gap:14px;margin-top:34px;flex-wrap:wrap}
+.ss.ss .hero-card{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(14px);border-radius:24px;padding:28px}
+.ss.ss .hero-card h3{font-size:20px;color:var(--yellow);margin-bottom:6px}
+.ss.ss .slide-text{min-height:110px}
+.ss.ss .slide-text p{color:#e2eee8;font-size:18px}
+.ss.ss .dots{display:flex;gap:8px;margin-top:18px}
+.ss.ss .dots button{width:30px;height:5px;padding:0;border-radius:5px!important;border:0;background:rgba(255,255,255,.3);cursor:pointer;transition:.3s}
+.ss.ss .dots button.on{background:var(--yellow);width:48px}
+.ss.ss .hero-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px;padding-top:22px;border-top:1px solid rgba(255,255,255,.15)}
+.ss.ss .hero-stats strong{display:block;font-size:34px;color:#fff;line-height:1}
+.ss.ss .hero-stats span{font-size:15px;color:#b8d1c4}
+@media (max-width:1100px){
+.ss.ss .hero .wrap{grid-template-columns:1fr}
+}
+@media (max-width:680px){
+.ss.ss .hero-card{display:none}
+}
+</style>
+<div class="ss">
+<section class="hero">
+  <div class="hero-slides" aria-hidden="true">
+    <div class="hero-slide active" style="background-image:url('https://localization.saudisoft.com/wp-content/uploads/2025/06/1-2.webp')"></div>
+    <div class="hero-slide" style="background-image:url('https://localization.saudisoft.com/wp-content/uploads/2025/06/2-2.webp')"></div>
+    <div class="hero-slide" style="background-image:url('https://localization.saudisoft.com/wp-content/uploads/2025/06/3-2.webp')"></div>
+    <div class="hero-slide" style="background-image:url('https://localization.saudisoft.com/wp-content/uploads/2025/06/4-2.webp')"></div>
+  </div>
+  <div class="wrap">
+    <div>
+      <span class="badge"><b>Since 1983</b> Translation &amp; localization in 100+ languages</span>
+      <h1>Your brand, fluent in <span class="rot" id="rot" aria-live="polite"><span>every market</span></span></h1>
+      <p class="sub">Saudisoft is the Middle East &amp; GCC's trusted localization partner — combining native linguists, localization engineering and AI to take your products, content and games global.</p>
+      <div class="hero-ctas">
+        <a class="btn btn-primary" href="https://localization.saudisoft.com/get-quote/">Get a free quote <span class="ss-arr">→</span></a>
+        <a class="btn btn-ghost" href="#services">Explore services</a>
+      </div>
+    </div>
+    <aside class="hero-card" aria-label="Why Saudisoft">
+      <div class="slide-text" id="slideText">
+        <h3>Languages, solutions &amp; beyond</h3>
+        <p>We build solutions through our language and technical depth to reveal the growth potential beyond your region.</p>
+      </div>
+      <div class="dots" id="dots" role="tablist"></div>
+      <div class="hero-stats">
+        <div><strong>40+</strong><span>Years of expertise</span></div>
+        <div><strong>70+</strong><span>Countries served</span></div>
+      </div>
+    </aside>
+  </div>
+</section>
+</div>
+<script>
+(function(){
+function run(){
+var root = document.querySelector('.ss .hero'); if (!root || root.dataset.init) return; root.dataset.init = 1;
+var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+var slides = root.querySelectorAll('.hero-slide');
+var msgs = [
+  ['Languages, solutions &amp; beyond','We build solutions through our language and technical depth to reveal the growth potential beyond your region.'],
+  ['In-depth industry experience','We build new pathways to success by understanding your business language needs and creating a culturally rich experience for your clients.'],
+  ['Market awareness','We connect the dots of localization while keeping your target market at the centre of every decision.'],
+  ['Quality is a habit, not an act','Speed, scale and precision — delivered by an ISO 17100 and ISO 9001 certified language service provider.']
+];
+var text = root.querySelector('#slideText'), dots = root.querySelector('#dots'), cur = 0, timer;
+msgs.forEach(function(_, i){ var b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-label','Show message ' + (i + 1)); b.onclick = function(){ go(i); restart(); }; dots.appendChild(b); });
+function go(i){
+  slides[cur].classList.remove('active'); dots.children[cur].classList.remove('on');
+  cur = i; slides[cur].classList.add('active'); dots.children[cur].classList.add('on');
+  text.innerHTML = '<h3>' + msgs[i][0] + '</h3><p>' + msgs[i][1] + '</p>';
+}
+function restart(){ clearInterval(timer); if (!reduce) timer = setInterval(function(){ go((cur + 1) % slides.length); }, 5500); }
+go(0); restart();
+var words = ['every market','Arabic','Español','中文','日本語','Français','Deutsch','हिन्दी'], w = 0, rot = root.querySelector('#rot');
+if (!reduce) setInterval(function(){ w = (w + 1) % words.length; rot.innerHTML = '<span>' + words[w] + '</span>'; }, 2200);
+}
+if(document.readyState!=="loading")run();else document.addEventListener("DOMContentLoaded",run);
+})();
+</script>
+<style>
+.ss.ss .logos{padding:34px 0;border-bottom:1px solid var(--line);background:#fff}
+.ss.ss .logos .wrap{display:flex;align-items:center;gap:40px}
+.ss.ss .logos p{flex:0 0 auto;font-weight:700;color:var(--muted);font-size:17px;max-width:180px;line-height:1.2}
+.ss.ss .marquee{overflow:hidden;flex:1;min-width:0;width:100%;-webkit-mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent);mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent)}
+.ss.ss .track{display:flex;gap:64px;width:max-content;animation:ss-scroll 30s linear infinite}
+.ss.ss .marquee:hover .track{animation-play-state:paused}
+.ss.ss .track img{height:64px;width:auto;filter:grayscale(1);opacity:.7;transition:.3s}
+.ss.ss .track img:hover{filter:none;opacity:1}
+@media (max-width:680px){
+.ss.ss .logos .wrap{flex-direction:column;align-items:flex-start;gap:16px}
+}
+</style>
+<div class="ss">
+<div class="logos">
+  <div class="wrap">
+    <p>Trusted by global brands in every industry</p>
+    <div class="marquee">
+      <div class="track" id="logoTrack">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Tes1.png.png" alt="Client logo" width="150" height="150" loading="lazy">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/pos-150x150.png.png" alt="Posiflex" width="150" height="150" loading="lazy">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/uni-150x150.png.png" alt="Client logo" width="150" height="150" loading="lazy">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Tes5.png.png" alt="Client logo" width="150" height="150" loading="lazy">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Tes3.png.png" alt="Client logo" width="150" height="150" loading="lazy">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Tes2.png.png" alt="SAP" width="150" height="150" loading="lazy">
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+(function(){
+function run(){
+var t = document.querySelector('.ss #logoTrack'); if (!t || t.dataset.init) return; t.dataset.init = 1; t.innerHTML += t.innerHTML;
+}
+if(document.readyState!=="loading")run();else document.addEventListener("DOMContentLoaded",run);
+})();
+</script>
+<style>
+.ss.ss .about{background:#fff}
+.ss.ss .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center}
+.ss.ss .about-visual{position:relative;border-radius:28px;overflow:hidden;aspect-ratio:5/4;background:url("https://localization.saudisoft.com/wp-content/uploads/2025/06/2-2.webp") center/cover}
+.ss.ss .about-visual .since{position:absolute;left:24px;bottom:24px;background:var(--yellow);color:var(--green-deep);border-radius:20px;padding:18px 24px}
+.ss.ss .about-visual .since strong{display:block;font-size:52px;line-height:.9}
+.ss.ss .about h2{margin:12px 0 20px}
+.ss.ss .about p{color:var(--muted);margin-bottom:16px}
+.ss.ss .checks{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:26px 0 32px}
+.ss.ss .checks li{display:flex;gap:10px;align-items:flex-start;font-weight:700;list-style:none}
+.ss.ss .checks li::before{content:"✓";flex:0 0 26px;height:26px;border-radius:50%;background:#e4f1ea;color:var(--green);display:grid;place-items:center;font-size:15px}
+@media (max-width:1100px){
+.ss.ss .about-grid{grid-template-columns:1fr}
+}
+@media (max-width:680px){
+.ss.ss .checks{grid-template-columns:1fr}
+}
+</style>
+<div class="ss">
+<section class="about">
+  <div class="wrap about-grid">
+    <div class="about-visual reveal" role="img" aria-label="Saudisoft localization team">
+      <div class="since"><strong>1983</strong>Localizing for the world</div>
+    </div>
+    <div class="reveal">
+      <span class="eyebrow">Who we are</span>
+      <h2>Localization is the gateway to globalization. We've known that since 1983.</h2>
+      <p>More than 40 years ago, Saudisoft was founded with one mission: help businesses around the world become universally understood.</p>
+      <p>World-class linguists, pioneering technology, industry-leading scalability, rigorous security and hands-on support are how our partners compete — and win — internationally.</p>
+      <ul class="checks">
+        <li>Native, subject-matter linguists</li>
+        <li>ISO 17100 &amp; 9001 certified</li>
+        <li>Arabic &amp; RTL specialists</li>
+        <li>AI-assisted, human-verified</li>
+      </ul>
+      <a class="btn btn-line" href="https://localization.saudisoft.com/about/">About Saudisoft <span class="ss-arr">→</span></a>
+    </div>
+  </div>
+</section>
+</div>
+<style>
+.ss.ss .lang-band{background:var(--green);color:#fff;padding:0;overflow:hidden}
+.ss.ss .lang-band .lb-row{display:flex;gap:48px;padding:26px 0;width:max-content;animation:ss-scroll 40s linear infinite;font-size:34px;font-weight:800;line-height:1.3}
+.ss.ss .lang-band .lb-row span{opacity:.9}
+.ss.ss .lang-band .lb-row span:nth-child(odd){color:var(--yellow)}
+</style>
+<div class="ss">
+<div class="lang-band" aria-hidden="true">
+  <div class="lb-row">
+    <span>Innovation</span><span>ابتكار</span><span>Innovación</span><span>创新</span><span>イノベーション</span><span>Инновация</span><span>नवाचार</span><span>Innovazione</span><span>Yenilik</span><span>혁신</span>
+    <span>Innovation</span><span>ابتكار</span><span>Innovación</span><span>创新</span><span>イノベーション</span><span>Инновация</span><span>नवाचार</span><span>Innovazione</span><span>Yenilik</span><span>혁신</span>
+  </div>
+</div>
+</div>
+<style>
+.ss.ss .services{background:var(--bg-soft)}
+.ss.ss .tabs{display:flex;gap:8px;flex-wrap:wrap}
+.ss.ss .tabs button{font-size:17px;font-weight:700;padding:10px 20px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;transition:.2s}
+.ss.ss .tabs button.on{background:var(--green);border-color:var(--green);color:#fff}
+.ss.ss .svc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.ss.ss .svc{position:relative;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:28px;overflow:hidden;display:flex;flex-direction:column;transition:transform .3s,box-shadow .3s,border-color .3s}
+.ss.ss .svc::before{content:"";position:absolute;inset:0;background:var(--img) center/cover;opacity:0;transition:opacity .4s}
+.ss.ss .svc::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,96,85,.75),rgba(6,61,38,.95));opacity:0;transition:opacity .4s}
+.ss.ss .svc > *{position:relative;z-index:1}
+.ss.ss .svc:hover{transform:translateY(-4px);box-shadow:var(--shadow);border-color:transparent;color:#fff}
+.ss.ss .svc:hover::before,.ss.ss .svc:hover::after{opacity:1}
+.ss.ss .svc:hover p{color:#fff}
+.ss.ss .svc img{width:56px;height:56px;border-radius:14px;object-fit:cover;margin-bottom:20px}
+.ss.ss .svc h3{margin-bottom:10px}
+.ss.ss .svc p{color:var(--muted);font-size:17px;flex:1;transition:color .3s}
+.ss.ss .svc .more{margin-top:18px;font-weight:700;color:var(--green);display:inline-flex;gap:6px}
+.ss.ss .svc:hover .more{color:var(--yellow)}
+.ss.ss .svc.ss-hide{display:none}
+@media (max-width:1100px){
+.ss.ss .svc-grid{grid-template-columns:1fr 1fr}
+}
+@media (max-width:680px){
+.ss.ss .svc-grid{grid-template-columns:1fr}
+}
+</style>
+<div class="ss">
+<section class="services" id="services">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <span class="eyebrow">What we do</span>
+        <h2>Every localization service you need to engage a global audience</h2>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Filter services">
+        <button class="on" data-f="all">All</button>
+        <button data-f="media">Media</button>
+        <button data-f="tech">Technical</button>
+        <button data-f="lang">Language</button>
+      </div>
+    </div>
+    <div class="svc-grid" id="svcGrid">
+      <a class="svc reveal" data-c="media" href="https://localization.saudisoft.com/services/subtitling-services/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/11/1a.png')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Subtitling-Services-1.webp" alt="" loading="lazy">
+        <h3>Subtitling</h3><p>Pairing audio with precisely timed text so your video content delivers its message in any language.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="media" href="https://localization.saudisoft.com/services/voice-over-services/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/11/voiceover.jpg@0.33x.png')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Links_0010_VoiceOver.jpg.webp" alt="" loading="lazy">
+        <h3>Voice Over &amp; Dubbing</h3><p>We bring your stories to life with native voice talent, boosting accessibility and inclusivity.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="media" href="https://localization.saudisoft.com/services/transcreation-services/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/11/transcreation.jpg@0.33x.png')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Links_0008_Group-3-copy-2.jpg.webp" alt="" loading="lazy">
+        <h3>Transcreation</h3><p>Copywriters who recreate your message for a new culture while preserving its original intent.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="media" href="https://localization.saudisoft.com/services/transcription-service/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/11/transcription.jpg@0.33x.png')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Links_0007_Group-3-copy-3.jpg.webp" alt="" loading="lazy">
+        <h3>Transcription</h3><p>Converting spoken language into accurate, searchable text for your business needs.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="media" href="https://localization.saudisoft.com/services/3d-localization/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2025/01/3D-Graphics.webp')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/3D-Assets-Adaptation-Implementation.webp" alt="" loading="lazy">
+        <h3>2D &amp; 3D Graphics</h3><p>Adapting in-scene assets for games, animation and film to build immersive, local-feeling worlds.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="tech" href="https://localization.saudisoft.com/services/website-localization-services/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/12/website-localization-services-1.webp')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Links_0004_Group-3-copy-6.jpg.webp" alt="" loading="lazy">
+        <h3>Website Localization</h3><p>Adapting your site to local regulations, cultural sensitivities and user preferences in each market.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="tech" href="https://localization.saudisoft.com/services/app-localization-services/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/12/Image-42.webp')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/App-localization-services.webp" alt="" loading="lazy">
+        <h3>App Localization</h3><p>Meeting the linguistic, cultural and technical requirements of every app store you launch in.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="tech" href="https://localization.saudisoft.com/services/seo-localization/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2023/09/Multilingual-SEO-NO-Words-e1736432397735.webp')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/SEO.webp" alt="" loading="lazy">
+        <h3>SEO Localization</h3><p>Multilingual keyword research and on-page optimisation so global customers can find you.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="tech" href="https://localization.saudisoft.com/services/localization-engineering/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/11/engineering.jpg@0.33x.png')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Localization-Engineering-Services-1.webp" alt="" loading="lazy">
+        <h3>Localization Engineering</h3><p>Not a separate phase but an integral function — the bridge between translation and technology.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="tech" href="https://localization.saudisoft.com/services/localization-testing-services/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/11/testing.jpg@0.33x.png')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Links_0005_Group-3-copy-5.jpg.webp" alt="" loading="lazy">
+        <h3>Localization Testing</h3><p>Linguistic and functional testing that makes sure your product is launch-ready in every market.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="tech" href="https://localization.saudisoft.com/services/layout-and-desktop-publishing/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/12/Layout-and-Desktop-Publishing-03.webp')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Links_0004_Group-3-copy-6.jpg.webp" alt="" loading="lazy">
+        <h3>Desktop Publishing</h3><p>Pixel-perfect multilingual layouts, including Arabic RTL, for consistent branding worldwide.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="lang" href="https://localization.saudisoft.com/services/ai-translation-service/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/12/AI-Language-Solutions_Post_Design.webp')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/AI-Language-Solutions.webp" alt="" loading="lazy">
+        <h3>AI Translation</h3><p>AI speed and scale with expert human review — faster turnaround without compromising quality.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="lang" href="https://localization.saudisoft.com/services/document-translation-services/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2025/01/document-translation-services-2.webp')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/document-translation-services-1.webp" alt="" loading="lazy">
+        <h3>Document Translation</h3><p>Seamless translation for every document type and language, handled by skilled translators.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="lang" href="https://localization.saudisoft.com/services/multilingual-translation/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/11/multilingual-translation.jpg@0.33x.png')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Links-8-e1737025553117.webp" alt="" loading="lazy">
+        <h3>Multilingual Translation</h3><p>Content that resonates across cultures while keeping its original meaning intact.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="lang" href="https://localization.saudisoft.com/services/interpretation/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/11/interpretation2.jpg@0.33x.png')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Links_0000_Group-3-copy-10.jpg.webp" alt="" loading="lazy">
+        <h3>Interpretation</h3><p>Professional interpreters who listen, understand and relay every message at your events.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="lang" href="https://localization.saudisoft.com/services/localization-quality-assurance-lqa/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/11/localization-quality-assurance-1.jpg@0.33x.png')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Links_0002_Group-3-copy-8.jpg.webp" alt="" loading="lazy">
+        <h3>Quality Assurance (LQA)</h3><p>ISO-driven linguistic and functional checks that reduce risk and eliminate costly errors.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="lang" href="https://localization.saudisoft.com/services/cultural-assessment/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/11/Cultural-Assessment.jpg@0.33x.png')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Links_0001_Group-3-copy-9.jpg.webp" alt="" loading="lazy">
+        <h3>Cultural Assessment</h3><p>Market-specific insight that eases entry into new regions and builds stronger customer relationships.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+    </div>
+  </div>
+</section>
+</div>
+<script>
+(function(){
+function run(){
+var root = document.querySelector('.ss .services'); if (!root || root.dataset.init) return; root.dataset.init = 1;
+var btns = root.querySelectorAll('.tabs button');
+btns.forEach(function(btn){ btn.type = 'button'; btn.addEventListener('click', function(){
+  btns.forEach(function(b){ b.classList.toggle('on', b === btn); });
+  var f = btn.dataset.f;
+  root.querySelectorAll('.svc').forEach(function(s){ s.classList.toggle('ss-hide', f !== 'all' && s.dataset.c !== f); });
+}); });
+}
+if(document.readyState!=="loading")run();else document.addEventListener("DOMContentLoaded",run);
+})();
+</script>
+<style>
+.ss.ss .industries{background:#fff}
+.ss.ss .ind-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.ss.ss .ind{display:block;border:1px solid var(--line);border-radius:var(--radius);padding:24px;transition:.3s;background:#fff}
+.ss.ss .ind:hover{border-color:var(--green);transform:translateY(-3px);box-shadow:var(--shadow)}
+.ss.ss .ind .ic{width:58px;height:58px;border-radius:16px;background:var(--bg-soft);display:grid;place-items:center;margin-bottom:16px}
+.ss.ss .ind .ic img{width:40px;height:40px;object-fit:contain}
+.ss.ss .ind h3{font-size:21px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.ss.ss .ind h3::after{content:"→";color:var(--green);opacity:0;transform:translateX(-6px);transition:.3s}
+.ss.ss .ind:hover h3::after{opacity:1;transform:none}
+.ss.ss .ind p{font-size:16px;color:var(--muted);line-height:1.45}
+@media (max-width:1100px){
+.ss.ss .ind-grid{grid-template-columns:1fr 1fr}
+}
+@media (max-width:680px){
+.ss.ss .ind-grid{grid-template-columns:1fr}
+}
+</style>
+<div class="ss">
+<section class="industries">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <span class="eyebrow">Industries</span>
+        <h2>Deep expertise in the industries we serve</h2>
+      </div>
+      <a class="btn btn-line" href="https://localization.saudisoft.com/industries/">All industries <span class="ss-arr">→</span></a>
+    </div>
+    <div class="ind-grid">
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/software-localization-services/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Software.png" alt="" loading="lazy"></div><h3>Software</h3><p>A consistent brand experience for international users, technically and linguistically.</p></a>
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/video-games-localization-services/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2022/09/Gaming.webp" alt="" loading="lazy"></div><h3>Gaming</h3><p>Games that feel native to every local player community.</p></a>
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/language-solutions-for-education/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/E-Learning.png.png" alt="" loading="lazy"></div><h3>Education</h3><p>The same quality of learning for every student, in their native language.</p></a>
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/media-translation-services/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Media.png" alt="" loading="lazy"></div><h3>Media</h3><p>Viewing experiences that break language barriers and drive engagement.</p></a>
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/financial-translation-services/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Banking-Finance.png.png" alt="" loading="lazy"></div><h3>Banking &amp; Finance</h3><p>Precise financial content aligned with local regulations and culture.</p></a>
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/marketing-localization/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Marketing.png" alt="" loading="lazy"></div><h3>Marketing</h3><p>Brand messages that build trust and loyalty in every culture.</p></a>
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/e-commerce-translation/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/E-commerce@2x.png" alt="" loading="lazy"></div><h3>E-commerce</h3><p>Native shopping experiences, from UI to multilingual SEO.</p></a>
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/government-translation-services/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Government-1.png" alt="" loading="lazy"></div><h3>Government</h3><p>Accessible public services that meet every standard of governance.</p></a>
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/legal-translations-services/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Legal.png" alt="" loading="lazy"></div><h3>Legal</h3><p>Accurate legal translation that satisfies local authorities.</p></a>
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/medical-translation-services/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Healthcare.png" alt="" loading="lazy"></div><h3>Medical</h3><p>Clear communication between healthcare providers and patients.</p></a>
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/aviation-translations/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Airport-Translators.webp" alt="" loading="lazy"></div><h3>Aviation</h3><p>Content that meets diverse service standards and regulations.</p></a>
+      <a class="ind reveal" href="https://localization.saudisoft.com/industries/manufacturing-translation-services/"><div class="ic"><img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Manufacturing-Translation-Services.webp" alt="" loading="lazy"></div><h3>Manufacturing</h3><p>Manuals and safety guidelines adapted for global compliance.</p></a>
+    </div>
+  </div>
+</section>
+</div>
+<style>
+.ss.ss .stats{background:var(--dark);color:#fff;position:relative;overflow:hidden}
+.ss.ss .stats::before{content:"";position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(12,108,66,.5),transparent 70%);right:-200px;top:-250px}
+.ss.ss .stats .wrap{position:relative;display:grid;grid-template-columns:1fr 1.4fr;gap:60px;align-items:center}
+.ss.ss .stats .eyebrow{color:var(--yellow)}
+.ss.ss .stats h2{margin:12px 0 16px;color:#fff}
+.ss.ss .stats p{color:#aebdb5}
+.ss.ss .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.ss.ss .stat{border:1px solid rgba(255,255,255,.12);border-radius:var(--radius);padding:28px;background:rgba(255,255,255,.03)}
+.ss.ss .stat strong{font-size:clamp(48px,5vw,68px);line-height:1;color:var(--yellow);font-weight:800}
+.ss.ss .stat span{display:block;margin-top:8px;color:#cfdcd5;font-size:18px}
+@media (max-width:1100px){
+.ss.ss .stats .wrap{grid-template-columns:1fr}
+}
+@media (max-width:680px){
+.ss.ss .stat-grid{grid-template-columns:1fr}
+}
+</style>
+<div class="ss">
+<section class="stats">
+  <div class="wrap">
+    <div class="reveal">
+      <span class="eyebrow">Our business in numbers</span>
+      <h2>Speed, scale and precision — proven over four decades</h2>
+      <p>Clients come back because quality isn't an act for us, it's a habit.</p>
+    </div>
+    <div class="stat-grid">
+      <div class="stat reveal"><strong data-count="100" data-suffix="+">100+</strong><span>Languages supported</span></div>
+      <div class="stat reveal"><strong data-count="90" data-suffix="%">90%</strong><span>Customer retention</span></div>
+      <div class="stat reveal"><strong data-count="70" data-suffix="+">70+</strong><span>Countries served</span></div>
+      <div class="stat reveal"><strong data-count="40" data-suffix="+">40+</strong><span>Years in localization</span></div>
+    </div>
+  </div>
+</section>
+</div>
+<style>
+.ss.ss .why-sec{background:#fff}
+.ss.ss .why-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.ss.ss .why{padding:30px;border-radius:var(--radius);background:var(--bg-soft)}
+.ss.ss .why .num{font-size:15px;font-weight:800;color:var(--green);letter-spacing:.1em}
+.ss.ss .why h3{font-size:22px;margin:14px 0 8px}
+.ss.ss .why p{color:var(--muted);font-size:17px}
+.ss.ss .why:nth-child(2){background:#fff9d6}
+.ss.ss .why:nth-child(3){background:#e4f1ea}
+.ss.ss .certs{margin-top:28px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;padding:24px 28px;border:1px dashed var(--line);border-radius:var(--radius)}
+.ss.ss .certs strong{font-size:20px}
+.ss.ss .certs a:hover{color:var(--green)}
+.ss.ss .certs .pill{padding:8px 16px;border-radius:999px;background:var(--green);color:#fff;font-weight:700;font-size:16px}
+@media (max-width:1100px){
+.ss.ss .why-grid{grid-template-columns:1fr 1fr}
+}
+@media (max-width:680px){
+.ss.ss .why-grid{grid-template-columns:1fr}
+}
+</style>
+<div class="ss">
+<section class="why-sec">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <span class="eyebrow">Why Saudisoft</span>
+        <h2>Bringing out the best in every business</h2>
+      </div>
+    </div>
+    <div class="why-grid">
+      <div class="why reveal"><span class="num">01</span><h3>Business-first technology</h3><p>We bring technology into the context of your business and recognise your challenges.</p></div>
+      <div class="why reveal"><span class="num">02</span><h3>Opportunity-ready</h3><p>We help you anticipate and capitalise on emerging market opportunities.</p></div>
+      <div class="why reveal"><span class="num">03</span><h3>Your success, centre stage</h3><p>Dedicated project management and support around the clock.</p></div>
+      <div class="why reveal"><span class="num">04</span><h3>Trusted worldwide</h3><p>Leading clients rely on us to deliver excellence and innovation.</p></div>
+    </div>
+    <div class="certs reveal">
+      <strong>Certified &amp; connected:</strong>
+      <span class="pill">ISO 17100</span><span class="pill">ISO 9001</span>
+      <a href="https://www.gala-global.org/" target="_blank" rel="noopener">GALA member</a> ·
+      <a href="https://www.sap.com/" target="_blank" rel="noopener">SAP translation partner</a> ·
+      <a href="https://eagls.org/home-en/" target="_blank" rel="noopener">EAGLS member</a>
+    </div>
+  </div>
+</section>
+</div>
+<style>
+.ss.ss .testi{background:var(--bg-soft)}
+.ss.ss .t-track{display:flex;gap:20px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding-bottom:6px}
+.ss.ss .t-track::-webkit-scrollbar{display:none}
+.ss.ss .t-card{flex:0 0 calc((100% - 40px)/3);scroll-snap-align:start;background:#fff;border-radius:var(--radius);padding:30px;border:1px solid var(--line);display:flex;flex-direction:column;gap:20px}
+.ss.ss .t-card .q{font-size:60px;line-height:.5;color:var(--yellow);font-weight:800;height:24px}
+.ss.ss .t-card p{flex:1;font-size:18px}
+.ss.ss .t-card img{height:54px;width:auto;object-fit:contain;align-self:flex-start}
+.ss.ss .t-nav{display:flex;gap:10px}
+.ss.ss .t-nav button{width:50px;height:50px;padding:0;border-radius:50%!important;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:20px;cursor:pointer;transition:.2s}
+.ss.ss .t-nav button:hover{background:var(--green);color:#fff;border-color:var(--green)}
+@media (max-width:1100px){
+.ss.ss .t-card{flex-basis:calc((100% - 20px)/2)}
+}
+@media (max-width:680px){
+.ss.ss .t-card{flex-basis:88%}
+}
+</style>
+<div class="ss">
+<section class="testi">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <span class="eyebrow">Testimonials</span>
+        <h2>What our clients say</h2>
+      </div>
+      <div class="t-nav">
+        <button id="tPrev" aria-label="Previous testimonials">←</button>
+        <button id="tNext" aria-label="Next testimonials">→</button>
+      </div>
+    </div>
+    <div class="t-track" id="tTrack">
+      <figure class="t-card"><div class="q">“</div><p>Saudisoft is an SAP committed translation partner with deep knowledge of the subject matter. As language testers, they have never failed to impress with their thorough testing capabilities and smooth project management.</p><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Tes2.png.png" alt="SAP" loading="lazy"></figure>
+      <figure class="t-card"><div class="q">“</div><p>We were very impressed by your solid in-house team and well-established processes, as well as the expertise demonstrated by your dubbing studio. We look forward to bringing our games to the Arabic market with an epic localization.</p><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Tes3.png.png" alt="Client logo" loading="lazy"></figure>
+      <figure class="t-card"><div class="q">“</div><p>Saudisoft with their Arabic skills has played a major role in Posiflex becoming the number 1 POS manufacturer in the Arabic-speaking world, and we are very grateful for our association.</p><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/pos-150x150.png.png" alt="Posiflex" loading="lazy"></figure>
+      <figure class="t-card"><div class="q">“</div><p>A perfectly professional translation service with on-time delivery. As always, I was extremely pleased with the cooperation of the team at Saudisoft, which never ceases to exceed all expectations.</p><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/uni-150x150.png.png" alt="Client logo" loading="lazy"></figure>
+      <figure class="t-card"><div class="q">“</div><p>Great company with great people who care about their customers and endeavour to deliver the best quality in a timely and professional manner.</p><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Tes1.png.png" alt="Client logo" loading="lazy"></figure>
+      <figure class="t-card"><div class="q">“</div><p>Saudisoft has been a highly reliable language services partner. Our projects were delivered on time and with high quality, and communication always goes smoothly. I certainly recommend Saudisoft.</p><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/Tes2.png.png" alt="SAP" loading="lazy"></figure>
+    </div>
+  </div>
+</section>
+</div>
+<script>
+(function(){
+function run(){
+var tt = document.querySelector('.ss #tTrack'); if (!tt || tt.dataset.init) return; tt.dataset.init = 1;
+function step(){ return tt.querySelector('.t-card').offsetWidth + 20; }
+document.querySelector('.ss #tPrev').onclick = function(){ tt.scrollBy({left:-step(), behavior:'smooth'}); };
+document.querySelector('.ss #tNext').onclick = function(){ tt.scrollBy({left: step(), behavior:'smooth'}); };
+}
+if(document.readyState!=="loading")run();else document.addEventListener("DOMContentLoaded",run);
+})();
+</script>
+<style>
+.ss.ss .blog{background:#fff}
+.ss.ss .blog-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:20px}
+.ss.ss .ss-post{position:relative;border-radius:var(--radius);overflow:hidden;min-height:260px;display:flex;align-items:flex-end;color:#fff}
+.ss.ss .ss-post:first-child{grid-row:span 2;min-height:540px}
+.ss.ss .ss-post img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .6s}
+.ss.ss .ss-post:hover img{transform:scale(1.05)}
+.ss.ss .ss-post::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(8,20,14,.9))}
+.ss.ss .ss-post .pbody{position:relative;z-index:1;padding:24px}
+.ss.ss .ss-post .pmeta{font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--yellow);font-weight:700}
+.ss.ss .ss-post h3{font-size:22px;margin-top:6px;color:#fff}
+.ss.ss .ss-post:first-child h3{font-size:32px}
+@media (max-width:680px){
+.ss.ss .blog-grid{grid-template-columns:1fr}
+.ss.ss .ss-post:first-child{grid-row:auto;min-height:340px}
+.ss.ss .ss-post{grid-column:auto!important}
+}
+</style>
+<div class="ss">
+<section class="blog">
+  <!-- Update the 4 posts below when you publish new articles (or replace this block with a WPBakery "Post Grid"). -->
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <span class="eyebrow">Insights</span>
+        <h2>Latest blogs &amp; news</h2>
+      </div>
+      <a class="btn btn-line" href="https://localization.saudisoft.com/our-blogs/">View all articles <span class="ss-arr">→</span></a>
+    </div>
+    <div class="blog-grid">
+      <a class="ss-post reveal" href="https://localization.saudisoft.com/certified-translation-of-documents/"><img src="https://localization.saudisoft.com/wp-content/uploads/2026/08/Gemini_Generated_Image_qhkl1fqhkl1fqhkl-1024x559.jpg" alt="" loading="lazy"><div class="pbody"><span class="pmeta">Document Translation · 19 Aug 2026</span><h3>What counts as ‘certified’ translation of documents?</h3></div></a>
+      <a class="ss-post reveal" href="https://localization.saudisoft.com/game-localization-services-2026/"><img src="https://localization.saudisoft.com/wp-content/uploads/2026/08/Gemini_Generated_Image_vudtalvudtalvudt-1024x559.jpg" alt="" loading="lazy"><div class="pbody"><span class="pmeta">Games · 19 Aug 2026</span><h3>Why game localization matters for global revenue</h3></div></a>
+      <a class="ss-post reveal" href="https://localization.saudisoft.com/e-learning-localization-what-it/"><img src="https://localization.saudisoft.com/wp-content/uploads/2026/07/eLearning_localization_concept_d…_202607201041-3-1024x572.webp" alt="" loading="lazy"><div class="pbody"><span class="pmeta">E-learning · 20 Jul 2026</span><h3>E-learning localization: what it is and why it matters</h3></div></a>
+      <a class="ss-post reveal" href="https://localization.saudisoft.com/software-localization-vs/" style="grid-column:span 2"><img src="https://localization.saudisoft.com/wp-content/uploads/2026/07/Software_localization_internatio…_202607161113-1024x572.webp" alt="" loading="lazy"><div class="pbody"><span class="pmeta">Software · 16 Jul 2026</span><h3>Software localization vs. internationalization</h3></div></a>
+    </div>
+  </div>
+</section>
+</div>
+<style>
+.ss.ss .cta{padding:0 0 100px;background:#fff}
+.ss.ss .cta-box{border-radius:32px;background:linear-gradient(120deg,var(--green-deep),var(--green) 60%,var(--teal));color:#fff;padding:64px;display:grid;grid-template-columns:1.3fr 1fr;gap:40px;align-items:center;position:relative;overflow:hidden}
+.ss.ss .cta-box::after{content:"";position:absolute;right:-80px;bottom:-120px;width:380px;height:380px;border-radius:50%;border:60px solid rgba(250,220,41,.15)}
+.ss.ss .cta-box h2{color:#fff}
+.ss.ss .cta-box h2 em{font-style:normal;color:var(--yellow)}
+.ss.ss .cta-box p{color:#d6e6dd;margin-top:14px;font-size:20px}
+.ss.ss .cta-actions{display:flex;flex-direction:column;gap:12px;align-items:flex-start;position:relative;z-index:1}
+.ss.ss .cta-actions small{color:#b8d1c4;font-size:16px}
+.ss.ss .cta-actions small a{text-decoration:underline}
+@media (max-width:1100px){
+.ss.ss .cta-box{grid-template-columns:1fr}
+}
+@media (max-width:680px){
+.ss.ss .cta-box{padding:36px 24px}
+}
+</style>
+<div class="ss">
+<section class="cta">
+  <div class="wrap">
+    <div class="cta-box reveal">
+      <div>
+        <h2>Ready to <em>go global</em>? Let's talk.</h2>
+        <p>Get in touch with our localization consultants and start your global growth today. We reply within one business day.</p>
+      </div>
+      <div class="cta-actions">
+        <a class="btn btn-primary" href="https://localization.saudisoft.com/get-quote/">Get a free quote <span class="ss-arr">→</span></a>
+        <a class="btn btn-ghost" href="https://wa.me/966539251011">Chat on WhatsApp</a>
+        <small>Or email <a href="mailto:emarketing@saudisoft.com">emarketing@saudisoft.com</a></small>
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+<style>
+.ss.ss footer{background:var(--dark);color:#b9c6bf;padding:80px 0 28px;font-size:17px}
+.ss.ss .f-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1.2fr;gap:40px}
+.ss.ss footer h4{color:#fff;font-size:18px;margin-bottom:16px;letter-spacing:0}
+.ss.ss footer ul{display:grid;gap:8px}
+.ss.ss footer li{list-style:none}
+.ss.ss footer a:hover{color:var(--yellow)}
+.ss.ss footer .logo img{height:40px;width:auto;margin-bottom:16px}
+.ss.ss .phones a{display:flex;gap:10px;align-items:center}
+.ss.ss .phones img{width:22px;height:15px;border-radius:2px}
+.ss.ss .social{display:flex;gap:10px;margin-top:18px}
+.ss.ss .social a{width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.08);display:grid;place-items:center;transition:.2s}
+.ss.ss .social a:hover{background:var(--yellow);color:var(--dark)}
+.ss.ss .social svg{width:18px;height:18px;fill:currentColor}
+.ss.ss .partners{margin-top:18px;background:#fff;border-radius:12px;padding:10px}
+.ss.ss .f-bottom{border-top:1px solid rgba(255,255,255,.1);margin-top:56px;padding-top:22px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:15px}
+@media (max-width:1100px){
+.ss.ss .f-grid{grid-template-columns:1fr 1fr}
+}
+@media (max-width:680px){
+.ss.ss .f-grid{grid-template-columns:1fr}
+}
+</style>
+<div class="ss">
+<footer>
+  <div class="wrap">
+    <div class="f-grid">
+      <div>
+        <a class="logo" href="https://localization.saudisoft.com/"><img src="https://localization.saudisoft.com/wp-content/uploads/2024/11/logo-white.png" alt="Saudisoft" width="301" height="69" loading="lazy"></a>
+        <p>A leading professional language service provider supporting business growth with customised, smart translation and localization solutions since 1983. Our support team is available around the clock.</p>
+        <div class="social">
+          <a href="https://www.facebook.com/Saudisoftofficial/" target="_blank" rel="noopener" aria-label="Facebook"><svg viewBox="0 0 24 24"><path d="M14 8h3V4h-3c-2.8 0-4 1.8-4 4.3V10H7v4h3v8h4v-8h3l1-4h-4V8.6c0-.4.3-.6.6-.6z"/></svg></a>
+          <a href="https://twitter.com/Saudisoft" target="_blank" rel="noopener" aria-label="X"><svg viewBox="0 0 24 24"><path d="M17.8 3h3.1l-6.8 7.8L22 21h-6.2l-4.9-6.4L5.3 21H2.2l7.3-8.3L2 3h6.4l4.4 5.8zM16.7 19.2h1.7L7.4 4.7H5.6z"/></svg></a>
+          <a href="https://www.linkedin.com/showcase/saudisoft-translation-and-localization-services/" target="_blank" rel="noopener" aria-label="LinkedIn"><svg viewBox="0 0 24 24"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9.5h4V21H3zM9.5 9.5h3.8v1.6h.1c.5-1 1.8-2 3.8-2 4 0 4.8 2.6 4.8 6V21h-4v-5.1c0-1.2 0-2.8-1.7-2.8s-2 1.3-2 2.7V21h-4z"/></svg></a>
+          <a href="https://www.youtube.com/channel/UCV64hZgP_pxUts68PuLdBsQ" target="_blank" rel="noopener" aria-label="YouTube"><svg viewBox="0 0 24 24"><path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12 31 31 0 0 0 1 16.8a3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.8 15V9l5.2 3z"/></svg></a>
+        </div>
+      </div>
+      <div>
+        <h4>Services</h4>
+        <ul>
+          <li><a href="https://localization.saudisoft.com/services/website-localization-services/">Website Localization</a></li>
+          <li><a href="https://localization.saudisoft.com/services/app-localization-services/">App Localization</a></li>
+          <li><a href="https://localization.saudisoft.com/services/subtitling-services/">Subtitling</a></li>
+          <li><a href="https://localization.saudisoft.com/services/voice-over-services/">Voice Over</a></li>
+          <li><a href="https://localization.saudisoft.com/services/ai-translation-service/">AI Translation</a></li>
+          <li><a href="https://localization.saudisoft.com/services/document-translation-services/">Document Translation</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="https://localization.saudisoft.com/about/">About Us</a></li>
+          <li><a href="https://localization.saudisoft.com/solutions/">Language Solutions</a></li>
+          <li><a href="https://localization.saudisoft.com/industries/">Industries</a></li>
+          <li><a href="https://localization.saudisoft.com/our-blogs/">Blog</a></li>
+          <li><a href="mailto:careers@saudisoft.com">Careers</a></li>
+          <li><a href="mailto:talent.acquisition@saudisoft.com">Freelance with us</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Contact</h4>
+        <ul class="phones">
+          <li><a href="tel:+966539251011"><img src="https://flagcdn.com/w40/sa.png" alt="Saudi Arabia" loading="lazy"> +966 53 925 1011</a></li>
+          <li><a href="tel:+12013666021"><img src="https://flagcdn.com/w40/us.png" alt="USA" loading="lazy"> +1 201 366 6021</a></li>
+          <li><a href="tel:+201044992520"><img src="https://flagcdn.com/w40/eg.png" alt="Egypt" loading="lazy"> +20 104 499 2520</a></li>
+          <li><a href="mailto:emarketing@saudisoft.com">emarketing@saudisoft.com</a></li>
+        </ul>
+        <img class="partners" src="https://localization.saudisoft.com/wp-content/uploads/2025/01/123.png" alt="GALA, SAP and EAGLS partnerships" loading="lazy">
+      </div>
+    </div>
+    <div class="f-bottom">
+      <span>© <span class="ss-yr">2026</span> Saudisoft Co. All rights reserved.</span>
+      <a href="#">Back to top ↑</a>
+    </div>
+  </div>
+</footer>
+</div>
+<script>
+(function(){
+function run(){
+document.querySelectorAll('.ss .ss-yr').forEach(function(e){ e.textContent = new Date().getFullYear(); });
+}
+if(document.readyState!=="loading")run();else document.addEventListener("DOMContentLoaded",run);
+})();
+</script>
+</body></html>

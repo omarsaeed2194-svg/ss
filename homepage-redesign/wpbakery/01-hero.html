@@ -1,0 +1,98 @@
+<!--
+  Saudisoft homepage — 01 HERO
+  HOW TO USE (WPBakery):
+   1. Add a Row. Row settings > Type: "Full Width Content", Padding top/bottom: 0.
+   2. Inside the (single, 1/1) column add a "Raw HTML" element and paste this whole file.
+   3. The "00-global-styles.html" block must be on the same page ONCE, above all sections.
+-->
+
+<style>
+.ss.ss .hero{position:relative;overflow:hidden;background:var(--green-deep);color:#fff;padding:0}
+.ss.ss .hero-slides{position:absolute;inset:0}
+.ss.ss .hero-slide{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transform:scale(1.06);transition:opacity 1.2s ease,transform 7s ease}
+.ss.ss .hero-slide.active{opacity:1;transform:scale(1)}
+.ss.ss .hero::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,rgba(6,40,25,.94) 0%,rgba(6,61,38,.82) 45%,rgba(6,61,38,.25) 100%)}
+.ss.ss .hero .wrap{position:relative;z-index:2;display:grid;grid-template-columns:1.25fr .75fr;gap:48px;align-items:center;min-height:min(86vh,760px);padding-top:80px;padding-bottom:80px}
+.ss.ss .badge{display:inline-flex;align-items:center;gap:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);padding:7px 16px 7px 8px;border-radius:999px;font-size:16px;font-weight:700}
+.ss.ss .badge b{background:var(--yellow);color:var(--green-deep);padding:2px 10px;border-radius:999px}
+.ss.ss .hero h1{font-size:clamp(44px,6vw,82px);margin:22px 0 18px;color:#fff}
+.ss.ss .hero h1 .rot{color:var(--yellow);display:inline-block;min-width:4ch}
+.ss.ss .hero .rot span{display:inline-block;animation:ss-rise .5s ease}
+.ss.ss .hero p.sub{font-size:22px;color:#d6e6dd;max-width:600px}
+.ss.ss .hero-ctas{display:flex;gap:14px;margin-top:34px;flex-wrap:wrap}
+.ss.ss .hero-card{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(14px);border-radius:24px;padding:28px}
+.ss.ss .hero-card h3{font-size:20px;color:var(--yellow);margin-bottom:6px}
+.ss.ss .slide-text{min-height:110px}
+.ss.ss .slide-text p{color:#e2eee8;font-size:18px}
+.ss.ss .dots{display:flex;gap:8px;margin-top:18px}
+.ss.ss .dots button{width:30px;height:5px;padding:0;border-radius:5px!important;border:0;background:rgba(255,255,255,.3);cursor:pointer;transition:.3s}
+.ss.ss .dots button.on{background:var(--yellow);width:48px}
+.ss.ss .hero-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px;padding-top:22px;border-top:1px solid rgba(255,255,255,.15)}
+.ss.ss .hero-stats strong{display:block;font-size:34px;color:#fff;line-height:1}
+.ss.ss .hero-stats span{font-size:15px;color:#b8d1c4}
+@media (max-width:1100px){
+.ss.ss .hero .wrap{grid-template-columns:1fr}
+}
+@media (max-width:680px){
+.ss.ss .hero-card{display:none}
+}
+</style>
+<div class="ss">
+<section class="hero">
+  <div class="hero-slides" aria-hidden="true">
+    <div class="hero-slide active" style="background-image:url('https://localization.saudisoft.com/wp-content/uploads/2025/06/1-2.webp')"></div>
+    <div class="hero-slide" style="background-image:url('https://localization.saudisoft.com/wp-content/uploads/2025/06/2-2.webp')"></div>
+    <div class="hero-slide" style="background-image:url('https://localization.saudisoft.com/wp-content/uploads/2025/06/3-2.webp')"></div>
+    <div class="hero-slide" style="background-image:url('https://localization.saudisoft.com/wp-content/uploads/2025/06/4-2.webp')"></div>
+  </div>
+  <div class="wrap">
+    <div>
+      <span class="badge"><b>Since 1983</b> Translation &amp; localization in 100+ languages</span>
+      <h1>Your brand, fluent in <span class="rot" id="rot" aria-live="polite"><span>every market</span></span></h1>
+      <p class="sub">Saudisoft is the Middle East &amp; GCC's trusted localization partner — combining native linguists, localization engineering and AI to take your products, content and games global.</p>
+      <div class="hero-ctas">
+        <a class="btn btn-primary" href="https://localization.saudisoft.com/get-quote/">Get a free quote <span class="ss-arr">→</span></a>
+        <a class="btn btn-ghost" href="#services">Explore services</a>
+      </div>
+    </div>
+    <aside class="hero-card" aria-label="Why Saudisoft">
+      <div class="slide-text" id="slideText">
+        <h3>Languages, solutions &amp; beyond</h3>
+        <p>We build solutions through our language and technical depth to reveal the growth potential beyond your region.</p>
+      </div>
+      <div class="dots" id="dots" role="tablist"></div>
+      <div class="hero-stats">
+        <div><strong>40+</strong><span>Years of expertise</span></div>
+        <div><strong>70+</strong><span>Countries served</span></div>
+      </div>
+    </aside>
+  </div>
+</section>
+</div>
+<script>
+(function(){
+function run(){
+var root = document.querySelector('.ss .hero'); if (!root || root.dataset.init) return; root.dataset.init = 1;
+var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+var slides = root.querySelectorAll('.hero-slide');
+var msgs = [
+  ['Languages, solutions &amp; beyond','We build solutions through our language and technical depth to reveal the growth potential beyond your region.'],
+  ['In-depth industry experience','We build new pathways to success by understanding your business language needs and creating a culturally rich experience for your clients.'],
+  ['Market awareness','We connect the dots of localization while keeping your target market at the centre of every decision.'],
+  ['Quality is a habit, not an act','Speed, scale and precision — delivered by an ISO 17100 and ISO 9001 certified language service provider.']
+];
+var text = root.querySelector('#slideText'), dots = root.querySelector('#dots'), cur = 0, timer;
+msgs.forEach(function(_, i){ var b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-label','Show message ' + (i + 1)); b.onclick = function(){ go(i); restart(); }; dots.appendChild(b); });
+function go(i){
+  slides[cur].classList.remove('active'); dots.children[cur].classList.remove('on');
+  cur = i; slides[cur].classList.add('active'); dots.children[cur].classList.add('on');
+  text.innerHTML = '<h3>' + msgs[i][0] + '</h3><p>' + msgs[i][1] + '</p>';
+}
+function restart(){ clearInterval(timer); if (!reduce) timer = setInterval(function(){ go((cur + 1) % slides.length); }, 5500); }
+go(0); restart();
+var words = ['every market','Arabic','Español','中文','日本語','Français','Deutsch','हिन्दी'], w = 0, rot = root.querySelector('#rot');
+if (!reduce) setInterval(function(){ w = (w + 1) % words.length; rot.innerHTML = '<span>' + words[w] + '</span>'; }, 2200);
+}
+if(document.readyState!=="loading")run();else document.addEventListener("DOMContentLoaded",run);
+})();
+</script>

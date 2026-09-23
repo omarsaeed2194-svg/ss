@@ -1,0 +1,46 @@
+<!--
+  Saudisoft homepage — 10 LATEST BLOGS
+  HOW TO USE (WPBakery):
+   1. Add a Row. Row settings > Type: "Full Width Content", Padding top/bottom: 0.
+   2. Inside the (single, 1/1) column add a "Raw HTML" element and paste this whole file.
+   3. The "00-global-styles.html" block must be on the same page ONCE, above all sections.
+-->
+
+<style>
+.ss.ss .blog{background:#fff}
+.ss.ss .blog-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:20px}
+.ss.ss .ss-post{position:relative;border-radius:var(--radius);overflow:hidden;min-height:260px;display:flex;align-items:flex-end;color:#fff}
+.ss.ss .ss-post:first-child{grid-row:span 2;min-height:540px}
+.ss.ss .ss-post img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .6s}
+.ss.ss .ss-post:hover img{transform:scale(1.05)}
+.ss.ss .ss-post::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(8,20,14,.9))}
+.ss.ss .ss-post .pbody{position:relative;z-index:1;padding:24px}
+.ss.ss .ss-post .pmeta{font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--yellow);font-weight:700}
+.ss.ss .ss-post h3{font-size:22px;margin-top:6px;color:#fff}
+.ss.ss .ss-post:first-child h3{font-size:32px}
+@media (max-width:680px){
+.ss.ss .blog-grid{grid-template-columns:1fr}
+.ss.ss .ss-post:first-child{grid-row:auto;min-height:340px}
+.ss.ss .ss-post{grid-column:auto!important}
+}
+</style>
+<div class="ss">
+<section class="blog">
+  <!-- Update the 4 posts below when you publish new articles (or replace this block with a WPBakery "Post Grid"). -->
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <span class="eyebrow">Insights</span>
+        <h2>Latest blogs &amp; news</h2>
+      </div>
+      <a class="btn btn-line" href="https://localization.saudisoft.com/our-blogs/">View all articles <span class="ss-arr">→</span></a>
+    </div>
+    <div class="blog-grid">
+      <a class="ss-post reveal" href="https://localization.saudisoft.com/certified-translation-of-documents/"><img src="https://localization.saudisoft.com/wp-content/uploads/2026/08/Gemini_Generated_Image_qhkl1fqhkl1fqhkl-1024x559.jpg" alt="" loading="lazy"><div class="pbody"><span class="pmeta">Document Translation · 19 Aug 2026</span><h3>What counts as ‘certified’ translation of documents?</h3></div></a>
+      <a class="ss-post reveal" href="https://localization.saudisoft.com/game-localization-services-2026/"><img src="https://localization.saudisoft.com/wp-content/uploads/2026/08/Gemini_Generated_Image_vudtalvudtalvudt-1024x559.jpg" alt="" loading="lazy"><div class="pbody"><span class="pmeta">Games · 19 Aug 2026</span><h3>Why game localization matters for global revenue</h3></div></a>
+      <a class="ss-post reveal" href="https://localization.saudisoft.com/e-learning-localization-what-it/"><img src="https://localization.saudisoft.com/wp-content/uploads/2026/07/eLearning_localization_concept_d…_202607201041-3-1024x572.webp" alt="" loading="lazy"><div class="pbody"><span class="pmeta">E-learning · 20 Jul 2026</span><h3>E-learning localization: what it is and why it matters</h3></div></a>
+      <a class="ss-post reveal" href="https://localization.saudisoft.com/software-localization-vs/" style="grid-column:span 2"><img src="https://localization.saudisoft.com/wp-content/uploads/2026/07/Software_localization_internatio…_202607161113-1024x572.webp" alt="" loading="lazy"><div class="pbody"><span class="pmeta">Software · 16 Jul 2026</span><h3>Software localization vs. internationalization</h3></div></a>
+    </div>
+  </div>
+</section>
+</div>

@@ -1,0 +1,119 @@
+<!--
+  Saudisoft homepage — 05 SERVICES
+  HOW TO USE (WPBakery):
+   1. Add a Row. Row settings > Type: "Full Width Content", Padding top/bottom: 0.
+   2. Inside the (single, 1/1) column add a "Raw HTML" element and paste this whole file.
+   3. The "00-global-styles.html" block must be on the same page ONCE, above all sections.
+-->
+
+<style>
+.ss.ss .services{background:var(--bg-soft)}
+.ss.ss .tabs{display:flex;gap:8px;flex-wrap:wrap}
+.ss.ss .tabs button{font-size:17px;font-weight:700;padding:10px 20px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;transition:.2s}
+.ss.ss .tabs button.on{background:var(--green);border-color:var(--green);color:#fff}
+.ss.ss .svc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.ss.ss .svc{position:relative;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:28px;overflow:hidden;display:flex;flex-direction:column;transition:transform .3s,box-shadow .3s,border-color .3s}
+.ss.ss .svc::before{content:"";position:absolute;inset:0;background:var(--img) center/cover;opacity:0;transition:opacity .4s}
+.ss.ss .svc::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,96,85,.75),rgba(6,61,38,.95));opacity:0;transition:opacity .4s}
+.ss.ss .svc > *{position:relative;z-index:1}
+.ss.ss .svc:hover{transform:translateY(-4px);box-shadow:var(--shadow);border-color:transparent;color:#fff}
+.ss.ss .svc:hover::before,.ss.ss .svc:hover::after{opacity:1}
+.ss.ss .svc:hover p{color:#fff}
+.ss.ss .svc img{width:56px;height:56px;border-radius:14px;object-fit:cover;margin-bottom:20px}
+.ss.ss .svc h3{margin-bottom:10px}
+.ss.ss .svc p{color:var(--muted);font-size:17px;flex:1;transition:color .3s}
+.ss.ss .svc .more{margin-top:18px;font-weight:700;color:var(--green);display:inline-flex;gap:6px}
+.ss.ss .svc:hover .more{color:var(--yellow)}
+.ss.ss .svc.ss-hide{display:none}
+@media (max-width:1100px){
+.ss.ss .svc-grid{grid-template-columns:1fr 1fr}
+}
+@media (max-width:680px){
+.ss.ss .svc-grid{grid-template-columns:1fr}
+}
+</style>
+<div class="ss">
+<section class="services" id="services">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <span class="eyebrow">What we do</span>
+        <h2>Every localization service you need to engage a global audience</h2>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Filter services">
+        <button class="on" data-f="all">All</button>
+        <button data-f="media">Media</button>
+        <button data-f="tech">Technical</button>
+        <button data-f="lang">Language</button>
+      </div>
+    </div>
+    <div class="svc-grid" id="svcGrid">
+      <a class="svc reveal" data-c="media" href="https://localization.saudisoft.com/services/subtitling-services/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/11/1a.png')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Subtitling-Services-1.webp" alt="" loading="lazy">
+        <h3>Subtitling</h3><p>Pairing audio with precisely timed text so your video content delivers its message in any language.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="media" href="https://localization.saudisoft.com/services/voice-over-services/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/11/voiceover.jpg@0.33x.png')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Links_0010_VoiceOver.jpg.webp" alt="" loading="lazy">
+        <h3>Voice Over &amp; Dubbing</h3><p>We bring your stories to life with native voice talent, boosting accessibility and inclusivity.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="media" href="https://localization.saudisoft.com/services/transcreation-services/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/11/transcreation.jpg@0.33x.png')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Links_0008_Group-3-copy-2.jpg.webp" alt="" loading="lazy">
+        <h3>Transcreation</h3><p>Copywriters who recreate your message for a new culture while preserving its original intent.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="media" href="https://localization.saudisoft.com/services/transcription-service/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/11/transcription.jpg@0.33x.png')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Links_0007_Group-3-copy-3.jpg.webp" alt="" loading="lazy">
+        <h3>Transcription</h3><p>Converting spoken language into accurate, searchable text for your business needs.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="media" href="https://localization.saudisoft.com/services/3d-localization/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2025/01/3D-Graphics.webp')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/3D-Assets-Adaptation-Implementation.webp" alt="" loading="lazy">
+        <h3>2D &amp; 3D Graphics</h3><p>Adapting in-scene assets for games, animation and film to build immersive, local-feeling worlds.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="tech" href="https://localization.saudisoft.com/services/website-localization-services/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/12/website-localization-services-1.webp')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Links_0004_Group-3-copy-6.jpg.webp" alt="" loading="lazy">
+        <h3>Website Localization</h3><p>Adapting your site to local regulations, cultural sensitivities and user preferences in each market.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="tech" href="https://localization.saudisoft.com/services/app-localization-services/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/12/Image-42.webp')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/App-localization-services.webp" alt="" loading="lazy">
+        <h3>App Localization</h3><p>Meeting the linguistic, cultural and technical requirements of every app store you launch in.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="tech" href="https://localization.saudisoft.com/services/seo-localization/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2023/09/Multilingual-SEO-NO-Words-e1736432397735.webp')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/SEO.webp" alt="" loading="lazy">
+        <h3>SEO Localization</h3><p>Multilingual keyword research and on-page optimisation so global customers can find you.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="tech" href="https://localization.saudisoft.com/services/localization-engineering/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/11/engineering.jpg@0.33x.png')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Localization-Engineering-Services-1.webp" alt="" loading="lazy">
+        <h3>Localization Engineering</h3><p>Not a separate phase but an integral function — the bridge between translation and technology.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="tech" href="https://localization.saudisoft.com/services/localization-testing-services/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/11/testing.jpg@0.33x.png')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Links_0005_Group-3-copy-5.jpg.webp" alt="" loading="lazy">
+        <h3>Localization Testing</h3><p>Linguistic and functional testing that makes sure your product is launch-ready in every market.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="tech" href="https://localization.saudisoft.com/services/layout-and-desktop-publishing/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/12/Layout-and-Desktop-Publishing-03.webp')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Links_0004_Group-3-copy-6.jpg.webp" alt="" loading="lazy">
+        <h3>Desktop Publishing</h3><p>Pixel-perfect multilingual layouts, including Arabic RTL, for consistent branding worldwide.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="lang" href="https://localization.saudisoft.com/services/ai-translation-service/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/12/AI-Language-Solutions_Post_Design.webp')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/AI-Language-Solutions.webp" alt="" loading="lazy">
+        <h3>AI Translation</h3><p>AI speed and scale with expert human review — faster turnaround without compromising quality.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="lang" href="https://localization.saudisoft.com/services/document-translation-services/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2025/01/document-translation-services-2.webp')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/document-translation-services-1.webp" alt="" loading="lazy">
+        <h3>Document Translation</h3><p>Seamless translation for every document type and language, handled by skilled translators.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="lang" href="https://localization.saudisoft.com/services/multilingual-translation/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/11/multilingual-translation.jpg@0.33x.png')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Links-8-e1737025553117.webp" alt="" loading="lazy">
+        <h3>Multilingual Translation</h3><p>Content that resonates across cultures while keeping its original meaning intact.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="lang" href="https://localization.saudisoft.com/services/interpretation/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/11/interpretation2.jpg@0.33x.png')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Links_0000_Group-3-copy-10.jpg.webp" alt="" loading="lazy">
+        <h3>Interpretation</h3><p>Professional interpreters who listen, understand and relay every message at your events.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="lang" href="https://localization.saudisoft.com/services/localization-quality-assurance-lqa/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/11/localization-quality-assurance-1.jpg@0.33x.png')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Links_0002_Group-3-copy-8.jpg.webp" alt="" loading="lazy">
+        <h3>Quality Assurance (LQA)</h3><p>ISO-driven linguistic and functional checks that reduce risk and eliminate costly errors.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+      <a class="svc reveal" data-c="lang" href="https://localization.saudisoft.com/services/cultural-assessment/" style="--img:url('https://localization.saudisoft.com/wp-content/uploads/2024/11/Cultural-Assessment.jpg@0.33x.png')">
+        <img src="https://localization.saudisoft.com/wp-content/uploads/2025/01/Links_0001_Group-3-copy-9.jpg.webp" alt="" loading="lazy">
+        <h3>Cultural Assessment</h3><p>Market-specific insight that eases entry into new regions and builds stronger customer relationships.</p><span class="more">Learn more <span class="ss-arr">→</span></span></a>
+    </div>
+  </div>
+</section>
+</div>
+<script>
+(function(){
+function run(){
+var root = document.querySelector('.ss .services'); if (!root || root.dataset.init) return; root.dataset.init = 1;
+var btns = root.querySelectorAll('.tabs button');
+btns.forEach(function(btn){ btn.type = 'button'; btn.addEventListener('click', function(){
+  btns.forEach(function(b){ b.classList.toggle('on', b === btn); });
+  var f = btn.dataset.f;
+  root.querySelectorAll('.svc').forEach(function(s){ s.classList.toggle('ss-hide', f !== 'all' && s.dataset.c !== f); });
+}); });
+}
+if(document.readyState!=="loading")run();else document.addEventListener("DOMContentLoaded",run);
+})();
+</script>

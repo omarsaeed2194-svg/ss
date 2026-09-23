@@ -1,0 +1,42 @@
+<!--
+  Saudisoft homepage — 11 CALL TO ACTION
+  HOW TO USE (WPBakery):
+   1. Add a Row. Row settings > Type: "Full Width Content", Padding top/bottom: 0.
+   2. Inside the (single, 1/1) column add a "Raw HTML" element and paste this whole file.
+   3. The "00-global-styles.html" block must be on the same page ONCE, above all sections.
+-->
+
+<style>
+.ss.ss .cta{padding:0 0 100px;background:#fff}
+.ss.ss .cta-box{border-radius:32px;background:linear-gradient(120deg,var(--green-deep),var(--green) 60%,var(--teal));color:#fff;padding:64px;display:grid;grid-template-columns:1.3fr 1fr;gap:40px;align-items:center;position:relative;overflow:hidden}
+.ss.ss .cta-box::after{content:"";position:absolute;right:-80px;bottom:-120px;width:380px;height:380px;border-radius:50%;border:60px solid rgba(250,220,41,.15)}
+.ss.ss .cta-box h2{color:#fff}
+.ss.ss .cta-box h2 em{font-style:normal;color:var(--yellow)}
+.ss.ss .cta-box p{color:#d6e6dd;margin-top:14px;font-size:20px}
+.ss.ss .cta-actions{display:flex;flex-direction:column;gap:12px;align-items:flex-start;position:relative;z-index:1}
+.ss.ss .cta-actions small{color:#b8d1c4;font-size:16px}
+.ss.ss .cta-actions small a{text-decoration:underline}
+@media (max-width:1100px){
+.ss.ss .cta-box{grid-template-columns:1fr}
+}
+@media (max-width:680px){
+.ss.ss .cta-box{padding:36px 24px}
+}
+</style>
+<div class="ss">
+<section class="cta">
+  <div class="wrap">
+    <div class="cta-box reveal">
+      <div>
+        <h2>Ready to <em>go global</em>? Let's talk.</h2>
+        <p>Get in touch with our localization consultants and start your global growth today. We reply within one business day.</p>
+      </div>
+      <div class="cta-actions">
+        <a class="btn btn-primary" href="https://localization.saudisoft.com/get-quote/">Get a free quote <span class="ss-arr">→</span></a>
+        <a class="btn btn-ghost" href="https://wa.me/966539251011">Chat on WhatsApp</a>
+        <small>Or email <a href="mailto:emarketing@saudisoft.com">emarketing@saudisoft.com</a></small>
+      </div>
+    </div>
+  </div>
+</section>
+</div>

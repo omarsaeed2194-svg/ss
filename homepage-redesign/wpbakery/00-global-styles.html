@@ -1,0 +1,84 @@
+<!--
+  Saudisoft homepage — 00 GLOBAL STYLES (add ONCE, first on the page)
+  HOW TO USE (WPBakery):
+   1. Add a Row. Row settings > Type: "Full Width Content", Padding top/bottom: 0.
+   2. Inside the (single, 1/1) column add a "Raw HTML" element and paste this whole file.
+   3. This block renders nothing visible. Place it ONCE, before every other section.
+     (Alternatively paste the <style> parts into Salient > Custom CSS and the <script> into a footer script.)
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zain:wght@300;400;700;800&display=swap" rel="stylesheet">
+<style>
+/* hide-until-visible only when JS is running, so content never stays invisible */
+html.ss-js .ss .reveal{opacity:0;transform:translateY(24px)}
+html.ss-js .ss .reveal.in{opacity:1;transform:none}
+/* remove WPBakery/Salient spacing around our Raw HTML blocks */
+.wpb_raw_code:has(.ss){margin-bottom:0!important}
+.wpb_row:has(.ss){margin-bottom:0!important}
+@media (prefers-reduced-motion:reduce){html.ss-js .ss .reveal{opacity:1;transform:none}}
+</style>
+<style>
+.ss.ss{--green:#0c6c42;--green-deep:#063d26;--teal:#006055;--yellow:#fadc29;--ink:#10201a;--muted:#56655e;--line:#e3e9e5;--bg-soft:#f4f7f5;--dark:#141a17;--radius:18px;--shadow:0 18px 40px -18px rgba(6,61,38,.28);
+  font-family:"Zain",system-ui,sans-serif;font-size:19px;line-height:1.55;color:var(--ink);-webkit-font-smoothing:antialiased;text-align:left;width:100%;max-width:100%;overflow-x:clip}
+.ss.ss *,.ss.ss *::before,.ss.ss *::after{box-sizing:border-box;margin:0;padding:0}
+.ss.ss img{max-width:100%;display:block;margin:0;border:0;box-shadow:none}
+.ss.ss a{color:inherit;text-decoration:none;background-image:none}
+.ss.ss a:hover,.ss.ss a:focus{text-decoration:none}
+.ss.ss ul,.ss.ss ol{list-style:none;margin:0}
+.ss.ss figure{margin:0}
+.ss.ss p{color:inherit;padding:0;font-size:inherit;line-height:inherit}
+.ss.ss h1,.ss.ss h2,.ss.ss h3,.ss.ss h4,.ss.ss h5{font-family:"Zain",system-ui,sans-serif;line-height:1.1;letter-spacing:-.02em;font-weight:800;color:inherit;text-transform:none;margin:0;padding:0}
+.ss.ss h2{font-size:clamp(34px,4.2vw,54px)}
+.ss.ss h3{font-size:24px}
+.ss.ss button{font-family:inherit;box-shadow:none}
+.ss.ss section{padding:100px 0}
+.ss.ss .wrap{max-width:1240px;margin:0 auto;padding:0 24px}
+.ss.ss .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--green)}
+.ss.ss .eyebrow::before{content:"";width:22px;height:3px;border-radius:3px;background:var(--yellow)}
+.ss.ss .sec-head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:48px;flex-wrap:wrap}
+.ss.ss .sec-head h2{margin-top:10px;max-width:720px}
+.ss.ss .btn{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:18px;line-height:1.2;padding:14px 26px;border-radius:999px;border:2px solid transparent;cursor:pointer;transition:transform .25s,box-shadow .25s,background .25s,color .25s}
+.ss.ss .btn:hover{transform:translateY(-2px)}
+.ss.ss .btn-primary,.ss.ss .btn-primary:hover{background:var(--yellow);color:var(--green-deep)}
+.ss.ss .btn-primary:hover{box-shadow:0 12px 26px -10px rgba(250,220,41,.8)}
+.ss.ss .btn-green,.ss.ss .btn-green:hover{background:var(--green);color:#fff}
+.ss.ss .btn-ghost{border-color:rgba(255,255,255,.5);color:#fff}
+.ss.ss .btn-ghost:hover{background:#fff;color:var(--green-deep)}
+.ss.ss .btn-line{border-color:var(--green);color:var(--green)}
+.ss.ss .btn-line:hover{background:var(--green);color:#fff}
+.ss.ss .ss-arr{transition:transform .25s}
+.ss.ss a:hover .ss-arr{transform:translateX(4px)}
+.ss.ss .reveal{transition:opacity .8s ease,transform .8s ease}
+@keyframes ss-scroll{to{transform:translateX(-50%)}}
+@keyframes ss-rise{from{opacity:0;transform:translateY(40%)}to{opacity:1;transform:none}}
+@media (max-width:680px){
+.ss.ss{font-size:18px}
+.ss.ss section{padding:70px 0}
+}
+@media (prefers-reduced-motion:reduce){
+.ss.ss *,.ss.ss *::before,.ss.ss *::after{animation:none!important;transition:none!important}
+}
+</style>
+<script>
+document.documentElement.classList.add('ss-js');
+(function(){
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function go(){
+    var els = document.querySelectorAll('.ss .reveal');
+    if (!('IntersectionObserver' in window)) { els.forEach(function(e){e.classList.add('in')}); return; }
+    var io = new IntersectionObserver(function(entries){ entries.forEach(function(e){
+      if (!e.isIntersecting) return;
+      e.target.classList.add('in');
+      var n = e.target.querySelector('[data-count]');
+      if (n && !reduce) {
+        var end = +n.dataset.count, suf = n.dataset.suffix || '', t0 = performance.now();
+        (function tick(t){ var p = Math.min((t - t0) / 1400, 1); n.textContent = Math.round(end * (1 - Math.pow(1 - p, 3))) + suf; if (p < 1) requestAnimationFrame(tick); })(t0);
+      }
+      io.unobserve(e.target);
+    }); }, {threshold:.15});
+    els.forEach(function(e){ io.observe(e); });
+  }
+  if (document.readyState !== 'loading') go(); else document.addEventListener('DOMContentLoaded', go);
+})();
+</script>
