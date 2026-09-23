@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "AI Visibility Toolkit",
+  "version": "1.0.0",
+  "description": "Audit pages for AI-search readiness (ChatGPT, Perplexity, Gemini, Claude, Copilot), generate llms.txt / schema, and track when AI answers cite your site.",
+  "action": {
+    "default_title": "AI Visibility Toolkit",
+    "default_popup": "popup.html"
+  },
+  "permissions": ["activeTab", "scripting", "storage"],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://www.perplexity.ai/*",
+        "https://perplexity.ai/*",
+        "https://gemini.google.com/*",
+        "https://claude.ai/*",
+        "https://copilot.microsoft.com/*"
+      ],
+      "js": ["defaults.js", "content/tracker.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

@@ -93,6 +93,13 @@ swap the body of `scripts/refresh-ubersuggest.mjs` and
 `lib/connectors/ubersuggest.ts` for real `fetch()` calls — the rest of the
 dashboard (types, UI, API route) doesn't need to change.
 
+## AI visibility Chrome extension
+
+`chrome-extension/` is an unpacked Chrome extension that audits pages for
+AI-search readiness (ChatGPT, Perplexity, Gemini, Claude, Copilot), generates
+`llms.txt` / schema / robots.txt rules, and tracks when AI answers cite the
+site. See [`chrome-extension/README.md`](chrome-extension/README.md).
+
 ## Architecture
 
 ```

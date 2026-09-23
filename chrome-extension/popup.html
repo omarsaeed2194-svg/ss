@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>AI Visibility Toolkit</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <h1>AI Visibility</h1>
+    <nav role="tablist">
+      <button role="tab" data-tab="audit" aria-selected="true">Audit</button>
+      <button role="tab" data-tab="generate">Generate</button>
+      <button role="tab" data-tab="track">Track</button>
+      <button role="tab" data-tab="settings">Settings</button>
+    </nav>
+  </header>
+
+  <section id="audit" class="panel">
+    <p class="hint">Checks whether AI search engines can crawl, understand and quote the page in the current tab.</p>
+    <button id="run-audit" class="primary">Audit this page</button>
+    <div id="audit-status" class="hint"></div>
+    <div id="audit-result" hidden>
+      <div class="score-row">
+        <div id="score" class="score">–</div>
+        <div>
+          <div id="score-label" class="score-label"></div>
+          <div id="audit-url" class="muted small"></div>
+        </div>
+      </div>
+      <h2>AI crawler access</h2>
+      <table id="bots" class="bots"></table>
+      <h2>Checks</h2>
+      <ul id="checks" class="checks"></ul>
+    </div>
+  </section>
+
+  <section id="generate" class="panel" hidden>
+    <p class="hint">Run an audit first, then generate files to add to your site. Review each draft before publishing.</p>
+    <div class="gen-buttons">
+      <button data-gen="llms">llms.txt</button>
+      <button data-gen="faq">FAQPage schema</button>
+      <button data-gen="org">Organization schema</button>
+      <button data-gen="robots">robots.txt rules</button>
+    </div>
+    <div id="gen-note" class="hint"></div>
+    <textarea id="gen-output" spellcheck="false" placeholder="Generated output appears here"></textarea>
+    <button id="gen-copy">Copy</button>
+  </section>
+
+  <section id="track" class="panel" hidden>
+    <p class="hint">Ask each assistant your target questions. While an answer is on screen, the extension highlights mentions of your site and records whether it was cited.</p>
+    <ul id="prompts" class="prompts"></ul>
+    <h2>Results</h2>
+    <div id="summary" class="summary"></div>
+    <table id="log" class="log"></table>
+    <div class="row">
+      <button id="export-log">Export CSV</button>
+      <button id="clear-log" class="danger">Clear log</button>
+    </div>
+  </section>
+
+  <section id="settings" class="panel" hidden>
+    <label>Your domain
+      <input id="set-domain" type="text" placeholder="example.com" />
+    </label>
+    <label>Brand names (comma-separated)
+      <input id="set-brands" type="text" />
+    </label>
+    <label>Target prompts (one per line)
+      <textarea id="set-prompts" rows="7"></textarea>
+    </label>
+    <button id="save-settings" class="primary">Save</button>
+    <span id="saved" class="hint"></span>
+  </section>
+
+  <script src="defaults.js"></script>
+  <script src="audit.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
