@@ -58,7 +58,7 @@ in a dark, cinematic game-HUD style using the same brand colours. Source: `case-
 
 | Time | Scene |
 | --- | --- |
-| 0–5.6s | Case study · 2022: "Delivering a AAA game experience to Arabic players" (لعبة عالمية. بلغتك.) |
+| 0–5.6s | Case study: "Delivering a AAA game experience to Arabic players" (لعبة عالمية. بلغتك.) |
 | 5.6–12.4s | The mission: a leading global publisher, one of its most anticipated AAA titles; MENA markets light up |
 | 12.4–19.2s | The scope: thousands of assets; dialogue, subtitles, quests, items, tutorials and menus flip EN → AR |
 | 19.2–30.4s | The solution: translation & transcreation, cultural adaptation, Arabic dubbing, engineering & LQA |
@@ -66,11 +66,28 @@ in a dark, cinematic game-HUD style using the same brand colours. Source: `case-
 | 37.4–43.6s | "Achievement unlocked": linguistic accuracy, emotional authenticity, cultural relevance |
 | 43.6–49s | CTA: localization.saudisoft.com |
 
-Files: `dist/saudisoft-aaa-game-case-study-{horizontal,vertical}-*`. Embed with
-`embed-aaa-case-study.html`.
+Files: `dist/saudisoft-aaa-game-case-study-{horizontal,vertical}-*`, with sound
+(AAC in the MP4s, Opus in the WebMs). Embed with `embed-aaa-case-study.html`.
+It autoplays muted, as browsers require, and has a "Sound on" button.
+
+**Soundtrack.** `sound-aaa.py` synthesizes an original score (no samples or
+licensed music, so no rights issues). It's a 120 bpm cinematic pulse with a
+D Hijaz (Arabic maqam) melody that builds into a D-major "achievement" finale,
+plus sound effects timed to the animation:
+- whooshes on scene changes
+- UI blips as the MENA markets light up
+- flip ticks on the asset cards
+- a power-up for each solution pillar
+- a left-to-right sweep for the RTL switch
+- an "achievement unlocked" chime and impacts on the title and logo
+
+It's mixed to about -17 LUFS with a -1 dBFS peak. If you change timings in
+`case-aaa.html`, update the matching times in `sound-aaa.py`.
 
 ```bash
-node render.js case-aaa.html              # horizontal
+pip install numpy scipy
+python3 sound-aaa.py                      # -> dist/audio-aaa.wav
+node render.js case-aaa.html              # horizontal (muxes the audio)
 node render.js case-aaa.html --portrait   # vertical
 ```
 

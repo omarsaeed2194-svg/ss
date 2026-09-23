@@ -1,14 +1,27 @@
 <!-- Saudisoft AAA game localization case study: drop-in responsive embed.
      Upload the saudisoft-aaa-game-case-study-* files from dist/ (e.g. to /media/) and adjust MEDIA below.
-     Phones in portrait get the vertical 9:16 cut; everything else gets the horizontal 16:9 cut. -->
+     Phones in portrait get the vertical 9:16 cut; everything else gets the horizontal 16:9 cut.
+     Browsers only autoplay muted video, so it starts muted with a sound toggle button. -->
 <div class="ss-aaa">
   <video autoplay muted loop playsinline preload="metadata"
          aria-label="Case study: how Saudisoft delivered a fully localized Arabic AAA game experience"></video>
+  <button type="button" class="ss-aaa-sound" aria-pressed="false" aria-label="Turn sound on">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path class="off" d="M16 9l5 6M21 9l-5 6"/><path class="on" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/></svg>
+    <span>Sound on</span>
+  </button>
 </div>
 <style>
   .ss-aaa { position: relative; width: 100%; max-width: 1280px; margin: 0 auto; aspect-ratio: 16 / 9;
             border-radius: 16px; overflow: hidden; background: #0a0f0c; }
   .ss-aaa video { width: 100%; height: 100%; display: block; object-fit: cover; }
+  .ss-aaa-sound { position: absolute; right: 16px; bottom: 16px; display: flex; align-items: center; gap: 8px;
+                  padding: 10px 16px; border: 2px solid #fadc29; border-radius: 999px; background: rgba(10,15,12,.8);
+                  color: #fadc29; font: 600 14px/1 system-ui, sans-serif; cursor: pointer; }
+  .ss-aaa-sound:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+  .ss-aaa-sound svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .ss-aaa-sound svg path:first-child { fill: currentColor; }
+  .ss-aaa-sound .on, .ss-aaa-sound[aria-pressed="true"] .off { display: none; }
+  .ss-aaa-sound[aria-pressed="true"] .on { display: inline; }
   @media (max-width: 767px) and (orientation: portrait) {
     .ss-aaa { max-width: 480px; aspect-ratio: 9 / 16; }
   }
@@ -16,12 +29,21 @@
 <script>
   (function () {
     var MEDIA = "/media/saudisoft-aaa-game-case-study-";
-    var v = document.querySelector(".ss-aaa video");
+    var box = document.querySelector(".ss-aaa");
+    var v = box.querySelector("video"), btn = box.querySelector(".ss-aaa-sound");
     var cut = matchMedia("(max-width: 767px) and (orientation: portrait)").matches ? "vertical" : "horizontal";
     v.poster = MEDIA + cut + "-poster.jpg";
     v.innerHTML =
       '<source src="' + MEDIA + cut + '-1080p.webm" type="video/webm">' +
       '<source src="' + MEDIA + cut + '-1080p.mp4" type="video/mp4">';
     v.load();
+    btn.addEventListener("click", function () {
+      var on = v.muted;                       // toggling: muted -> sound on
+      v.muted = !on;
+      if (on) { v.currentTime = 0; v.play(); } // restart so the score plays from the top
+      btn.setAttribute("aria-pressed", String(on));
+      btn.setAttribute("aria-label", on ? "Turn sound off" : "Turn sound on");
+      btn.querySelector("span").textContent = on ? "Sound off" : "Sound on";
+    });
   })();
 </script>

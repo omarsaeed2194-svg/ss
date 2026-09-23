@@ -29,6 +29,10 @@ function ffmpeg(args) {
   const duration = await page.evaluate(() => window.DURATION);
   const base = await page.evaluate(() => window.VIDEO_NAME || "saudisoft-localization-journey");
   const NAME = base + "-" + (PORTRAIT ? "vertical" : "horizontal");
+  // Optional soundtrack: a page may set window.AUDIO to a WAV path (relative to this folder).
+  const audioRel = await page.evaluate(() => window.AUDIO || null);
+  const AUDIO = audioRel && path.join(__dirname, audioRel);
+  if (AUDIO && !fs.existsSync(AUDIO)) throw new Error(`missing ${audioRel}: generate it first (see README)`);
 
   if (process.argv.includes("--stills")) {
     for (const t of await page.evaluate(() => window.STILLS || [4, 8, 15.5, 27, 33, 38, 44.5, 49])) {
@@ -59,10 +63,13 @@ function ffmpeg(args) {
 
   const out = suffix => path.join(OUT, `${NAME}-${suffix}`);
   const small = PORTRAIT ? "720:1280" : "1280:720";
-  const h264 = ["-c:v", "libx264", "-preset", "slow", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-an"];
-  ffmpeg(["-i", master, ...h264, "-crf", "22", out("1080p.mp4")]);
-  ffmpeg(["-i", master, "-vf", `scale=${small}`, ...h264, "-crf", "23", out("720p.mp4")]);
-  ffmpeg(["-i", master, "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "34", "-row-mt", "1", "-deadline", "good", "-cpu-used", "2", "-an", out("1080p.webm")]);
+  const input = AUDIO ? ["-i", master, "-i", AUDIO, "-map", "0:v", "-map", "1:a", "-shortest"] : ["-i", master];
+  const aac = kbps => AUDIO ? ["-c:a", "aac", "-b:a", kbps] : ["-an"];
+  const h264 = ["-c:v", "libx264", "-preset", "slow", "-pix_fmt", "yuv420p", "-movflags", "+faststart"];
+  ffmpeg([...input, ...h264, "-crf", "22", ...aac("192k"), out("1080p.mp4")]);
+  ffmpeg([...input, "-vf", `scale=${small}`, ...h264, "-crf", "23", ...aac("128k"), out("720p.mp4")]);
+  ffmpeg([...input, "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "34", "-row-mt", "1", "-deadline", "good", "-cpu-used", "2",
+    ...(AUDIO ? ["-c:a", "libopus", "-b:a", "160k"] : ["-an"]), out("1080p.webm")]);
   ffmpeg(["-i", posterPng, "-q:v", "4", out("poster.jpg")]);
   fs.rmSync(master); fs.rmSync(posterPng);
   console.log("done:", NAME);
