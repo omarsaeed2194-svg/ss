@@ -1,6 +1,6 @@
 # Saudisoft Localization Journey — website video
 
-A 52-second, 1920×1080, 30 fps motion-graphics video telling the
+A 52-second, 30 fps motion-graphics video (horizontal 1920×1080 and vertical 1080×1920) telling the
 localization.saudisoft.com story, built to autoplay silently on a web page.
 
 | Time | Scene |
@@ -16,11 +16,14 @@ localization.saudisoft.com story, built to autoplay silently on a web page.
 
 ## Files
 
-- `dist/saudisoft-localization-journey-1080p.mp4`: H.264, faststart (≈5 MB)
-- `dist/saudisoft-localization-journey-1080p.webm`: VP9 (≈3.7 MB)
-- `dist/saudisoft-localization-journey-720p.mp4`: lighter fallback (≈2.6 MB)
-- `dist/saudisoft-localization-journey-poster.jpg`: poster frame
-- `embed.html`: copy-paste `<video>` embed (autoplay, muted, loop, responsive)
+Two cuts of the same 52s timeline, each as 1080p MP4 (H.264, faststart), 1080p
+WebM (VP9), a lighter 720p MP4 and a poster JPG, in `dist/`:
+
+- `saudisoft-localization-journey-horizontal-*`: 1920×1080 (16:9), for page sections and hero banners
+- `saudisoft-localization-journey-vertical-*`: 1080×1920 (9:16), for mobile, stories and reels
+
+`embed.html` is a copy-paste embed (autoplay, muted, loop, responsive). It serves
+the vertical cut on phones held upright and the horizontal cut everywhere else.
 
 There is no audio track, because browsers only autoplay muted video.
 
@@ -32,19 +35,14 @@ draws the frame for time `t` (seconds).
 
 ```bash
 python3 fetch-fonts.py          # once: downloads Google Fonts into ./fonts
-node render.js --stills         # quick preview JPGs in dist/
-node render.js                  # full render -> dist/master.mp4
+node render.js --stills         # quick preview JPGs in dist/ (add --portrait for vertical)
+node render.js                  # horizontal cut -> dist/*-horizontal-*
+node render.js --portrait       # vertical cut   -> dist/*-vertical-*
 ```
 
-`render.js` needs `playwright` (with Chromium) and `ffmpeg`. Set
-`PLAYWRIGHT_PATH` / `FFMPEG` to override their locations. Then produce the web
-encodes from `dist/master.mp4`:
-
-```bash
-ffmpeg -i dist/master.mp4 -c:v libx264 -crf 22 -pix_fmt yuv420p -movflags +faststart -an dist/saudisoft-localization-journey-1080p.mp4
-ffmpeg -i dist/master.mp4 -vf scale=1280:720 -c:v libx264 -crf 23 -pix_fmt yuv420p -movflags +faststart -an dist/saudisoft-localization-journey-720p.mp4
-ffmpeg -i dist/master.mp4 -c:v libvpx-vp9 -b:v 0 -crf 34 -row-mt 1 -an dist/saudisoft-localization-journey-1080p.webm
-```
+Open `journey.html?portrait&t=20` to preview the vertical layout. `render.js`
+needs `playwright` (with Chromium) and `ffmpeg`. Set `PLAYWRIGHT_PATH` /
+`FFMPEG` to override their locations.
 
 Brand: colours come from the Saudisoft logo (`saudisoft-logo.png`): green
 `#0B6D40`, yellow `#FADC29`, grey `#67696B`, on a light background. For a

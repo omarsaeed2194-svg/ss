@@ -1,13 +1,35 @@
-<!-- Saudisoft Localization Journey — drop-in responsive embed.
-     Upload the files in dist/ to your site (e.g. /media/) and adjust the paths below. -->
-<div style="position:relative;width:100%;max-width:1280px;margin:0 auto;aspect-ratio:16/9;border-radius:16px;overflow:hidden;background:#f3f6f2">
-  <video
-    autoplay muted loop playsinline preload="metadata"
-    poster="/media/saudisoft-localization-journey-poster.jpg"
-    style="width:100%;height:100%;display:block;object-fit:cover"
-    aria-label="Saudisoft Localization: from Jeddah in 1983 to 100+ languages — our localization journey">
-    <source src="/media/saudisoft-localization-journey-1080p.webm" type="video/webm">
-    <source src="/media/saudisoft-localization-journey-1080p.mp4" type="video/mp4">
-    <source src="/media/saudisoft-localization-journey-720p.mp4" type="video/mp4">
-  </video>
+<!-- Saudisoft Localization Journey: drop-in responsive embed.
+     Upload the files in dist/ to your site (e.g. /media/) and adjust MEDIA below.
+     Phones in portrait get the vertical 9:16 cut; everything else gets the horizontal 16:9 cut. -->
+<div class="ss-journey">
+  <video autoplay muted loop playsinline preload="metadata"
+         aria-label="Saudisoft Localization: from Jeddah in 1983 to 100+ languages, our localization journey"></video>
 </div>
+<style>
+  .ss-journey { position: relative; width: 100%; max-width: 1280px; margin: 0 auto; aspect-ratio: 16 / 9;
+                border-radius: 16px; overflow: hidden; background: #f3f6f2; }
+  .ss-journey video { width: 100%; height: 100%; display: block; object-fit: cover; }
+  @media (max-width: 767px) and (orientation: portrait) {
+    .ss-journey { max-width: 480px; aspect-ratio: 9 / 16; }
+  }
+</style>
+<script>
+  (function () {
+    var MEDIA = "/media/saudisoft-localization-journey-";
+    var v = document.querySelector(".ss-journey video");
+    var cut = matchMedia("(max-width: 767px) and (orientation: portrait)").matches ? "vertical" : "horizontal";
+    v.poster = MEDIA + cut + "-poster.jpg";
+    v.innerHTML =
+      '<source src="' + MEDIA + cut + '-1080p.webm" type="video/webm">' +
+      '<source src="' + MEDIA + cut + '-1080p.mp4" type="video/mp4">';
+    v.load();
+  })();
+</script>
+
+<!-- Or embed a single cut directly, e.g. the vertical one (for stories, reels, sidebars):
+<video autoplay muted loop playsinline poster="/media/saudisoft-localization-journey-vertical-poster.jpg"
+       style="width:100%;max-width:480px;aspect-ratio:9/16">
+  <source src="/media/saudisoft-localization-journey-vertical-1080p.webm" type="video/webm">
+  <source src="/media/saudisoft-localization-journey-vertical-1080p.mp4" type="video/mp4">
+</video>
+-->

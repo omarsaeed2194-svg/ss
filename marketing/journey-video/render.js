@@ -1,45 +1,67 @@
-// Renders journey.html frame-by-frame with headless Chromium and encodes MP4 + WebM.
-// Usage: node render.js [--stills]   (requires playwright and ffmpeg; FFMPEG env overrides binary)
+// Renders journey.html frame-by-frame with headless Chromium, then encodes the web files into dist/.
+// Usage: node render.js [--portrait] [--stills]
+//   --portrait  vertical 1080x1920 cut (default: horizontal 1920x1080)
+//   --stills    only write a few preview JPGs
+// Requires playwright (with Chromium) and ffmpeg; PLAYWRIGHT_PATH / FFMPEG override their locations.
 const { chromium } = require(process.env.PLAYWRIGHT_PATH || "playwright");
-const { spawn } = require("child_process");
+const { spawn, spawnSync } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 
 const FPS = 30;
 const FFMPEG = process.env.FFMPEG || "ffmpeg";
 const OUT = path.join(__dirname, "dist");
+const PORTRAIT = process.argv.includes("--portrait");
+const [W, H] = PORTRAIT ? [1080, 1920] : [1920, 1080];
+const NAME = "saudisoft-localization-journey-" + (PORTRAIT ? "vertical" : "horizontal");
+
+function ffmpeg(args) {
+  const r = spawnSync(FFMPEG, ["-loglevel", "error", "-y", ...args], { stdio: "inherit" });
+  if (r.status !== 0) throw new Error("ffmpeg failed: " + args.join(" "));
+}
 
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
-  await page.goto("file://" + path.join(__dirname, "journey.html"));
+  const page = await browser.newPage({ viewport: { width: W, height: H } });
+  await page.goto("file://" + path.join(__dirname, "journey.html") + (PORTRAIT ? "?portrait" : ""));
   await page.evaluate(() => document.fonts.ready);
   const duration = await page.evaluate(() => window.DURATION);
 
   if (process.argv.includes("--stills")) {
-    for (const t of [2.5, 4, 8, 15.5, 22, 27, 33, 38, 40.5, 44.5, 49]) {
+    for (const t of [4, 8, 15.5, 27, 33, 38, 44.5, 49]) {
       await page.evaluate(t => window.render(t), t);
-      await page.screenshot({ path: path.join(OUT, `still-${t}.jpg`), quality: 80 });
+      await page.screenshot({ path: path.join(OUT, `still-${PORTRAIT ? "v" : "h"}-${t}.jpg`), quality: 80 });
     }
     await browser.close();
     return;
   }
 
-  const master = path.join(OUT, "master.mp4");
-  const ff = spawn(FFMPEG, ["-y", "-f", "image2pipe", "-framerate", String(FPS), "-c:v", "mjpeg", "-i", "-",
+  const master = path.join(OUT, `master-${NAME}.mp4`);
+  const ff = spawn(FFMPEG, ["-y", "-loglevel", "error", "-f", "image2pipe", "-framerate", String(FPS), "-c:v", "mjpeg", "-i", "-",
     "-c:v", "libx264", "-preset", "slow", "-crf", "12", "-pix_fmt", "yuv420p", master], { stdio: ["pipe", "inherit", "inherit"] });
   const total = Math.round(duration * FPS);
   for (let f = 0; f < total; f++) {
     await page.evaluate(t => window.render(t), f / FPS);
     const buf = await page.screenshot({ type: "jpeg", quality: 95 });
     if (!ff.stdin.write(buf)) await new Promise(r => ff.stdin.once("drain", r));
-    if (f % 150 === 0) console.log(`frame ${f}/${total}`);
+    if (f % 300 === 0) console.log(`frame ${f}/${total}`);
   }
   ff.stdin.end();
   await new Promise(r => ff.on("close", r));
-  // Poster frame
+
   await page.evaluate(() => window.render(49));
-  await page.screenshot({ path: path.join(OUT, "poster.jpg"), type: "jpeg", quality: 85 });
+  const posterPng = path.join(OUT, "poster.png");
+  await page.screenshot({ path: posterPng });
   await browser.close();
+
+  const out = suffix => path.join(OUT, `${NAME}-${suffix}`);
+  const small = PORTRAIT ? "720:1280" : "1280:720";
+  const h264 = ["-c:v", "libx264", "-preset", "slow", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-an"];
+  ffmpeg(["-i", master, ...h264, "-crf", "22", out("1080p.mp4")]);
+  ffmpeg(["-i", master, "-vf", `scale=${small}`, ...h264, "-crf", "23", out("720p.mp4")]);
+  ffmpeg(["-i", master, "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "34", "-row-mt", "1", "-deadline", "good", "-cpu-used", "2", "-an", out("1080p.webm")]);
+  ffmpeg(["-i", posterPng, "-q:v", "4", out("poster.jpg")]);
+  fs.rmSync(master); fs.rmSync(posterPng);
+  console.log("done:", NAME);
 })();

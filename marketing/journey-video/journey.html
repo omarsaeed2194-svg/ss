@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf-8">
 <title>Saudisoft Localization Journey</title>
+<script>
+  // ?portrait renders the vertical 1080x1920 cut from the same timeline.
+  if (/[?&]portrait\b/.test(location.search)) document.documentElement.classList.add("portrait");
+</script>
 <link rel="stylesheet" href="fonts.css">
 <style>
   :root {
@@ -104,6 +108,43 @@
   .url { display: inline-block; margin-top: 50px; padding: 26px 56px; border-radius: 999px; font-size: 52px; font-weight: 700;
          background: var(--green); color: #fff; border-bottom: 8px solid var(--yellow); box-shadow: 0 24px 70px rgba(11,109,64,.3); }
   .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+
+  .p-only { display: none; }
+
+  /* ---------- Vertical 1080x1920 layout ---------- */
+  .portrait body, .portrait #stage { width: 1080px; height: 1920px; }
+  .portrait #stage { background: radial-gradient(1000px 1300px at 50% 32%, #ffffff 0%, #f7f9f5 45%, #e9f0e8 100%); }
+  .portrait .p-only { display: inline; }
+  .portrait .h1 { font-size: 80px; }
+  .portrait .h2 { font-size: 62px; }
+  .portrait .lead { font-size: 34px; }
+  .portrait .eyebrow { font-size: 24px; }
+  .portrait .logo { width: 560px; height: 128px; }
+  .portrait .wm-sub { font-size: 22px; }
+  .portrait .wm-sub::before, .portrait .wm-sub::after { width: 40px; margin: 0 14px 5px; }
+  .portrait .s2-copy { left: 90px !important; top: 830px !important; width: 900px !important; }
+  .portrait .s-head { left: 90px !important; top: 230px !important; width: 900px; }
+  .portrait .miles { left: 90px; top: 620px; width: 900px; }
+  .portrait .mile { height: 230px; }
+  .portrait .mile h3 { font-size: 42px; line-height: 1.15; }
+  .portrait .mile p { font-size: 28px; }
+  .portrait .mile-line { height: 775px; }
+  .portrait .s4-head { top: 150px !important; padding: 0 60px; }
+  .portrait .node-label { width: 380px; margin-left: 0; }
+  .portrait .node-label .t { font-size: 36px; }
+  .portrait .node-label .d { font-size: 24px; }
+  .portrait .tep { top: 1745px; width: 900px; white-space: normal; text-align: center; font-size: 27px; line-height: 1.35;
+                   border-radius: 36px; padding: 22px 34px; justify-content: center; }
+  .portrait .grid { left: 90px; top: 580px; width: 900px; grid-template-columns: repeat(2, 1fr); gap: 28px; }
+  .portrait .card { height: 250px; }
+  .portrait .pill { font-size: 36px; padding: 14px 26px; }
+  .portrait .big100 { font-size: 250px; }
+  .portrait .lang-lead { max-width: 820px; font-size: 32px !important; }
+  .portrait .s7-head { top: 420px !important; padding: 0 70px; }
+  .portrait .badges { top: 800px; }
+  .portrait .badge { width: 880px; }
+  .portrait .cta-h { font-size: 84px !important; }
+  .portrait .url { font-size: 44px; padding: 24px 48px; }
 </style>
 </head>
 <body>
@@ -125,7 +166,7 @@
 
   <!-- S2: 1983 Jeddah -->
   <section class="scene" data-start="5.2" data-end="11">
-    <div style="position:absolute;left:160px;top:230px;width:1100px">
+    <div class="s2-copy" style="position:absolute;left:160px;top:230px;width:1100px">
       <div class="eyebrow" data-in="0.2">Where it began</div>
       <div class="year grad" id="year" data-in="0.4">1983</div>
       <div class="h2" data-in="1.0">Jeddah, Saudi Arabia</div>
@@ -135,7 +176,7 @@
 
   <!-- S3: growth milestones -->
   <section class="scene" data-start="11" data-end="17.6">
-    <div style="position:absolute;left:160px;top:130px">
+    <div class="s-head" style="position:absolute;left:160px;top:130px">
       <div class="eyebrow" data-in="0.2">Four decades of growth</div>
       <div class="h2" style="margin-top:18px" data-in="0.4">From one city to every market</div>
     </div>
@@ -150,7 +191,7 @@
 
   <!-- S4: the content journey -->
   <section class="scene" data-start="17.6" data-end="28.4">
-    <div style="position:absolute;left:0;right:0;top:110px;text-align:center">
+    <div class="s4-head" style="position:absolute;left:0;right:0;top:110px;text-align:center">
       <div class="eyebrow" data-in="0.2">How your content travels</div>
       <div class="h2" style="margin-top:18px" data-in="0.4">The journey of every project</div>
     </div>
@@ -159,9 +200,9 @@
         <linearGradient id="pg" x1="0" x2="1"><stop offset="0" stop-color="#0b6d40"/><stop offset="1" stop-color="#2e9a57"/></linearGradient>
         <radialGradient id="glow"><stop offset="0" stop-color="#fff"/><stop offset=".3" stop-color="#fadc29"/><stop offset="1" stop-color="#fadc29" stop-opacity="0"/></radialGradient>
       </defs>
-      <path id="track" d="M 150 620 C 330 480, 420 480, 560 580 S 800 740, 960 620 S 1200 480, 1360 580 S 1600 740, 1770 620"
+      <path id="track" class="trk" d="M 150 620 C 330 480, 420 480, 560 580 S 800 740, 960 620 S 1200 480, 1360 580 S 1600 740, 1770 620"
             fill="none" stroke="rgba(11,109,64,.12)" stroke-width="6" stroke-linecap="round"/>
-      <path id="track-fill" d="M 150 620 C 330 480, 420 480, 560 580 S 800 740, 960 620 S 1200 480, 1360 580 S 1600 740, 1770 620"
+      <path id="track-fill" class="trk" d="M 150 620 C 330 480, 420 480, 560 580 S 800 740, 960 620 S 1200 480, 1360 580 S 1600 740, 1770 620"
             fill="none" stroke="url(#pg)" stroke-width="8" stroke-linecap="round"/>
       <g id="nodes"></g>
       <circle id="runner" r="34" fill="url(#glow)"/>
@@ -174,7 +215,7 @@
 
   <!-- S5: services -->
   <section class="scene" data-start="28.4" data-end="34.6">
-    <div style="position:absolute;left:160px;top:130px">
+    <div class="s-head" style="position:absolute;left:160px;top:130px">
       <div class="eyebrow" data-in="0.2">End-to-end services</div>
       <div class="h2" style="margin-top:18px" data-in="0.4">Whatever you create, we localize it</div>
     </div>
@@ -187,13 +228,13 @@
     <div class="center" style="pointer-events:none">
       <div class="big100 grad" data-in="0.3" data-anim="scale"><span id="count">0</span>+</div>
       <div class="h2" style="margin-top:6px" data-in="0.8">languages</div>
-      <div class="lead" style="margin-top:20px;font-size:30px" data-in="1.2">Native speakers who master every linguistic &amp; cultural nuance</div>
+      <div class="lead lang-lead" style="margin-top:20px;font-size:30px" data-in="1.2">Native speakers who master every linguistic &amp; cultural nuance</div>
     </div>
   </section>
 
   <!-- S7: ISO -->
   <section class="scene" data-start="41" data-end="46">
-    <div style="position:absolute;left:0;right:0;top:150px;text-align:center">
+    <div class="s7-head" style="position:absolute;left:0;right:0;top:150px;text-align:center">
       <div class="eyebrow" data-in="0.2">Certified quality</div>
       <div class="h2" style="margin-top:18px" data-in="0.4">Certified to the global translation standard</div>
     </div>
@@ -209,7 +250,7 @@
         <img class="logo" src="saudisoft-logo.png" alt="Saudisoft">
         <div class="wm-sub">Localization &amp; Translation</div>
       </div>
-      <div class="h1" style="margin-top:70px;font-size:88px" data-in="0.7">Your journey to every market<br><span class="grad">starts here.</span></div>
+      <div class="h1 cta-h" style="margin-top:70px;font-size:88px" data-in="0.7">Your journey to <br class="p-only">every market<br><span class="grad">starts here.</span></div>
       <div class="url" data-in="1.5" data-anim="scale">localization.saudisoft.com</div>
     </div>
   </section>
@@ -224,6 +265,19 @@ const easeOut = x => 1 - Math.pow(1 - clamp(x), 3);
 const easeInOut = x => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
 const backOut = x => { x = clamp(x); const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
 const $ = s => document.querySelector(s);
+const PORTRAIT = document.documentElement.classList.contains("portrait");
+const W = PORTRAIT ? 1080 : 1920, H = PORTRAIT ? 1920 : 1080;
+if (PORTRAIT) {
+  $("#globe").width = W; $("#globe").height = H;
+  $("#path-svg").setAttribute("width", W); $("#path-svg").setAttribute("height", H);
+  // zigzag with nodes at the turning points, evenly spaced 190px apart
+  let d = "M 430 450";
+  for (let i = 1; i < 7; i++) {
+    const y0 = 450 + (i - 1) * 190, y1 = y0 + 190, x0 = i % 2 ? 430 : 650, x1 = i % 2 ? 650 : 430;
+    d += ` C ${x0} ${y0 + 95}, ${x1} ${y1 - 95}, ${x1} ${y1}`;
+  }
+  document.querySelectorAll(".trk").forEach(p => p.setAttribute("d", d));
+}
 
 /* ---------- build dynamic content ---------- */
 const STEPS = [
@@ -247,9 +301,17 @@ const nodes = STEPS.map((s, i) => {
   nodeG.appendChild(ring);
   const lab = document.createElement("div");
   lab.className = "node-label";
-  const below = i % 2 === 1;
-  lab.style.left = p.x + "px";
-  lab.style.top = (below ? p.y + 50 : p.y - 235) + "px";
+  if (PORTRAIT) {
+    // alternate labels left/right of the vertical path
+    const right = i % 2 === 1;
+    lab.style.left = (right ? p.x + 70 : p.x - 70 - 380) + "px";
+    lab.style.top = (p.y - 62) + "px";
+    lab.style.textAlign = right ? "left" : "right";
+  } else {
+    const below = i % 2 === 1;
+    lab.style.left = p.x + "px";
+    lab.style.top = (below ? p.y + 50 : p.y - 235) + "px";
+  }
   lab.innerHTML = `<div class="n">0${i + 1}</div><div class="t">${s[0]}<br><span style="color:var(--muted);font-weight:600;font-size:26px">${s[1]}</span></div><div class="d">${s[2]}</div>`;
   labels.appendChild(lab);
   return { ring, lab, frac: i / (STEPS.length - 1) };
@@ -283,9 +345,19 @@ const GREETINGS = [
 ];
 // Positions on an ellipse ring around the centre, with slight jitter.
 $("#pills").innerHTML = GREETINGS.map((g, i) => {
-  const a = (i / GREETINGS.length) * Math.PI * 2 - Math.PI / 2;
-  const rx = 800 + (i % 3) * 20, ry = 410 + (i % 2) * 30;
-  const x = 960 + Math.cos(a) * rx, y = 540 + Math.sin(a) * ry;
+  let x, y;
+  if (PORTRAIT) {
+    // two staggered clusters above and below the headline: rows of 4,3,4
+    const half = i < 11 ? 0 : 1, j = i % 11;
+    const row = j < 4 ? 0 : j < 7 ? 1 : 2, col = j < 4 ? j : j < 7 ? j - 4 : j - 7;
+    const xs = row === 1 ? [260, 540, 820] : [150, 405, 675, 930];
+    x = xs[col] + ((i * 37) % 30 - 15);
+    y = (half ? 1330 : 300) + row * 140;
+  } else {
+    const a = (i / GREETINGS.length) * Math.PI * 2 - Math.PI / 2;
+    const rx = 800 + (i % 3) * 20, ry = 410 + (i % 2) * 30;
+    x = 960 + Math.cos(a) * rx; y = 540 + Math.sin(a) * ry;
+  }
   return `<div class="pill ${g[1]}${i % 4 === 0 ? " hi" : ""}" data-in="${0.2 + i * 0.12}" data-anim="pop" style="left:${x}px;top:${y}px">${g[0]}</div>`;
 }).join("");
 
@@ -306,7 +378,7 @@ function slerp(a, b, t) {
   return [a[0] * wa + b[0] * wb, a[1] * wa + b[1] * wb, a[2] * wa + b[2] * wb];
 }
 function drawGlobe(t, cx, cy, R, alpha, arcs) {
-  ctx.clearRect(0, 0, 1920, 1080);
+  ctx.clearRect(0, 0, W, H);
   if (alpha <= 0.001) return;
   const rot = -JEDDAH[1] + 0.35 - t * 0.05, tilt = -0.32;
   const proj = v => {
@@ -377,6 +449,15 @@ const GK = [
   [35, 960, 540, 330, .9, 0], [36, 960, 540, 330, .9, .05], [40, 960, 540, 330, .9, 1], [40.8, 960, 540, 330, .9, 1],
   [41.6, 960, 1500, 900, .4, 0], [52, 960, 1500, 900, .5, 0],
 ];
+const GK_PORTRAIT = [
+  [0, 540, 1800, 720, .55, 0], [4.6, 540, 1800, 720, .55, 0],
+  [5.6, 540, 450, 330, 1, 0], [10.4, 540, 450, 330, 1, 0],
+  [11.4, 700, 2250, 760, .3, 0], [17, 700, 2250, 760, .3, 0],
+  [18, 540, 2400, 1100, .25, 0], [34, 540, 2400, 1100, .25, 0],
+  [35, 540, 960, 320, .9, 0], [36, 540, 960, 320, .9, .05], [40, 540, 960, 320, .9, 1], [40.8, 540, 960, 320, .9, 1],
+  [41.6, 540, 1800, 720, .4, 0], [52, 540, 1800, 720, .5, 0],
+];
+if (PORTRAIT) GK.splice(0, GK.length, ...GK_PORTRAIT);
 function globeAt(t) {
   let i = 0; while (i < GK.length - 2 && GK[i + 1][0] <= t) i++;
   const a = GK[i], b = GK[i + 1], k = easeInOut((t - a[0]) / (b[0] - a[0]));
@@ -413,7 +494,7 @@ window.render = function (t) {
   y.textContent = Math.round(lerp(1950, 1983, lk));
 
   // S3 timeline fill
-  $("#mile-fill").style.height = (560 * easeInOut((t - 11.9) / 4)) + "px";
+  $("#mile-fill").style.height = ((PORTRAIT ? 775 : 560) * easeInOut((t - 11.9) / 4)) + "px";
 
   // S4 runner along journey path
   const jp = easeInOut((t - 18.6) / 7.4);
