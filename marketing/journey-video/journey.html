@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Saudisoft Localization Journey</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+  :root {
+    --navy: #07172e;
+    --navy-2: #0c2547;
+    --blue: #2f7df6;
+    --green: #22c08a;
+    --gold: #f4b740;
+    --ink: #eaf2ff;
+    --muted: #93a8c7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--navy); }
+  body {
+    font-family: Montserrat, Cairo, "Noto Sans", sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  #stage {
+    position: relative; width: 1920px; height: 1080px; overflow: hidden;
+    background: radial-gradient(1200px 800px at 75% 40%, #123a6e 0%, var(--navy-2) 40%, var(--navy) 100%);
+  }
+  #globe { position: absolute; inset: 0; }
+  .scene { position: absolute; inset: 0; opacity: 0; }
+  [data-in] { opacity: 0; will-change: transform, opacity; }
+  .eyebrow {
+    font-size: 26px; font-weight: 600; letter-spacing: .32em; text-transform: uppercase;
+    color: var(--green);
+  }
+  .h1 { font-size: 104px; font-weight: 800; line-height: 1.02; letter-spacing: -.02em; }
+  .h2 { font-size: 72px; font-weight: 800; line-height: 1.08; letter-spacing: -.015em; }
+  .lead { font-size: 36px; font-weight: 500; line-height: 1.4; color: var(--muted); }
+  .grad { background: linear-gradient(90deg, var(--blue), var(--green)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .ar { font-family: Cairo, sans-serif; direction: rtl; }
+
+  /* Wordmark */
+  .wordmark { display: flex; align-items: center; gap: 28px; }
+  .mark {
+    width: 120px; height: 120px; border-radius: 30px;
+    background: linear-gradient(135deg, var(--blue), var(--green));
+    display: grid; place-items: center; box-shadow: 0 20px 60px rgba(47,125,246,.45);
+    font-size: 72px; font-weight: 800; color: white;
+  }
+  .wm-text { font-size: 84px; font-weight: 800; letter-spacing: -.02em; }
+  .wm-sub { font-size: 30px; font-weight: 500; color: var(--muted); letter-spacing: .28em; text-transform: uppercase; margin-top: 6px; }
+
+  /* S2 year counter */
+  .year { font-size: 300px; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
+
+  /* S3 milestones */
+  .miles { position: absolute; left: 160px; top: 330px; width: 1600px; }
+  .mile-line { position: absolute; left: 36px; top: 30px; width: 4px; height: 560px; background: rgba(255,255,255,.12); border-radius: 2px; }
+  .mile-fill { position: absolute; left: 36px; top: 30px; width: 4px; height: 0; background: linear-gradient(var(--blue), var(--green)); border-radius: 2px; }
+  .mile { position: relative; display: flex; align-items: center; gap: 44px; height: 150px; }
+  .dot { width: 76px; height: 76px; border-radius: 50%; flex: none; display: grid; place-items: center;
+         background: var(--navy-2); border: 4px solid var(--green); font-size: 30px; font-weight: 800; color: var(--green); }
+  .mile h3 { font-size: 48px; font-weight: 700; }
+  .mile p { font-size: 30px; color: var(--muted); margin-top: 6px; }
+
+  /* S4 journey path */
+  #path-svg { position: absolute; left: 0; top: 0; }
+  .node-label { position: absolute; width: 260px; margin-left: -130px; text-align: center; }
+  .node-label .n { font-size: 22px; font-weight: 700; letter-spacing: .2em; color: var(--green); }
+  .node-label .t { font-size: 34px; font-weight: 700; margin-top: 8px; line-height: 1.15; }
+  .node-label .d { font-size: 22px; color: var(--muted); margin-top: 8px; line-height: 1.35; }
+  .tep { position: absolute; left: 0; right: 0; margin: 0 auto; width: fit-content; top: 965px; display: flex; gap: 18px; align-items: center;
+         padding: 18px 34px; border-radius: 999px; background: rgba(34,192,138,.12); border: 2px solid rgba(34,192,138,.5);
+         font-size: 28px; font-weight: 600; white-space: nowrap; }
+
+  /* S5 services */
+  .grid { position: absolute; left: 160px; top: 380px; width: 1600px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; }
+  .card { height: 240px; border-radius: 28px; padding: 36px; background: rgba(255,255,255,.05);
+          border: 1.5px solid rgba(255,255,255,.12); display: flex; flex-direction: column; justify-content: space-between; }
+  .card .ic { width: 72px; height: 72px; border-radius: 20px; display: grid; place-items: center;
+              background: linear-gradient(135deg, rgba(47,125,246,.3), rgba(34,192,138,.3)); }
+  .card .ic svg { width: 40px; height: 40px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .card h4 { font-size: 36px; font-weight: 700; }
+  .card small { display: block; font-size: 22px; color: var(--muted); margin-top: 6px; font-weight: 500; }
+
+  /* S6 languages */
+  .pill { position: absolute; padding: 16px 30px; border-radius: 999px; font-size: 40px; font-weight: 700; white-space: nowrap;
+          background: rgba(12,37,71,.8); border: 2px solid rgba(255,255,255,.14); transform: translate(-50%, -50%); }
+  .pill.hi { border-color: var(--green); }
+  .big100 { font-size: 260px; font-weight: 800; line-height: 1; letter-spacing: -.04em; }
+  .sc { font-family: "Noto Sans SC"; } .jp { font-family: "Noto Sans JP"; } .kr { font-family: "Noto Sans KR"; }
+  .hi-dev { font-family: "Noto Sans Devanagari"; } .he { font-family: "Noto Sans Hebrew"; } .th { font-family: "Noto Sans Thai"; }
+  .gr { font-family: "Noto Sans"; }
+
+  /* S7 ISO */
+  .badges { position: absolute; left: 0; right: 0; top: 400px; display: flex; justify-content: center; gap: 90px; }
+  .badge { width: 560px; padding: 56px 48px; border-radius: 36px; text-align: center; background: rgba(255,255,255,.05);
+           border: 2px solid rgba(244,183,64,.5); }
+  .seal { width: 150px; height: 150px; border-radius: 50%; margin: 0 auto 30px; display: grid; place-items: center;
+          border: 5px solid var(--gold); color: var(--gold); font-size: 34px; font-weight: 800; line-height: 1.05; }
+  .badge h3 { font-size: 60px; font-weight: 800; }
+  .badge p { font-size: 28px; color: var(--muted); margin-top: 10px; }
+
+  /* S8 CTA */
+  .url { display: inline-block; margin-top: 50px; padding: 26px 56px; border-radius: 999px; font-size: 52px; font-weight: 700;
+         background: linear-gradient(90deg, var(--blue), var(--green)); color: #fff; box-shadow: 0 24px 80px rgba(34,192,138,.35); }
+  .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="globe" width="1920" height="1080"></canvas>
+
+  <!-- S1: intro -->
+  <section class="scene" data-start="0" data-end="5.2">
+    <div class="center">
+      <div class="eyebrow" data-in="0.3">A localization journey</div>
+      <div class="h1" style="margin-top:34px" data-in="0.6">Every market speaks<br><span class="grad">its own language.</span></div>
+      <div class="lead ar" style="margin-top:36px;font-size:44px" data-in="1.4">لكل سوقٍ لغته الخاصة</div>
+      <div class="wordmark" style="margin-top:70px" data-in="2.4" data-anim="scale">
+        <div class="mark">S</div>
+        <div style="text-align:left"><div class="wm-text">Saudisoft</div><div class="wm-sub">Localization &amp; Translation</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- S2: 1983 Jeddah -->
+  <section class="scene" data-start="5.2" data-end="11">
+    <div style="position:absolute;left:160px;top:230px;width:1100px">
+      <div class="eyebrow" data-in="0.2">Where it began</div>
+      <div class="year grad" id="year" data-in="0.4">1983</div>
+      <div class="h2" data-in="1.0">Jeddah, Saudi Arabia</div>
+      <div class="lead" style="margin-top:28px;max-width:1000px" data-in="1.6">Founded by Saudi entrepreneurs to bring Arabic technical communication to the world.</div>
+    </div>
+  </section>
+
+  <!-- S3: growth milestones -->
+  <section class="scene" data-start="11" data-end="17.6">
+    <div style="position:absolute;left:160px;top:130px">
+      <div class="eyebrow" data-in="0.2">Four decades of growth</div>
+      <div class="h2" style="margin-top:18px" data-in="0.4">From one city to every market</div>
+    </div>
+    <div class="miles">
+      <div class="mile-line"></div><div class="mile-fill" id="mile-fill"></div>
+      <div class="mile" data-in="0.9" data-anim="left"><div class="dot">1</div><div><h3>Founded in Jeddah</h3><p>Pioneering Arabic software and technical content</p></div></div>
+      <div class="mile" data-in="1.9" data-anim="left"><div class="dot">2</div><div><h3>Offices across Saudi Arabia &amp; Egypt</h3><p>A regional team close to the markets we serve</p></div></div>
+      <div class="mile" data-in="2.9" data-anim="left"><div class="dot">3</div><div><h3>Cairo production hub</h3><p>Localization, engineering and QA under one roof</p></div></div>
+      <div class="mile" data-in="3.9" data-anim="left"><div class="dot">4</div><div><h3>35+ years · 100+ languages</h3><p>Helping global brands launch to multilingual audiences</p></div></div>
+    </div>
+  </section>
+
+  <!-- S4: the content journey -->
+  <section class="scene" data-start="17.6" data-end="28.4">
+    <div style="position:absolute;left:0;right:0;top:110px;text-align:center">
+      <div class="eyebrow" data-in="0.2">How your content travels</div>
+      <div class="h2" style="margin-top:18px" data-in="0.4">The journey of every project</div>
+    </div>
+    <svg id="path-svg" width="1920" height="1080">
+      <defs>
+        <linearGradient id="pg" x1="0" x2="1"><stop offset="0" stop-color="#2f7df6"/><stop offset="1" stop-color="#22c08a"/></linearGradient>
+        <radialGradient id="glow"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="#22c08a"/><stop offset="1" stop-color="#22c08a" stop-opacity="0"/></radialGradient>
+      </defs>
+      <path id="track" d="M 150 620 C 330 480, 420 480, 560 580 S 800 740, 960 620 S 1200 480, 1360 580 S 1600 740, 1770 620"
+            fill="none" stroke="rgba(255,255,255,.12)" stroke-width="6" stroke-linecap="round"/>
+      <path id="track-fill" d="M 150 620 C 330 480, 420 480, 560 580 S 800 740, 960 620 S 1200 480, 1360 580 S 1600 740, 1770 620"
+            fill="none" stroke="url(#pg)" stroke-width="8" stroke-linecap="round"/>
+      <g id="nodes"></g>
+      <circle id="runner" r="34" fill="url(#glow)"/>
+    </svg>
+    <div id="node-labels"></div>
+    <div class="tep" data-in="7.6">
+      <span style="color:var(--green)">●</span> TEP quality process: Translation → Editing → Proofreading, by native linguists
+    </div>
+  </section>
+
+  <!-- S5: services -->
+  <section class="scene" data-start="28.4" data-end="34.6">
+    <div style="position:absolute;left:160px;top:130px">
+      <div class="eyebrow" data-in="0.2">End-to-end services</div>
+      <div class="h2" style="margin-top:18px" data-in="0.4">Whatever you create, we localize it</div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <!-- S6: languages -->
+  <section class="scene" data-start="34.6" data-end="41">
+    <div id="pills"></div>
+    <div class="center" style="pointer-events:none">
+      <div class="big100 grad" data-in="0.3" data-anim="scale"><span id="count">0</span>+</div>
+      <div class="h2" style="margin-top:6px" data-in="0.8">languages</div>
+      <div class="lead" style="margin-top:20px;font-size:30px" data-in="1.2">Native speakers who master every linguistic &amp; cultural nuance</div>
+    </div>
+  </section>
+
+  <!-- S7: ISO -->
+  <section class="scene" data-start="41" data-end="46">
+    <div style="position:absolute;left:0;right:0;top:150px;text-align:center">
+      <div class="eyebrow" data-in="0.2">Certified quality</div>
+      <div class="h2" style="margin-top:18px" data-in="0.4">Built on international standards</div>
+    </div>
+    <div class="badges">
+      <div class="badge" data-in="0.9" data-anim="scale"><div class="seal">ISO<br>17100</div><h3>ISO 17100</h3><p>Translation Services</p></div>
+      <div class="badge" data-in="1.4" data-anim="scale"><div class="seal">ISO<br>9001</div><h3>ISO 9001</h3><p>Quality Management Systems</p></div>
+    </div>
+  </section>
+
+  <!-- S8: CTA -->
+  <section class="scene" data-start="46" data-end="52">
+    <div class="center">
+      <div class="wordmark" data-in="0.2" data-anim="scale">
+        <div class="mark">S</div>
+        <div style="text-align:left"><div class="wm-text">Saudisoft</div><div class="wm-sub">Localization &amp; Translation</div></div>
+      </div>
+      <div class="h1" style="margin-top:70px;font-size:88px" data-in="0.7">Your journey to every market<br><span class="grad">starts here.</span></div>
+      <div class="url" data-in="1.5" data-anim="scale">localization.saudisoft.com</div>
+    </div>
+  </section>
+
+  
+</div>
+
+<script>
+const DURATION = 52;
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const easeOut = x => 1 - Math.pow(1 - clamp(x), 3);
+const easeInOut = x => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const backOut = x => { x = clamp(x); const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+const $ = s => document.querySelector(s);
+
+/* ---------- build dynamic content ---------- */
+const STEPS = [
+  ["Source", "Your content", "Software, web, games, docs"],
+  ["Analysis", "Scoping & quote", "Files, glossary, timeline"],
+  ["Translate", "Native linguists", "Domain experts + CAT tools"],
+  ["Edit & proof", "TEP review", "Accuracy, style, terminology"],
+  ["Engineer", "Build & DTP", "Code, layout, RTL support"],
+  ["Test", "QA & LQA", "Linguistic + functional"],
+  ["Launch", "Global release", "Ready for every market"],
+];
+const track = $("#track"), trackFill = $("#track-fill");
+const LEN = track.getTotalLength();
+trackFill.style.strokeDasharray = LEN;
+const nodeG = $("#nodes"), labels = $("#node-labels");
+const nodes = STEPS.map((s, i) => {
+  const p = track.getPointAtLength(LEN * i / (STEPS.length - 1));
+  const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  ring.setAttribute("cx", p.x); ring.setAttribute("cy", p.y); ring.setAttribute("r", 26);
+  ring.setAttribute("fill", "#0c2547"); ring.setAttribute("stroke", "rgba(255,255,255,.25)"); ring.setAttribute("stroke-width", 5);
+  nodeG.appendChild(ring);
+  const lab = document.createElement("div");
+  lab.className = "node-label";
+  const below = i % 2 === 1;
+  lab.style.left = p.x + "px";
+  lab.style.top = (below ? p.y + 50 : p.y - 235) + "px";
+  lab.innerHTML = `<div class="n">0${i + 1}</div><div class="t">${s[0]}<br><span style="color:var(--muted);font-weight:600;font-size:26px">${s[1]}</span></div><div class="d">${s[2]}</div>`;
+  labels.appendChild(lab);
+  return { ring, lab, frac: i / (STEPS.length - 1) };
+});
+
+const ICONS = {
+  code: '<polyline points="8 6 2 12 8 18"/><polyline points="16 6 22 12 16 18"/>',
+  globe: '<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/>',
+  game: '<rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 11v3M5.5 12.5h3"/><circle cx="16" cy="11.5" r=".8"/><circle cx="18" cy="13.5" r=".8"/>',
+  learn: '<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2 9 2 12 0v-5"/>',
+  sub: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 14h5M13 14h5M6 10h12"/>',
+  mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/>',
+  spark: '<path d="M12 2v6M12 16v6M2 12h6M16 12h6M5 5l4 4M15 15l4 4M19 5l-4 4M9 15l-4 4"/>',
+  talk: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/>',
+};
+const SERVICES = [
+  ["code", "Software", "UI, strings & help"], ["globe", "Websites", "Multilingual web & SEO"],
+  ["game", "Games", "In-game text & culturalization"], ["learn", "eLearning", "Courses & LMS content"],
+  ["sub", "Subtitling", "Timed, broadcast-ready"], ["mic", "Voiceover", "Native voice talent"],
+  ["spark", "Transcreation", "Marketing that resonates"], ["talk", "Interpretation", "Live, on-site & remote"],
+];
+$("#grid").innerHTML = SERVICES.map((s, i) =>
+  `<div class="card" data-in="${0.8 + i * 0.22}" data-anim="up"><div class="ic"><svg viewBox="0 0 24 24">${ICONS[s[0]]}</svg></div><div><h4>${s[1]}</h4><small>${s[2]}</small></div></div>`
+).join("");
+
+const GREETINGS = [
+  ["مرحباً", "ar"], ["Hello", ""], ["Bonjour", ""], ["Hola", ""], ["你好", "sc"], ["こんにちは", "jp"],
+  ["Привет", ""], ["नमस्ते", "hi-dev"], ["안녕하세요", "kr"], ["Hallo", ""], ["Olá", ""], ["Merhaba", ""],
+  ["سلام", "ar"], ["Ciao", ""], ["Jambo", ""], ["Xin chào", ""], ["สวัสดี", "th"], ["שלום", "he"],
+  ["Γεια σου", "gr"], ["Hej", ""], ["Salamat", ""], ["Cześć", ""],
+];
+// Positions on an ellipse ring around the centre, with slight jitter.
+$("#pills").innerHTML = GREETINGS.map((g, i) => {
+  const a = (i / GREETINGS.length) * Math.PI * 2 - Math.PI / 2;
+  const rx = 800 + (i % 3) * 20, ry = 410 + (i % 2) * 30;
+  const x = 960 + Math.cos(a) * rx, y = 540 + Math.sin(a) * ry;
+  return `<div class="pill ${g[1]}${i % 4 === 0 ? " hi" : ""}" data-in="${0.2 + i * 0.12}" data-anim="pop" style="left:${x}px;top:${y}px">${g[0]}</div>`;
+}).join("");
+
+/* ---------- globe ---------- */
+const ctx = $("#globe").getContext("2d");
+const PTS = [];
+for (let lat = -80; lat <= 80; lat += 6) {
+  const n = Math.max(6, Math.round(60 * Math.cos(lat * Math.PI / 180)));
+  for (let k = 0; k < n; k++) PTS.push([lat * Math.PI / 180, (k / n) * Math.PI * 2]);
+}
+const D = Math.PI / 180;
+const JEDDAH = [21.5 * D, 39.2 * D];
+const CITIES = [[30.0, 31.2], [51.5, -0.1], [40.7, -74.0], [35.7, 139.7], [48.9, 2.35], [25.2, 55.3], [-26.2, 28.0], [19.1, 72.9], [1.35, 103.8], [52.5, 13.4], [37.6, 127.0], [-23.5, -46.6]].map(c => [c[0] * D, c[1] * D]);
+const toVec = ([la, lo]) => [Math.cos(la) * Math.sin(lo), Math.sin(la), Math.cos(la) * Math.cos(lo)];
+function slerp(a, b, t) {
+  const d = Math.acos(clamp(a[0] * b[0] + a[1] * b[1] + a[2] * b[2], -1, 1)), s = Math.sin(d) || 1;
+  const wa = Math.sin((1 - t) * d) / s, wb = Math.sin(t * d) / s;
+  return [a[0] * wa + b[0] * wb, a[1] * wa + b[1] * wb, a[2] * wa + b[2] * wb];
+}
+function drawGlobe(t, cx, cy, R, alpha, arcs) {
+  ctx.clearRect(0, 0, 1920, 1080);
+  if (alpha <= 0.001) return;
+  const rot = -JEDDAH[1] + 0.35 - t * 0.05, tilt = -0.32;
+  const proj = v => {
+    // rotate around Y (longitude) then X (tilt)
+    let [x, y, z] = v;
+    const c = Math.cos(rot), s = Math.sin(rot);
+    [x, z] = [x * c + z * s, -x * s + z * c];
+    const ct = Math.cos(tilt), st = Math.sin(tilt);
+    [y, z] = [y * ct - z * st, y * st + z * ct];
+    return [cx + x * R, cy - y * R, z];
+  };
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  const g = ctx.createRadialGradient(cx - R * .3, cy - R * .3, R * .1, cx, cy, R * 1.05);
+  g.addColorStop(0, "rgba(47,125,246,.18)"); g.addColorStop(1, "rgba(7,23,46,0)");
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R * 1.05, 0, 7); ctx.fill();
+  for (const p of PTS) {
+    const [x, y, z] = proj(toVec(p));
+    if (z < 0) continue;
+    ctx.fillStyle = `rgba(147,190,255,${0.15 + z * 0.55})`;
+    ctx.beginPath(); ctx.arc(x, y, 1.4 + z * 1.6, 0, 7); ctx.fill();
+  }
+  const J = toVec(JEDDAH);
+  if (arcs > 0) {
+    CITIES.forEach((c, i) => {
+      const pr = clamp(arcs * 1.6 - i * 0.07);
+      if (pr <= 0) return;
+      const B = toVec(c);
+      ctx.beginPath();
+      let started = false;
+      for (let k = 0; k <= 60 * pr; k++) {
+        const v = slerp(J, B, k / 60), lift = 1 + 0.18 * Math.sin(Math.PI * k / 60);
+        const [x, y, z] = proj([v[0] * lift, v[1] * lift, v[2] * lift]);
+        if (z < -0.05) { started = false; continue; }
+        started ? ctx.lineTo(x, y) : ctx.moveTo(x, y); started = true;
+      }
+      ctx.strokeStyle = i % 2 ? "rgba(34,192,138,.85)" : "rgba(47,125,246,.9)";
+      ctx.lineWidth = 3; ctx.stroke();
+      if (pr >= 1) {
+        const [x, y, z] = proj(B);
+        if (z > 0) { ctx.fillStyle = "#22c08a"; ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.fill(); }
+      }
+    });
+  }
+  const [jx, jy, jz] = proj(J);
+  if (jz > 0) {
+    const pulse = (t * 0.8) % 1;
+    ctx.strokeStyle = `rgba(244,183,64,${1 - pulse})`; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(jx, jy, 10 + pulse * 40, 0, 7); ctx.stroke();
+    ctx.fillStyle = "#f4b740"; ctx.beginPath(); ctx.arc(jx, jy, 10, 0, 7); ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* ---------- per-frame render ---------- */
+const scenes = [...document.querySelectorAll(".scene")].map(el => ({
+  el, start: +el.dataset.start, end: +el.dataset.end,
+  items: [...el.querySelectorAll("[data-in]")].map(n => ({ n, at: +n.dataset.in, anim: n.dataset.anim || "up" })),
+}));
+const lerp = (a, b, k) => a + (b - a) * k;
+
+// Globe placement keyframes: [time, cx, cy, R, alpha, arcs]
+const GK = [
+  [0, 960, 1500, 900, .55, 0], [4.6, 960, 1500, 900, .55, 0],
+  [5.6, 1470, 540, 380, 1, 0], [10.4, 1470, 540, 380, 1, 0],
+  [11.4, 1650, 560, 520, .35, 0], [17, 1650, 560, 520, .35, 0],
+  [18, 960, 1600, 1000, .25, 0], [34, 960, 1600, 1000, .25, 0],
+  [35, 960, 540, 330, .9, 0], [36, 960, 540, 330, .9, .05], [40, 960, 540, 330, .9, 1], [40.8, 960, 540, 330, .9, 1],
+  [41.6, 960, 1500, 900, .4, 0], [52, 960, 1500, 900, .5, 0],
+];
+function globeAt(t) {
+  let i = 0; while (i < GK.length - 2 && GK[i + 1][0] <= t) i++;
+  const a = GK[i], b = GK[i + 1], k = easeInOut((t - a[0]) / (b[0] - a[0]));
+  return a.map((v, j) => lerp(v, b[j], k));
+}
+
+window.render = function (t) {
+  const [, gx, gy, gr, ga, garcs] = globeAt(t);
+  drawGlobe(t, gx, gy, gr, ga, garcs);
+
+  for (const s of scenes) {
+    const local = t - s.start;
+    const vis = clamp(local / 0.5) * clamp((s.end - t) / 0.5);
+    s.el.style.opacity = vis;
+    s.el.style.display = vis > 0 ? "block" : "none";
+    if (vis <= 0) continue;
+    const exit = clamp((t - (s.end - 0.5)) / 0.5);
+    s.el.style.transform = `translateY(${-exit * 30}px)`;
+    for (const it of s.items) {
+      const p = clamp((local - it.at) / 0.7), e = easeOut(p);
+      it.n.style.opacity = e;
+      if (it.anim === "up") it.n.style.transform = `translateY(${(1 - e) * 50}px)`;
+      else if (it.anim === "left") it.n.style.transform = `translateX(${(1 - e) * -70}px)`;
+      else if (it.anim === "scale") it.n.style.transform = `scale(${0.85 + 0.15 * backOut(p)})`;
+      else if (it.anim === "pop") {
+        const bob = Math.sin((t + it.at * 7) * 1.4) * 8;
+        it.n.style.transform = `translate(-50%, calc(-50% + ${bob}px)) scale(${0.4 + 0.6 * backOut(p)})`;
+      }
+    }
+  }
+
+  // S2 year counter settles on 1983
+  const y = $("#year"), lk = easeOut((t - 5.6) / 1.6);
+  y.textContent = Math.round(lerp(1950, 1983, lk));
+
+  // S3 timeline fill
+  $("#mile-fill").style.height = (560 * easeInOut((t - 11.9) / 4)) + "px";
+
+  // S4 runner along journey path
+  const jp = easeInOut((t - 18.6) / 7.4);
+  trackFill.style.strokeDashoffset = LEN * (1 - jp);
+  const rp = track.getPointAtLength(LEN * jp);
+  const runner = $("#runner");
+  runner.setAttribute("cx", rp.x); runner.setAttribute("cy", rp.y);
+  runner.setAttribute("opacity", clamp((t - 18.4) / 0.3));
+  nodes.forEach((nd, i) => {
+    const reached = jp >= nd.frac - 0.001;
+    const k = clamp((jp - nd.frac) * 12);
+    nd.ring.setAttribute("stroke", reached ? "#22c08a" : "rgba(255,255,255,.25)");
+    nd.ring.setAttribute("fill", reached ? "#123a6e" : "#0c2547");
+    nd.ring.setAttribute("r", 26 + 6 * Math.sin(Math.PI * k));
+    const lp = easeOut(clamp((jp - nd.frac + 0.04) * 10));
+    nd.lab.style.opacity = t < 18 ? 0 : lp;
+    nd.lab.style.transform = `translateY(${(1 - lp) * 24}px)`;
+  });
+
+  // S6 counter
+  $("#count").textContent = Math.round(100 * easeOut((t - 35) / 2.2));
+
+
+};
+window.DURATION = DURATION;
+window.render(new URLSearchParams(location.search).has("t") ? +new URLSearchParams(location.search).get("t") : 3);
+</script>
+</body>
+</html>

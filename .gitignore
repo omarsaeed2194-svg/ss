@@ -6,3 +6,4 @@ out
 *.log
 .DS_Store
 credentials/*.json
+marketing/journey-video/dist/master.mp4
