@@ -1,5 +1,5 @@
 // Renders journey.html frame-by-frame with headless Chromium, then encodes the web files into dist/.
-// Usage: node render.js [--portrait] [--stills]
+// Usage: node render.js [page.html] [--portrait] [--stills]   (page defaults to journey.html)
 //   --portrait  vertical 1080x1920 cut (default: horizontal 1920x1080)
 //   --stills    only write a few preview JPGs
 // Requires playwright (with Chromium) and ffmpeg; PLAYWRIGHT_PATH / FFMPEG override their locations.
@@ -13,7 +13,7 @@ const FFMPEG = process.env.FFMPEG || "ffmpeg";
 const OUT = path.join(__dirname, "dist");
 const PORTRAIT = process.argv.includes("--portrait");
 const [W, H] = PORTRAIT ? [1080, 1920] : [1920, 1080];
-const NAME = "saudisoft-localization-journey-" + (PORTRAIT ? "vertical" : "horizontal");
+const PAGE = process.argv.slice(2).find(a => a.endsWith(".html")) || "journey.html";
 
 function ffmpeg(args) {
   const r = spawnSync(FFMPEG, ["-loglevel", "error", "-y", ...args], { stdio: "inherit" });
@@ -24,12 +24,14 @@ function ffmpeg(args) {
   fs.mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: W, height: H } });
-  await page.goto("file://" + path.join(__dirname, "journey.html") + (PORTRAIT ? "?portrait" : ""));
+  await page.goto("file://" + path.join(__dirname, PAGE) + (PORTRAIT ? "?portrait" : ""));
   await page.evaluate(() => document.fonts.ready);
   const duration = await page.evaluate(() => window.DURATION);
+  const base = await page.evaluate(() => window.VIDEO_NAME || "saudisoft-localization-journey");
+  const NAME = base + "-" + (PORTRAIT ? "vertical" : "horizontal");
 
   if (process.argv.includes("--stills")) {
-    for (const t of [4, 8, 15.5, 27, 33, 38, 44.5, 49]) {
+    for (const t of await page.evaluate(() => window.STILLS || [4, 8, 15.5, 27, 33, 38, 44.5, 49])) {
       await page.evaluate(t => window.render(t), t);
       await page.screenshot({ path: path.join(OUT, `still-${PORTRAIT ? "v" : "h"}-${t}.jpg`), quality: 80 });
     }
@@ -50,7 +52,7 @@ function ffmpeg(args) {
   ff.stdin.end();
   await new Promise(r => ff.on("close", r));
 
-  await page.evaluate(() => window.render(49));
+  await page.evaluate(d => window.render(d - 3), duration);
   const posterPng = path.join(OUT, "poster.png");
   await page.screenshot({ path: posterPng });
   await browser.close();

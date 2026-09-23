@@ -1,6 +1,6 @@
 """Download the Google Fonts used by the video into ./fonts and write fonts.css
 so the headless render has no network dependency on font loading."""
-import re, urllib.request, urllib.parse, pathlib
+import hashlib, re, urllib.request, urllib.parse, pathlib
 
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
 GREETINGS = "你好こんにちは안녕하세요नमस्तेשלוםสวัสดีΓειασου"
@@ -14,6 +14,7 @@ FAMILIES = [
     "family=Noto+Sans+Hebrew:wght@700",
     "family=Noto+Sans+Thai:wght@700",
     "family=Noto+Sans:wght@700",
+    "family=Rajdhani:wght@600;700",
 ]
 here = pathlib.Path(__file__).parent
 out = here / "fonts"
@@ -29,7 +30,7 @@ for fam in FAMILIES:
         url += "&text=" + urllib.parse.quote(GREETINGS)
     css = get(url).decode()
     for i, u in enumerate(re.findall(r"url\((https://[^)]+)\)", css)):
-        name = re.sub(r"\W+", "_", fam.split("=")[1].split(":")[0]) + f"_{abs(hash(u)) % 10**8}.woff2"
+        name = re.sub(r"\W+", "_", fam.split("=")[1].split(":")[0]) + "_" + hashlib.md5(u.encode()).hexdigest()[:8] + ".woff2"
         (out / name).write_bytes(get(u))
         css = css.replace(u, "fonts/" + name)
     css_all.append(css)

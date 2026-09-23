@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Saudisoft AAA Case Study</title>
+<script>
+  // ?portrait renders the vertical 1080x1920 cut from the same timeline.
+  if (/[?&]portrait\b/.test(location.search)) document.documentElement.classList.add("portrait");
+</script>
+<link rel="stylesheet" href="fonts.css">
+<style>
+  :root {
+    /* Saudisoft brand palette (from the logo), tuned for a dark cinematic game look */
+    --green: #0b6d40;
+    --green-hi: #35b86b;
+    --yellow: #fadc29;
+    --grey: #67696b;
+    --bg: #0a0f0c;
+    --panel: rgba(18, 28, 22, .78);
+    --ink: #f1f5f2;
+    --muted: #9aa59e;
+    --line: rgba(53, 184, 107, .28);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+  body { font-family: Montserrat, Cairo, sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; }
+  #stage { position: relative; width: 1920px; height: 1080px; overflow: hidden;
+           background: radial-gradient(1400px 900px at 50% 30%, #13221a 0%, #0c1510 45%, var(--bg) 100%); }
+  #bg { position: absolute; inset: 0; }
+  .scene { position: absolute; inset: 0; opacity: 0; }
+  [data-in] { opacity: 0; will-change: transform, opacity; }
+  .hud { font-family: Rajdhani, Montserrat, sans-serif; font-weight: 700; letter-spacing: .28em; text-transform: uppercase; }
+  .eyebrow { font-family: Rajdhani, sans-serif; font-size: 30px; font-weight: 700; letter-spacing: .34em; text-transform: uppercase; color: var(--yellow); }
+  .h1 { font-size: 100px; font-weight: 800; line-height: 1.04; letter-spacing: -.02em; }
+  .h2 { font-size: 70px; font-weight: 800; line-height: 1.08; letter-spacing: -.015em; }
+  .lead { font-size: 34px; font-weight: 500; line-height: 1.45; color: var(--muted); }
+  .y { color: var(--yellow); }
+  .g { color: var(--green-hi); }
+  .ar { font-family: Cairo, sans-serif; direction: rtl; }
+  .title { font-size: 90px; }
+  .portrait .title { font-size: 84px; }
+  .s5-head { top: 110px !important; }
+  .portrait .s5-head { top: 330px !important; }
+  .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 120px; }
+
+  /* HUD frame */
+  .corner { position: absolute; width: 70px; height: 70px; border-color: var(--yellow); border-style: solid; opacity: .85; }
+  .c-tl { left: 48px; top: 48px; border-width: 4px 0 0 4px; }
+  .c-tr { right: 48px; top: 48px; border-width: 4px 4px 0 0; }
+  .c-bl { left: 48px; bottom: 48px; border-width: 0 0 4px 4px; }
+  .c-br { right: 48px; bottom: 48px; border-width: 0 4px 4px 0; }
+  .hud-tl, .hud-tr { position: absolute; top: 62px; font-size: 22px; color: var(--muted); }
+  .hud-tl { left: 140px; } .hud-tr { right: 140px; }
+  .hud-tr b { color: var(--yellow); }
+  #scan { position: absolute; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, var(--yellow), transparent); opacity: 0; box-shadow: 0 0 30px var(--yellow); }
+
+  /* S2 briefing */
+  .brief { position: absolute; left: 160px; top: 250px; width: 860px; }
+  .chips { position: absolute; right: 160px; top: 200px; width: 700px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .chip { padding: 22px 18px; border-radius: 14px; background: var(--panel); border: 2px solid rgba(255,255,255,.08); text-align: center; }
+  .chip .ar { font-size: 30px; font-weight: 700; display: block; }
+  .chip small { display: block; font-family: Rajdhani, sans-serif; font-size: 20px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
+  .chip.on { border-color: var(--yellow); box-shadow: 0 0 0 1px var(--yellow), 0 0 40px rgba(250,220,41,.25); }
+  .chips-cap { position: absolute; right: 160px; top: 880px; width: 700px; text-align: center; font-size: 28px; color: var(--muted); }
+
+  /* S3 scope tiles */
+  .s-head { position: absolute; left: 0; right: 0; top: 130px; text-align: center; padding: 0 100px; }
+  .tiles { position: absolute; left: 160px; right: 160px; top: 470px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
+  .tile { position: relative; height: 210px; border-radius: 20px; background: var(--panel); border: 2px solid var(--line); perspective: 900px; overflow: hidden; }
+  .tile .tag { position: absolute; left: 26px; top: 20px; font-family: Rajdhani, sans-serif; font-size: 22px; font-weight: 700; letter-spacing: .22em; color: var(--green-hi); text-transform: uppercase; }
+  .tile .lang { position: absolute; right: 26px; top: 20px; font-family: Rajdhani, sans-serif; font-size: 22px; font-weight: 700; letter-spacing: .1em; color: var(--muted); }
+  .tile .face { position: absolute; left: 26px; right: 26px; top: 70px; bottom: 20px; display: flex; align-items: center; font-size: 36px; font-weight: 700; line-height: 1.25; backface-visibility: hidden; }
+  .tile .face.ar { justify-content: flex-start; font-size: 40px; color: var(--yellow); }
+
+  /* S4 pillars */
+  .pillars { position: absolute; left: 140px; right: 140px; top: 420px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px; }
+  .pillar { height: 420px; border-radius: 24px; padding: 34px 30px; background: var(--panel); border: 2px solid rgba(255,255,255,.08); position: relative; overflow: hidden; }
+  .pillar .num { font-family: Rajdhani, sans-serif; font-size: 64px; font-weight: 700; color: rgba(255,255,255,.14); line-height: 1; }
+  .pillar h4 { font-size: 36px; font-weight: 800; margin-top: 18px; line-height: 1.15; }
+  .pillar p { font-size: 24px; color: var(--muted); margin-top: 14px; line-height: 1.4; }
+  .pillar .viz { position: absolute; left: 30px; right: 30px; bottom: 30px; height: 70px; display: flex; align-items: flex-end; gap: 6px; }
+  .pillar .viz i { flex: 1; background: var(--green-hi); border-radius: 3px; display: block; }
+  .pillar.on { border-color: var(--yellow); box-shadow: 0 0 60px rgba(250,220,41,.18); }
+  .pillar.on .num { color: var(--yellow); }
+  .xp { position: absolute; left: 140px; right: 140px; top: 885px; height: 16px; border-radius: 8px; background: rgba(255,255,255,.08); overflow: hidden; }
+  .xp i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: linear-gradient(90deg, var(--green-hi), var(--yellow)); border-radius: 8px; }
+  .xp-label { position: absolute; left: 140px; right: 140px; top: 915px; display: flex; justify-content: space-between; font-size: 24px; color: var(--muted); }
+  .xp-label b { color: var(--yellow); }
+
+  /* S5 in-game mockup */
+  .screen { position: absolute; left: 50%; top: 330px; width: 1200px; height: 600px; margin-left: -600px; border-radius: 22px; overflow: hidden;
+            border: 3px solid rgba(255,255,255,.14); box-shadow: 0 40px 120px rgba(0,0,0,.6); background: #0f1a14; }
+  .screen svg.art { position: absolute; inset: 0; }
+  .menu { position: absolute; top: 150px; display: flex; flex-direction: column; gap: 18px; }
+  .menu.en { left: 70px; } .menu.ar { right: 70px; text-align: right; }
+  .menu div { font-family: Rajdhani, Cairo, sans-serif; font-size: 40px; font-weight: 700; letter-spacing: .08em; color: rgba(255,255,255,.75); }
+  .menu.ar div { font-family: Cairo, sans-serif; letter-spacing: 0; font-size: 40px; }
+  .menu div.sel { color: var(--yellow); }
+  .menu.en div.sel::before { content: "▸ "; } .menu.ar div.sel::before { content: "◂ "; }
+  .hp { position: absolute; top: 40px; width: 300px; }
+  .hp.en { left: 70px; } .hp.ar { right: 70px; }
+  .hp .bar { height: 16px; border-radius: 8px; background: rgba(255,255,255,.12); overflow: hidden; margin-top: 8px; }
+  .hp .bar i { display: block; height: 100%; width: 72%; background: linear-gradient(90deg, var(--green-hi), var(--yellow)); }
+  .hp.ar .bar i { margin-left: auto; background: linear-gradient(270deg, var(--green-hi), var(--yellow)); }
+  .hp span { font-family: Rajdhani, Cairo, sans-serif; font-size: 24px; font-weight: 700; letter-spacing: .12em; color: rgba(255,255,255,.8); }
+  .hp.ar span { font-family: Cairo, sans-serif; letter-spacing: 0; display: block; text-align: right; }
+  .subs { position: absolute; left: 0; right: 0; bottom: 42px; text-align: center; }
+  .subs div { position: absolute; left: 0; right: 0; bottom: 0; font-size: 36px; font-weight: 600; }
+  .subs .ar { font-size: 40px; }
+  .subs span { background: rgba(0,0,0,.6); padding: 8px 22px; border-radius: 8px; }
+  #sweep { position: absolute; top: 0; bottom: 0; width: 6px; background: var(--yellow); box-shadow: 0 0 40px 10px rgba(250,220,41,.6); opacity: 0; }
+  .lang-toggle { position: absolute; left: 0; right: 0; top: 960px; text-align: center; font-size: 30px; font-weight: 600; color: var(--muted); }
+  .lang-toggle b { color: var(--yellow); }
+
+  /* S6 achievement */
+  .toast { display: flex; align-items: center; gap: 34px; padding: 30px 60px 30px 30px; border-radius: 999px; background: #121c16;
+           border: 3px solid var(--yellow); box-shadow: 0 0 80px rgba(250,220,41,.35); text-align: left; }
+  .trophy { width: 130px; height: 130px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--yellow); }
+  .trophy svg { width: 70px; height: 70px; fill: none; stroke: #0a0f0c; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .toast .k { text-transform: uppercase; font-family: Rajdhani, sans-serif; font-size: 30px; font-weight: 700; letter-spacing: .3em; color: var(--yellow); }
+  .toast .v { font-size: 46px; font-weight: 800; margin-top: 4px; }
+  .toast .a { font-family: Cairo, sans-serif; font-size: 30px; color: var(--muted); direction: rtl; text-align: left; }
+  #burst { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; border-radius: 50%; border: 4px solid var(--yellow); opacity: 0; }
+  .stats { display: flex; gap: 32px; margin-top: 80px; }
+  .stat { width: 440px; padding: 30px; border-radius: 22px; background: var(--panel); border: 2px solid var(--line); text-align: left; display: flex; gap: 20px; align-items: center; }
+  .stat .ck { width: 60px; height: 60px; border-radius: 50%; flex: none; background: var(--green); display: grid; place-items: center; box-shadow: inset 0 -5px 0 var(--yellow); }
+  .stat .ck svg { width: 32px; height: 32px; stroke: #fff; stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .stat h5 { font-size: 30px; font-weight: 800; }
+  .stat p { font-size: 22px; color: var(--muted); margin-top: 4px; }
+
+  /* S7 CTA */
+  .brand-card { background: #fff; border-radius: 30px; padding: 42px 60px 34px; box-shadow: 0 30px 90px rgba(0,0,0,.5); border-bottom: 10px solid var(--yellow); }
+  .logo { display: block; width: 602px; height: 138px; }
+  .brand-card small { display: block; margin-top: 14px; font-size: 22px; font-weight: 600; color: var(--grey); letter-spacing: .3em; text-transform: uppercase; }
+  .url { display: inline-block; margin-top: 50px; padding: 24px 54px; border-radius: 999px; font-size: 46px; font-weight: 700;
+         background: var(--yellow); color: #0a0f0c; box-shadow: 0 20px 70px rgba(250,220,41,.3); }
+
+  /* ---------- Vertical 1080x1920 layout ---------- */
+  .p-only { display: none; }
+  .portrait .p-only { display: inline; }
+  .portrait body, .portrait #stage { width: 1080px; height: 1920px; }
+  .portrait .h1 { font-size: 84px; }
+  .portrait .h2 { font-size: 62px; }
+  .portrait .lead { font-size: 32px; }
+  .portrait .center { padding: 0 80px; }
+  .portrait .hud-tl { left: 130px; font-size: 20px; } .portrait .hud-tr { right: 130px; font-size: 20px; }
+  .portrait .brief { left: 90px; top: 260px; width: 900px; }
+  .portrait .chips { left: 90px; right: auto; top: 900px; width: 900px; }
+  .portrait .chips-cap { left: 90px; right: auto; top: 1610px; width: 900px; }
+  .portrait .s-head { top: 200px; padding: 0 80px; }
+  .portrait .tiles { left: 80px; right: 80px; top: 640px; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+  .portrait .tile { height: 300px; }
+  .portrait .tile .face { top: 64px; font-size: 34px; }
+  .portrait .tile .face.ar { font-size: 38px; }
+  .portrait .pillars { left: 80px; right: 80px; top: 500px; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+  .portrait .pillar { height: 500px; }
+  .portrait .xp { left: 80px; right: 80px; top: 1590px; }
+  .portrait .xp-label { left: 80px; right: 80px; top: 1625px; }
+  .portrait .screen { top: 620px; width: 960px; height: 700px; margin-left: -480px; }
+  .portrait .menu { top: 180px; } .portrait .menu.en { left: 50px; } .portrait .menu.ar { right: 50px; }
+  .portrait .hp { width: 250px; } .portrait .hp.en { left: 50px; } .portrait .hp.ar { right: 50px; }
+  .portrait .lang-toggle { top: 1420px; padding: 0 80px; }
+  .portrait .toast { flex-direction: column; text-align: center; padding: 50px 50px 44px; border-radius: 40px; gap: 24px; }
+  .portrait .toast .a { text-align: center; }
+  .portrait .stats { flex-direction: column; gap: 22px; margin-top: 60px; }
+  .portrait .stat { width: 820px; }
+  .portrait .logo { width: 560px; height: 128px; }
+  .portrait .url { font-size: 42px; padding: 22px 46px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="bg" width="1920" height="1080"></canvas>
+  <div id="scan"></div>
+
+  <!-- S1: title -->
+  <section class="scene" data-start="0" data-end="5.6">
+    <div class="center">
+      <div class="eyebrow" data-in="0.3">Case study · 2022</div>
+      <div class="h1 title" style="margin-top:34px" data-in="0.6">Delivering a <span class="y">AAA</span> game experience <br class="l-only">to <span class="y">Arabic players</span></div>
+      <div class="lead ar" style="margin-top:40px;font-size:48px;color:var(--ink);font-weight:700" data-in="1.5">لعبة عالمية. <span class="y">بلغتك.</span></div>
+    </div>
+  </section>
+
+  <!-- S2: briefing -->
+  <section class="scene" data-start="5.6" data-end="12.4">
+    <div class="brief">
+      <div class="eyebrow" data-in="0.2">◆ The mission</div>
+      <div class="h2" style="margin-top:22px" data-in="0.4">A leading global publisher. One of its most anticipated <span class="y">AAA titles.</span></div>
+      <div class="lead" style="margin-top:34px" data-in="1.2">Arabic-speaking players had long asked for AAA games in their language. The publisher made Arabic a priority: <span style="color:var(--ink)">the same immersive experience as every other market.</span></div>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="chips-cap" data-in="3.6">Millions of players across <b class="y">MENA</b>, one of gaming's fastest‑growing markets</div>
+  </section>
+
+  <!-- S3: scope -->
+  <section class="scene" data-start="12.4" data-end="19.2">
+    <div class="s-head">
+      <div class="eyebrow" data-in="0.2">◆ The scope</div>
+      <div class="h2" style="margin-top:22px" data-in="0.4">Rich storytelling. Emotional depth. <br class="l-only"><span class="y">Cinematic scale.</span></div>
+      <div class="lead" style="margin-top:22px" data-in="0.9">Thousands of assets, and every one had to feel native.</div>
+    </div>
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <!-- S4: solution -->
+  <section class="scene" data-start="19.2" data-end="30.4">
+    <div class="s-head">
+      <div class="eyebrow" data-in="0.2">◆ The solution</div>
+      <div class="h2" style="margin-top:22px" data-in="0.4">A fully localized Arabic <br class="p-only">experience, <span class="y">end to end</span></div>
+    </div>
+    <div class="pillars" id="pillars"></div>
+    <div class="xp" data-in="1.0"><i id="xp"></i></div>
+    <div class="xp-label" data-in="1.0"><span>LOCALIZATION PROGRESS</span><b id="xp-n">0%</b></div>
+  </section>
+
+  <!-- S5: in-game -->
+  <section class="scene" data-start="30.4" data-end="37.4">
+    <div class="s-head s5-head">
+      <div class="eyebrow" data-in="0.2">◆ In-game</div>
+      <div class="h2" style="margin-top:22px" data-in="0.4">Left‑to‑right becomes <span class="y">right‑to‑left</span></div>
+    </div>
+    <div class="screen" data-in="0.7" data-anim="scale">
+      <svg class="art" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d2a1c"/><stop offset=".6" stop-color="#3a3a16"/><stop offset="1" stop-color="#1a1408"/></linearGradient>
+          <radialGradient id="sun" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fadc29"/><stop offset="1" stop-color="#fadc29" stop-opacity="0"/></radialGradient>
+        </defs>
+        <rect width="1200" height="600" fill="url(#sky)"/>
+        <circle id="sun-c" cx="600" cy="360" r="220" fill="url(#sun)" opacity=".55"/>
+        <path d="M0 420 L140 330 L260 390 L420 280 L560 380 L700 300 L860 390 L1000 310 L1200 400 L1200 600 L0 600Z" fill="#12261a"/>
+        <path d="M0 480 Q300 420 600 470 T1200 460 L1200 600 L0 600Z" fill="#0b1a11"/>
+        <rect width="1200" height="600" fill="url(#sky)" opacity=".15"/>
+      </svg>
+      <div class="hp en" id="hp-en"><span>HEALTH</span><div class="bar"><i></i></div></div>
+      <div class="hp ar" id="hp-ar"><span>الصحة</span><div class="bar"><i></i></div></div>
+      <div class="menu en" id="menu-en"><div class="sel">CONTINUE</div><div>NEW GAME</div><div>SETTINGS</div><div>QUIT</div></div>
+      <div class="menu ar" id="menu-ar"><div class="sel">متابعة</div><div>لعبة جديدة</div><div>الإعدادات</div><div>خروج</div></div>
+      <div class="subs"><div id="sub-en"><span>We face this together.</span></div><div class="ar" id="sub-ar"><span>سنواجه هذا معًا.</span></div></div>
+      <div id="sweep"></div>
+    </div>
+    <div class="lang-toggle" data-in="1.2">Menus, HUD, subtitles and fonts, <b>mirrored and tested in‑game</b></div>
+  </section>
+
+  <!-- S6: achievement -->
+  <section class="scene" data-start="37.4" data-end="43.6">
+    <div id="burst"></div>
+    <div class="center">
+      <div class="toast" data-in="0.4" data-anim="drop">
+        <div class="trophy"><svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg></div>
+        <div><div class="k">Achievement unlocked</div><div class="v">A fully localized Arabic AAA experience</div><div class="a">تم فتح إنجاز</div></div>
+      </div>
+      <div class="stats">
+        <div class="stat" data-in="1.4"><div class="ck"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></div><div><h5>Linguistic accuracy</h5><p>Faithful to every line</p></div></div>
+        <div class="stat" data-in="1.7"><div class="ck"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></div><div><h5>Emotional authenticity</h5><p>Tone and identity preserved</p></div></div>
+        <div class="stat" data-in="2.0"><div class="ck"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></div><div><h5>Cultural relevance</h5><p>Seamless for MENA players</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- S7: CTA -->
+  <section class="scene" data-start="43.6" data-end="49">
+    <div class="center">
+      <div class="brand-card" data-in="0.2" data-anim="scale">
+        <img class="logo" src="saudisoft-logo.png" alt="Saudisoft">
+        <small>Game localization · MENA</small>
+      </div>
+      <div class="h2" style="margin-top:70px;font-size:76px" data-in="0.7">Ready to bring <br class="p-only">your game <br class="l-only">to <br class="p-only"><span class="y">Arabic players?</span></div>
+      <div class="url" data-in="1.4" data-anim="scale">localization.saudisoft.com</div>
+    </div>
+  </section>
+
+  <div class="corner c-tl"></div><div class="corner c-tr"></div><div class="corner c-bl"></div><div class="corner c-br"></div>
+  <div class="hud hud-tl">Saudisoft // Game localization</div>
+  <div class="hud hud-tr">EN <b>→</b> AR</div>
+</div>
+
+<script>
+window.VIDEO_NAME = "saudisoft-aaa-game-case-study";
+window.STILLS = [3, 10, 17.5, 25, 34.5, 40.5, 46];
+const DURATION = 49;
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const easeOut = x => 1 - Math.pow(1 - clamp(x), 3);
+const easeInOut = x => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const backOut = x => { x = clamp(x); const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+const $ = s => document.querySelector(s);
+const PORTRAIT = document.documentElement.classList.contains("portrait");
+const W = PORTRAIT ? 1080 : 1920, H = PORTRAIT ? 1920 : 1080;
+if (PORTRAIT) { $("#bg").width = W; $("#bg").height = H; document.querySelectorAll(".l-only").forEach(b => b.remove()); }
+
+/* ---------- dynamic content ---------- */
+const MARKETS = [["السعودية", "Saudi Arabia"], ["الإمارات", "UAE"], ["مصر", "Egypt"], ["الكويت", "Kuwait"], ["قطر", "Qatar"], ["البحرين", "Bahrain"],
+  ["عُمان", "Oman"], ["الأردن", "Jordan"], ["العراق", "Iraq"], ["المغرب", "Morocco"], ["الجزائر", "Algeria"], ["تونس", "Tunisia"]];
+$("#chips").innerHTML = MARKETS.map((m, i) =>
+  `<div class="chip" data-in="${1.0 + i * 0.16}" data-anim="pop2"><span class="ar">${m[0]}</span><small>${m[1]}</small></div>`).join("");
+const chips = [...document.querySelectorAll(".chip")];
+
+const ASSETS = [
+  ["Dialogue", "Stay close. It's not safe here.", "ابقَ قريبًا. المكان ليس آمنًا."],
+  ["Subtitles", "Where are you going?", "إلى أين أنت ذاهب؟"],
+  ["Quests", "Find the lost map", "اعثر على الخريطة المفقودة"],
+  ["Items", "Health Potion", "جرعة شفاء"],
+  ["Tutorials", "Press X to jump", "اضغط X للقفز"],
+  ["Menus", "Continue", "متابعة"],
+];
+$("#tiles").innerHTML = ASSETS.map((a, i) =>
+  `<div class="tile" data-in="${1.2 + i * 0.15}"><div class="tag">${a[0]}</div><div class="lang">EN</div>
+     <div class="face en">${a[1]}</div><div class="face ar">${a[2]}</div></div>`).join("");
+const tiles = [...document.querySelectorAll(".tile")].map(el => ({
+  el, en: el.querySelector(".face.en"), ar: el.querySelector(".face.ar"), lang: el.querySelector(".lang") }));
+
+const PILLARS = [
+  ["Translation & transcreation", "Native Arabic linguists preserving tone, identity and story"],
+  ["Cultural adaptation", "Content tuned so every scene feels right for players across MENA"],
+  ["Arabic dubbing", "Professional voice actors matched to each character's emotion and personality"],
+  ["Engineering & LQA", "RTL UI, Arabic fonts and in-game linguistic quality testing"],
+];
+$("#pillars").innerHTML = PILLARS.map((p, i) =>
+  `<div class="pillar" data-in="${1.0 + i * 0.25}"><div class="num">0${i + 1}</div><h4>${p[0]}</h4><p>${p[1]}</p><div class="viz">${"<i></i>".repeat(18)}</div></div>`).join("");
+const pillars = [...document.querySelectorAll(".pillar")].map(el => ({ el, bars: [...el.querySelectorAll(".viz i")] }));
+
+/* ---------- background: perspective grid + embers ---------- */
+const ctx = $("#bg").getContext("2d");
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const EMBERS = Array.from({ length: 70 }, () => ({ x: rnd(), y: rnd(), s: 0.02 + rnd() * 0.05, r: 1 + rnd() * 2.5, f: rnd() * 6 }));
+function drawBg(t, gridAlpha) {
+  ctx.clearRect(0, 0, W, H);
+  const hy = H * (PORTRAIT ? 0.66 : 0.62), vx = W / 2;
+  ctx.save();
+  ctx.globalAlpha = gridAlpha;
+  ctx.strokeStyle = "rgba(53,184,107,.35)"; ctx.lineWidth = 1.5;
+  for (let i = -24; i <= 24; i++) {
+    ctx.beginPath(); ctx.moveTo(vx + i * 12, hy); ctx.lineTo(vx + i * (W / 8), H + 40); ctx.stroke();
+  }
+  for (let k = 0; k < 16; k++) {
+    const z = ((k + (t * 0.6) % 1) / 16);
+    const y = hy + Math.pow(z, 2.4) * (H - hy + 40);
+    ctx.globalAlpha = gridAlpha * clamp(z * 2);
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+  const g = ctx.createLinearGradient(0, hy - 120, 0, hy + 60);
+  g.addColorStop(0, "rgba(10,15,12,0)"); g.addColorStop(.7, "rgba(10,15,12,.95)"); g.addColorStop(1, "rgba(10,15,12,0)");
+  ctx.globalAlpha = gridAlpha; ctx.fillStyle = g; ctx.fillRect(0, hy - 120, W, 180);
+  ctx.restore();
+  for (const e of EMBERS) {
+    const y = H + 20 - (((e.y + t * e.s) % 1) * (H + 40));
+    const x = e.x * W + Math.sin(t * 0.8 + e.f) * 20;
+    ctx.fillStyle = `rgba(250,220,41,${0.25 + 0.35 * (0.5 + 0.5 * Math.sin(t * 3 + e.f))})`;
+    ctx.beginPath(); ctx.arc(x, y, e.r, 0, 7); ctx.fill();
+  }
+}
+
+/* ---------- per-frame render ---------- */
+const scenes = [...document.querySelectorAll(".scene")].map(el => ({
+  el, start: +el.dataset.start, end: +el.dataset.end,
+  items: [...el.querySelectorAll("[data-in]")].map(n => ({ n, at: +n.dataset.in, anim: n.dataset.anim || "up" })),
+}));
+const S = Object.fromEntries(scenes.map((s, i) => ["s" + (i + 1), s.start]));
+
+window.render = function (t) {
+  drawBg(t, 0.35 + 0.25 * Math.sin(t * 0.3));
+
+  for (const s of scenes) {
+    const local = t - s.start;
+    const vis = clamp(local / 0.45) * clamp((s.end - t) / 0.45);
+    s.el.style.opacity = vis;
+    s.el.style.display = vis > 0 ? "block" : "none";
+    if (vis <= 0) continue;
+    const enter = 1 - clamp(local / 0.45), exit = clamp((t - (s.end - 0.45)) / 0.45);
+    s.el.style.transform = `scale(${1 + enter * 0.03 - exit * 0.03})`;
+    for (const it of s.items) {
+      const p = clamp((local - it.at) / 0.6), e = easeOut(p);
+      it.n.style.opacity = e;
+      if (it.anim === "up") it.n.style.transform = `translateY(${(1 - e) * 46}px)`;
+      else if (it.anim === "scale") it.n.style.transform = `scale(${0.86 + 0.14 * backOut(p)})`;
+      else if (it.anim === "pop2") it.n.style.transform = `scale(${0.6 + 0.4 * backOut(p)})`;
+      else if (it.anim === "drop") it.n.style.transform = `translateY(${(1 - backOut(p)) * -160}px)`;
+    }
+  }
+
+  // Scan line sweep on title
+  const sp = clamp((t - 0.2) / 1.4);
+  $("#scan").style.opacity = sp > 0 && sp < 1 ? 0.9 : 0;
+  $("#scan").style.top = (sp * H) + "px";
+
+  // S2: markets light up in sequence
+  chips.forEach((c, i) => c.classList.toggle("on", t - S.s2 > 2.2 + i * 0.12));
+
+  // S3: tiles flip EN -> AR
+  tiles.forEach((tl, i) => {
+    const p = easeInOut((t - S.s3 - 2.6 - i * 0.35) / 0.6);
+    tl.en.style.opacity = p < .5 ? 1 : 0; tl.ar.style.opacity = p < .5 ? 0 : 1;
+    tl.en.style.transform = `rotateX(${p * 180}deg)`;
+    tl.ar.style.transform = `rotateX(${(p - 1) * 180}deg)`;
+    tl.lang.textContent = p < .5 ? "EN" : "AR";
+    tl.lang.style.color = p < .5 ? "" : "var(--yellow)";
+    tl.el.style.borderColor = p >= 1 ? "rgba(250,220,41,.55)" : "";
+  });
+
+  // S4: pillars activate in turn, XP bar fills
+  const l4 = t - S.s4;
+  pillars.forEach((pl, i) => {
+    pl.el.classList.toggle("on", l4 > 2.2 + i * 2 && l4 < 4.2 + i * 2 || l4 > 10);
+    pl.bars.forEach((b, k) => {
+      const active = pl.el.classList.contains("on");
+      const h = i === 2
+        ? 0.2 + 0.8 * Math.abs(Math.sin(t * 7 + k * 0.9) * Math.sin(t * 2.3 + k * 0.4))
+        : 0.25 + 0.2 * Math.sin(k * 0.8 + i) + (active ? 0.3 * (0.5 + 0.5 * Math.sin(t * 3 + k)) : 0);
+      b.style.height = (clamp(h) * 100) + "%";
+      b.style.opacity = active ? 1 : 0.25;
+      b.style.background = active ? "var(--yellow)" : "var(--green-hi)";
+    });
+  });
+  const xp = easeInOut((l4 - 2.2) / 8);
+  $("#xp").style.width = (xp * 100) + "%";
+  $("#xp-n").textContent = Math.round(xp * 100) + "%";
+
+  // S5: sweep switches the game UI from EN to AR
+  const l5 = t - S.s5, sw = easeInOut((l5 - 2.6) / 1.1);
+  const screenW = PORTRAIT ? 960 : 1200;
+  $("#sweep").style.left = (sw * screenW) + "px";
+  $("#sweep").style.opacity = sw > 0 && sw < 1 ? 1 : 0;
+  const swap = clamp((l5 - 3.0) / 0.5);
+  for (const id of ["#menu-en", "#hp-en", "#sub-en"]) $(id).style.opacity = 1 - swap;
+  for (const id of ["#menu-ar", "#hp-ar", "#sub-ar"]) $(id).style.opacity = swap;
+  $("#menu-en").style.transform = `translateX(${-swap * 40}px)`;
+  $("#menu-ar").style.transform = `translateX(${(1 - swap) * 40}px)`;
+  $("#sun-c").setAttribute("cx", 600 + Math.sin(t * 0.4) * 40);
+
+  // S6: burst ring behind the toast
+  const bp = clamp((t - S.s6 - 0.7) / 1.2);
+  const burst = $("#burst"), br = bp * (PORTRAIT ? 1300 : 1600);
+  burst.style.width = burst.style.height = br + "px";
+  burst.style.marginLeft = burst.style.marginTop = (-br / 2) + "px";
+  burst.style.opacity = bp > 0 && bp < 1 ? (1 - bp) : 0;
+};
+window.DURATION = DURATION;
+window.render(new URLSearchParams(location.search).has("t") ? +new URLSearchParams(location.search).get("t") : 3);
+</script>
+</body>
+</html>

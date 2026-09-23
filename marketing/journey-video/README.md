@@ -47,3 +47,34 @@ needs `playwright` (with Chromium) and `ffmpeg`. Set `PLAYWRIGHT_PATH` /
 Brand: colours come from the Saudisoft logo (`saudisoft-logo.png`): green
 `#0B6D40`, yellow `#FADC29`, grey `#67696B`, on a light background. For a
 sharper logo, replace `saudisoft-logo.png` with a larger or SVG version.
+
+---
+
+# AAA game localization case study video
+
+A 49-second companion video for
+[the AAA game case study](https://localization.saudisoft.com/saudisoft-deliver-aaa-game-experiences/),
+in a dark, cinematic game-HUD style using the same brand colours. Source: `case-aaa.html`.
+
+| Time | Scene |
+| --- | --- |
+| 0–5.6s | Case study · 2022: "Delivering a AAA game experience to Arabic players" (لعبة عالمية. بلغتك.) |
+| 5.6–12.4s | The mission: a leading global publisher, one of its most anticipated AAA titles; MENA markets light up |
+| 12.4–19.2s | The scope: thousands of assets; dialogue, subtitles, quests, items, tutorials and menus flip EN → AR |
+| 19.2–30.4s | The solution: translation & transcreation, cultural adaptation, Arabic dubbing, engineering & LQA |
+| 30.4–37.4s | In-game: menu, HUD and subtitles mirror from LTR to RTL |
+| 37.4–43.6s | "Achievement unlocked": linguistic accuracy, emotional authenticity, cultural relevance |
+| 43.6–49s | CTA: localization.saudisoft.com |
+
+Files: `dist/saudisoft-aaa-game-case-study-{horizontal,vertical}-*`. Embed with
+`embed-aaa-case-study.html`.
+
+```bash
+node render.js case-aaa.html              # horizontal
+node render.js case-aaa.html --portrait   # vertical
+```
+
+The case study names neither the game nor the publisher, and gives no figures.
+The in-game screen is a generic mockup. If you can share real numbers (word
+count, voice-over lines, characters, timeline), add them to the scope or
+achievement scene in `case-aaa.html` and re-render.

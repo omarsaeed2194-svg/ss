@@ -1,0 +1,27 @@
+<!-- Saudisoft AAA game localization case study: drop-in responsive embed.
+     Upload the saudisoft-aaa-game-case-study-* files from dist/ (e.g. to /media/) and adjust MEDIA below.
+     Phones in portrait get the vertical 9:16 cut; everything else gets the horizontal 16:9 cut. -->
+<div class="ss-aaa">
+  <video autoplay muted loop playsinline preload="metadata"
+         aria-label="Case study: how Saudisoft delivered a fully localized Arabic AAA game experience"></video>
+</div>
+<style>
+  .ss-aaa { position: relative; width: 100%; max-width: 1280px; margin: 0 auto; aspect-ratio: 16 / 9;
+            border-radius: 16px; overflow: hidden; background: #0a0f0c; }
+  .ss-aaa video { width: 100%; height: 100%; display: block; object-fit: cover; }
+  @media (max-width: 767px) and (orientation: portrait) {
+    .ss-aaa { max-width: 480px; aspect-ratio: 9 / 16; }
+  }
+</style>
+<script>
+  (function () {
+    var MEDIA = "/media/saudisoft-aaa-game-case-study-";
+    var v = document.querySelector(".ss-aaa video");
+    var cut = matchMedia("(max-width: 767px) and (orientation: portrait)").matches ? "vertical" : "horizontal";
+    v.poster = MEDIA + cut + "-poster.jpg";
+    v.innerHTML =
+      '<source src="' + MEDIA + cut + '-1080p.webm" type="video/webm">' +
+      '<source src="' + MEDIA + cut + '-1080p.mp4" type="video/mp4">';
+    v.load();
+  })();
+</script>
