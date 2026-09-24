@@ -127,3 +127,9 @@ This is a standard Next.js app (`npm run build && npm run start`), so it
 deploys to Vercel, or any Node host, unchanged. Set the environment
 variables from `.env.example` in the hosting provider's dashboard rather
 than committing `.env.local`.
+
+---
+
+This repo also contains [`personal-site/`](personal-site/README.md), a
+separate Next.js app: a personal website with an admin backend and a
+LinkedIn import.
