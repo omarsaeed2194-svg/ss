@@ -106,6 +106,7 @@ select { border: 1px solid var(--line); background: var(--panel); border-radius:
   --p-container: #1F4F37; --p-on-container: #C6F0D7; --p-line: #2C332E; --p-toast: #E1E4E0; --p-danger: #FF8A7E;
 }
 .screen svg { width: 24px; height: 24px; display: block; }
+.screen input, .screen textarea { user-select: text; -webkit-user-select: text; }
 .screen button { border: 0; background: none; padding: 0; color: inherit; }
 .layer { position: absolute; inset: 0; }
 .wallpaper { background-size: cover; transition: background .4s; }
@@ -138,7 +139,7 @@ select { border: 1px solid var(--line); background: var(--panel); border-radius:
 .ico.sm { width: 26px; height: 26px; box-shadow: none; }
 .ico.sm svg { width: 15px; height: 15px; }
 .screen .search-pill { margin: 22px 0 16px; height: 48px; border-radius: 24px; background: rgb(255 255 255 / .88); color: #3c4540; display: flex; align-items: center; gap: 10px; padding: 0 18px; font-size: 15px; }
-.dock { display: grid; grid-template-columns: repeat(4, 1fr); }
+.dock { display: grid; grid-template-columns: repeat(5, 1fr); }
 .dock .app-ico span:last-child { display: none; }
 
 /* Lock */
@@ -299,6 +300,46 @@ select { border: 1px solid var(--line); background: var(--panel); border-radius:
 .kv b { font-weight: 450; font-size: 15px; font-variant-numeric: tabular-nums; }
 .screen button.kv { width: 100%; text-align: left; padding: 12px 4px; border-bottom: 1px solid var(--p-line); }
 
+/* Launcher search */
+.lsearch { z-index: 3; background: var(--p-surface); padding: 40px 14px 50px; display: flex; flex-direction: column; animation: appIn .2s ease; }
+.ls-bar { flex: none; display: flex; align-items: center; gap: 10px; height: 52px; border-radius: 26px; background: var(--p-surface2); padding: 0 6px 0 16px; color: var(--p-on2); }
+.ls-bar input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--p-on); font-size: 16px; }
+.ls-bar input::-webkit-search-cancel-button { display: none; }
+.ls-results { flex: 1; min-height: 0; overflow: auto; padding: 4px 2px 12px; scrollbar-width: none; }
+.ls-results h3 { margin: 18px 4px 8px; font-size: 13px; font-weight: 600; color: var(--p-primary); }
+.ls-apps { display: grid; grid-template-columns: repeat(4, 1fr); row-gap: 16px; }
+.ls-apps .app-ico { color: var(--p-on); text-shadow: none; }
+.ls-empty { color: var(--p-on2); padding: 24px 4px; text-align: center; }
+
+/* Browser */
+.br { padding-bottom: 46px; }
+.br-top { flex: none; display: flex; align-items: center; gap: 2px; padding: 6px 6px 6px 4px; }
+.br-top .ib[disabled] { opacity: .35; pointer-events: none; }
+.br-top a.ib { text-decoration: none; }
+.br-omni { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; height: 42px; border-radius: 21px; background: var(--p-surface2); padding: 0 12px; margin: 0; color: var(--p-on2); }
+.br-omni svg { width: 15px !important; height: 15px !important; flex: none; }
+.br-omni input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--p-on); font-size: 14px; }
+.br-prog { height: 3px; flex: none; position: relative; overflow: hidden; }
+.br-prog i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--p-primary); opacity: 0; }
+.br-prog.loading i { opacity: 1; width: 80%; transition: width 6s cubic-bezier(.1, .7, .2, 1); }
+.br-prog.done i { opacity: 0; width: 100%; transition: width .2s, opacity .4s .2s; }
+.br-view { flex: 1; min-height: 0; position: relative; background: var(--p-surface); }
+.br-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff; }
+.br-start, .br-blocked { position: absolute; inset: 0; overflow: auto; padding: 36px 20px 20px; display: flex; flex-direction: column; gap: 18px; }
+.br-start h2 { margin: 12px 0 0; text-align: center; font-size: 30px; font-weight: 500; font-variation-settings: "wdth" 120; }
+.br-search { display: flex; align-items: center; gap: 10px; height: 52px; border-radius: 26px; border: 1px solid var(--p-line); padding: 0 16px; color: var(--p-on2); margin: 0; }
+.br-search input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--p-on); font-size: 16px; }
+.br-tiles { display: grid; grid-template-columns: repeat(4, 1fr); row-gap: 14px; }
+.br-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; color: var(--p-on); }
+.br-tile span { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: var(--p-surface2); font-size: 20px; font-weight: 600; color: var(--p-primary); }
+.br-note { color: var(--p-on2); font-size: 12.5px; text-align: center; margin: 0; text-wrap: balance; }
+.br-blocked { align-items: center; justify-content: center; text-align: center; }
+.br-blocked svg { width: 44px !important; height: 44px !important; color: var(--p-on2); }
+.br-blocked b { font-size: 18px; font-weight: 550; }
+.br-blocked p { margin: 0; color: var(--p-on2); font-size: 13.5px; max-width: 30ch; }
+.br-blocked code { font-family: var(--f-mono); font-size: 12px; word-break: break-all; color: var(--p-on); }
+.br-open { display: inline-block; background: var(--p-primary); color: var(--p-on-primary); text-decoration: none; padding: 10px 20px; border-radius: 20px; font-weight: 600; }
+
 /* Recents */
 .recents { z-index: 3; background: rgb(0 0 0 / .38); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; flex-direction: column; justify-content: center; padding: 30px 0 50px; }
 .rec-track { display: flex; gap: 16px; overflow-x: auto; padding: 0 70px; scroll-snap-type: x mandatory; scrollbar-width: none; align-items: center; }
@@ -379,6 +420,10 @@ select { border: 1px solid var(--line); background: var(--panel); border-radius:
             <div class="layer wallpaper" id="wallpaper"></div>
             <div class="layer home" id="home"></div>
             <div class="layer apphost" id="appHost"></div>
+            <div class="layer lsearch" id="lsearch" hidden>
+              <div class="ls-bar"><span id="lsIco"></span><input id="lsInput" type="search" autocomplete="off" spellcheck="false" placeholder="Search apps, settings and the web" aria-label="Search"><button class="ib" id="lsClear" aria-label="Clear search"></button></div>
+              <div class="ls-results" id="lsResults"></div>
+            </div>
             <div class="layer recents" id="recents" hidden>
               <div class="rec-track" id="recTrack"></div>
               <p class="rec-empty" id="recEmpty">No recent items</p>
@@ -500,6 +545,10 @@ select { border: 1px solid var(--line); background: var(--panel); border-radius:
     palette: '<path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.7 0-1-.8-1.4-.8-2.3 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1" fill="currentColor"/><circle cx="10" cy="7" r="1" fill="currentColor"/><circle cx="15" cy="7.5" r="1" fill="currentColor"/>',
     battery: '<rect x="3" y="7" width="16" height="10" rx="2"/><path d="M21 10v4M6 10v4M9 10v4"/>',
     info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+    reload: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
+    external: '<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+    arrowRight: '<path d="M5 12h14M13 6l6 6-6 6"/>',
     bolt: '<path d="M13 2 5 13h6l-1 9 8-11h-6z" fill="currentColor" stroke="none"/>'
   };
   const svg = (k, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${P[k]}</svg>`;
@@ -561,6 +610,7 @@ select { border: 1px solid var(--line); background: var(--panel); border-radius:
   // ---------- Apps ----------
   const APPS = {
     phone:    { name: 'Phone',      icon: 'phone',    bg: '#CDEFD9', fg: '#14613A', mount: mountPhone },
+    browser:  { name: 'Browser',    icon: 'globe',    bg: '#D3E3FD', fg: '#0B57D0', mount: mountBrowser },
     notes:    { name: 'Notes',      icon: 'notes',    bg: '#FBE4A6', fg: '#6B4B00', mount: mountNotes },
     calc:     { name: 'Calculator', icon: 'calc',     bg: '#D6E0F5', fg: '#23406F', mount: mountCalc },
     settings: { name: 'Settings',   icon: 'settings', bg: '#DDE3DF', fg: '#36413B', mount: mountSettings },
@@ -573,14 +623,14 @@ select { border: 1px solid var(--line); background: var(--panel); border-radius:
 
   function buildHome() {
     const grid = ['clock', 'calendar', 'weather', 'snake'];
-    const dock = ['phone', 'notes', 'calc', 'settings'];
+    const dock = ['phone', 'browser', 'notes', 'calc', 'settings'];
     const tile = id => `<button class="app-ico" data-launch="${id}" aria-label="${APPS[id].name}">${icoHtml(id)}<span>${APPS[id].name}</span></button>`;
     $('#home').innerHTML = `
       <div class="glance"><div class="g-date" id="gDate"></div><div class="g-wx">${svg('sun')}<span>34°C · Riyadh</span></div></div>
       <div class="home-grid">${grid.map(tile).join('')}</div>
-      <button class="search-pill" id="searchPill">${svg('search')}<span>Search</span></button>
+      <button class="search-pill" id="searchPill">${svg('search')}<span>Search apps and the web</span></button>
       <div class="dock">${dock.map(tile).join('')}</div>`;
-    $('#searchPill').onclick = () => toast('Search isn’t available in the simulator');
+    $('#searchPill').onclick = openSearch;
   }
 
   function launch(id) {
@@ -627,10 +677,11 @@ select { border: 1px solid var(--line); background: var(--panel); border-radius:
   function applyView() {
     for (const [id, w] of Object.entries(windows)) w.hidden = !(S.view === 'app' && id === S.current);
     $('#recents').hidden = S.view !== 'recents';
+    $('#lsearch').hidden = S.view !== 'search';
     if (S.view === 'recents') renderRecents();
     $('#lock').hidden = !S.locked;
     screen.classList.toggle('locked', S.locked);
-    screen.classList.toggle('on-wall', S.locked || S.view !== 'app');
+    screen.classList.toggle('on-wall', S.locked || (S.view !== 'app' && S.view !== 'search'));
   }
 
   function goHome() {
@@ -645,6 +696,7 @@ select { border: 1px solid var(--line); background: var(--panel); border-radius:
     if (S.locked) return;
     log('D', 'InputDispatcher', 'Key event KEYCODE_BACK');
     if (S.view === 'recents') { show(S.current && windows[S.current] ? 'app' : 'home'); return; }
+    if (S.view === 'search') { $('#lsInput').blur(); show('home'); return; }
     if (S.view === 'app') {
       const handled = inst[S.current]?.onBack?.();
       if (!handled) show('home');
@@ -673,6 +725,7 @@ select { border: 1px solid var(--line); background: var(--panel); border-radius:
       clone.hidden = false; clone.classList.remove('enter'); clone.inert = true;
       const oc = $$('canvas', src), cc = $$('canvas', clone);
       cc.forEach((c, i) => { try { c.getContext('2d').drawImage(oc[i], 0, 0); } catch (e) {} });
+      $$('iframe', clone).forEach(f => { const ph = document.createElement('div'); ph.className = 'br-frame'; f.replaceWith(ph); });
       $('.rc-shot', card).append(clone);
       let drag = null;
       card.addEventListener('pointerdown', e => { drag = { y: e.clientY, x: e.clientX, dy: 0 }; card.setPointerCapture(e.pointerId); card.style.transition = 'none'; });
@@ -740,7 +793,7 @@ select { border: 1px solid var(--line); background: var(--panel); border-radius:
   }
   function lockDevice() {
     if (S.view === 'app' && S.current) inst[S.current]?.onPause?.();
-    if (S.view === 'recents') S.view = S.current ? 'app' : 'home';
+    if (S.view === 'recents' || S.view === 'search') S.view = S.current ? 'app' : 'home';
     S.locked = true;
     applyView();
     log('I', 'KeyguardViewMediator', 'Keyguard shown');
@@ -1084,23 +1137,23 @@ select { border: 1px solid var(--line); background: var(--panel); border-radius:
     return {};
   }
 
+  let NOTES = store.get('pas-notes', null);
+  if (!Array.isArray(NOTES)) NOTES = [
+    { id: 1, title: 'Simulator shortcuts', body: 'Esc: Back\nP: Power\nArrow keys: steer Snake\nTap the status bar: Quick Settings\nSettings › About phone › tap Build number 7 times', t: Date.now() },
+    { id: 2, title: 'Groceries', body: 'Dates\nLaban\nKhubz\nCardamom\nTomatoes', t: Date.now() - 86400000 },
+    { id: 3, title: 'Ideas', body: 'Try swiping an app card up in Overview to close it.', t: Date.now() - 3 * 86400000 }
+  ];
   function mountNotes(el) {
-    let notes = store.get('pas-notes', null);
-    if (!Array.isArray(notes)) notes = [
-      { id: 1, title: 'Simulator shortcuts', body: 'Esc: Back\nP: Power\nArrow keys: steer Snake\nTap the status bar: Quick Settings\nSettings › About phone › tap Build number 7 times', t: Date.now() },
-      { id: 2, title: 'Groceries', body: 'Dates\nLaban\nKhubz\nCardamom\nTomatoes', t: Date.now() - 86400000 },
-      { id: 3, title: 'Ideas', body: 'Try swiping an app card up in Overview to close it.', t: Date.now() - 3 * 86400000 }
-    ];
     let editing = null;
-    const save = () => store.set('pas-notes', notes);
+    const save = () => store.set('pas-notes', NOTES);
     function list() {
       editing = null;
-      notes.sort((a, b) => b.t - a.t);
+      NOTES.sort((a, b) => b.t - a.t);
       el.innerHTML = `<div class="app-bar"><span class="ab-title">Notes</span></div>
-        <div class="app-body">${notes.length ? `<div class="nt-list">${notes.map(n => `<button class="nt-card" data-id="${n.id}"><b>${esc(n.title || 'Untitled')}</b><span>${esc(n.body.slice(0, 160))}</span></button>`).join('')}</div>` : '<p class="empty">No notes yet. Tap + to write one.</p>'}</div>
+        <div class="app-body">${NOTES.length ? `<div class="nt-list">${NOTES.map(n => `<button class="nt-card" data-id="${n.id}"><b>${esc(n.title || 'Untitled')}</b><span>${esc(n.body.slice(0, 160))}</span></button>`).join('')}</div>` : '<p class="empty">No notes yet. Tap + to write one.</p>'}</div>
         <button class="fab" aria-label="New note">${svg('plus')}</button>`;
-      $$('.nt-card', el).forEach(b => b.onclick = () => edit(notes.find(n => n.id === +b.dataset.id)));
-      $('.fab', el).onclick = () => { const n = { id: Date.now(), title: '', body: '', t: Date.now() }; notes.push(n); edit(n); };
+      $$('.nt-card', el).forEach(b => b.onclick = () => edit(NOTES.find(n => n.id === +b.dataset.id)));
+      $('.fab', el).onclick = () => { const n = { id: Date.now(), title: '', body: '', t: Date.now() }; NOTES.push(n); edit(n); };
     }
     function edit(n) {
       editing = n;
@@ -1111,15 +1164,18 @@ select { border: 1px solid var(--line); background: var(--panel); border-radius:
       ti.oninput = () => { n.title = ti.value; n.t = Date.now(); save(); };
       bo.oninput = () => { n.body = bo.value; n.t = Date.now(); save(); };
       $('.nt-back', el).onclick = finish;
-      $('.nt-del', el).onclick = () => { notes = notes.filter(x => x !== n); save(); list(); toast('Note deleted'); };
+      $('.nt-del', el).onclick = () => { NOTES = NOTES.filter(x => x !== n); save(); list(); toast('Note deleted'); };
       if (!n.title && !n.body) setTimeout(() => ti.focus(), 50);
     }
     function finish() {
-      if (editing && !editing.title.trim() && !editing.body.trim()) { notes = notes.filter(x => x !== editing); save(); }
+      if (editing && !editing.title.trim() && !editing.body.trim()) { NOTES = NOTES.filter(x => x !== editing); save(); }
       list();
     }
     list();
-    return { onBack() { if (editing) { finish(); return true; } return false; } };
+    return {
+      onBack() { if (editing) { finish(); return true; } return false; },
+      open(id) { const n = NOTES.find(x => x.id === id); if (n) edit(n); }
+    };
   }
 
   function mountClock(el) {
@@ -1278,6 +1334,167 @@ select { border: 1px solid var(--line); background: var(--panel); border-radius:
     };
   }
 
+  // Search engine that permits being shown inside a frame (igu=1 is Google's embeddable mode)
+  const SEARCH_URL = q => 'https://www.google.com/search?igu=1&q=' + encodeURIComponent(q);
+  const looksLikeUrl = t => /^[a-z]+:\/\//i.test(t) || (/^[^\s]+\.[a-z]{2,}(\/\S*)?$/i.test(t) && !/\s/.test(t));
+  const toUrl = t => { t = t.trim(); if (!t) return null; if (looksLikeUrl(t)) return /^[a-z]+:\/\//i.test(t) ? t : 'https://' + t; return SEARCH_URL(t); };
+
+  function mountBrowser(el) {
+    el.classList.add('br');
+    const START = 'start';
+    const SHORTCUTS = [
+      ['W', 'Wikipedia', 'https://en.m.wikipedia.org/wiki/Special:Random'],
+      ['G', 'Google', 'https://www.google.com/webhp?igu=1'],
+      ['M', 'Map', 'https://www.openstreetmap.org/export/embed.html?bbox=46.55%2C24.55%2C46.85%2C24.85&layer=mapnik'],
+      ['E', 'Example', 'https://example.com/']
+    ];
+    let hist = [START], idx = 0;
+    el.innerHTML = `
+      <div class="br-top">
+        <button class="ib br-back" aria-label="Back">${svg('arrowLeft')}</button>
+        <button class="ib br-fwd" aria-label="Forward">${svg('arrowRight')}</button>
+        <form class="br-omni">${svg('search')}<input class="br-url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="Search or type URL" aria-label="Address bar"></form>
+        <button class="ib br-reload" aria-label="Reload">${svg('reload')}</button>
+        <a class="ib br-ext" target="_blank" rel="noopener noreferrer" aria-label="Open in a new browser tab" title="Open in a new browser tab">${svg('external')}</a>
+      </div>
+      <div class="br-prog"><i></i></div>
+      <div class="br-view">
+        <div class="br-start">
+          <h2>Browser</h2>
+          <form class="br-search">${svg('search')}<input type="search" autocomplete="off" placeholder="Search the web" aria-label="Search the web"></form>
+          <div class="br-tiles">${SHORTCUTS.map(([l, n, u]) => `<button class="br-tile" data-url="${u}"><span>${l}</span>${n}</button>`).join('')}</div>
+          <p class="br-note">Pages open inside the phone when the site allows it. Many sites, like YouTube, refuse to be shown inside another page. Use the ↗ button to open any page in a new tab.</p>
+        </div>
+        <iframe class="br-frame" hidden title="Web page" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+        <div class="br-blocked" hidden>${svg('globe')}<b>Can’t show this page here</b><p>This copy of the simulator isn’t allowed to show other websites inside it. Open the page in a new tab, or run <code>index.html</code> from your own computer to browse inside the phone.</p><code class="br-bl-url"></code><a class="br-open" target="_blank" rel="noopener noreferrer">Open in new tab</a></div>
+      </div>`;
+    const url = $('.br-url', el), frame = $('.br-frame', el), start = $('.br-start', el), blocked = $('.br-blocked', el), prog = $('.br-prog', el);
+    const display = u => {
+      if (u === START) return '';
+      try { const x = new URL(u); if (x.hostname === 'www.google.com' && x.pathname === '/search' && x.searchParams.has('q')) return x.searchParams.get('q'); } catch (e) {}
+      return u.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    };
+    function render() {
+      const cur = hist[idx];
+      $('.br-back', el).disabled = idx === 0;
+      $('.br-fwd', el).disabled = idx >= hist.length - 1;
+      if (document.activeElement !== url) url.value = display(cur);
+      const ext = $('.br-ext', el);
+      if (cur === START) ext.removeAttribute('href'); else ext.href = cur;
+      ext.style.visibility = cur === START ? 'hidden' : '';
+    }
+    function load(u) {
+      blocked.hidden = true;
+      if (u === START) {
+        frame.hidden = true; frame.removeAttribute('src'); start.hidden = false;
+        prog.className = 'br-prog';
+      } else {
+        start.hidden = true; frame.hidden = false;
+        prog.className = 'br-prog'; void prog.offsetWidth; prog.className = 'br-prog loading';
+        frame.src = u;
+        log('I', 'chromium', `[browser] Navigating to ${u}`);
+      }
+      render();
+    }
+    function go(input) {
+      const u = input === START ? START : toUrl(input);
+      if (!u) return;
+      hist = hist.slice(0, idx + 1); hist.push(u); idx++;
+      load(u);
+    }
+    frame.addEventListener('load', () => { if (frame.getAttribute('src')) prog.className = 'br-prog done'; });
+    $('.br-omni', el).addEventListener('submit', e => { e.preventDefault(); url.blur(); go(url.value); });
+    url.addEventListener('focus', () => url.select());
+    url.addEventListener('blur', () => setTimeout(render, 0));
+    $('.br-search', el).addEventListener('submit', e => { e.preventDefault(); const i = $('input', e.currentTarget); go(i.value); i.value = ''; });
+    $$('.br-tile', el).forEach(b => b.onclick = () => go(b.dataset.url));
+    $('.br-back', el).onclick = () => { if (idx > 0) { idx--; load(hist[idx]); } };
+    $('.br-fwd', el).onclick = () => { if (idx < hist.length - 1) { idx++; load(hist[idx]); } };
+    $('.br-reload', el).onclick = () => { const cur = hist[idx]; if (cur !== START) { frame.src = 'about:blank'; setTimeout(() => load(cur), 30); } };
+    load(START);
+    return {
+      go,
+      onBack() { if (idx > 0) { idx--; load(hist[idx]); return true; } return false; },
+      onFrameBlocked() {
+        if (frame.hidden) return;
+        const cur = hist[idx];
+        frame.hidden = true; blocked.hidden = false; prog.className = 'br-prog';
+        $('.br-bl-url', el).textContent = cur;
+        $('.br-open', el).href = cur;
+        log('W', 'chromium', `[browser] Blocked from framing ${cur}`);
+      }
+    };
+  }
+  // The published artifact's content policy forbids embedding other sites; show a fallback when that happens
+  document.addEventListener('securitypolicyviolation', e => {
+    if (/frame-src|child-src|default-src/.test(e.violatedDirective || e.effectiveDirective || '')) inst.browser?.onFrameBlocked?.();
+  });
+
+  // ---------- Launcher search ----------
+  const SETTINGS_INDEX = [
+    { name: 'Wi‑Fi', k: 'wifi', ico: 'wifi', kw: 'wifi wi-fi internet network wlan' },
+    { name: 'Bluetooth', k: 'bt', ico: 'bt', kw: 'bluetooth devices pair' },
+    { name: 'Airplane mode', k: 'airplane', ico: 'plane', kw: 'airplane flight mode offline' },
+    { name: 'Flashlight', k: 'flashlight', ico: 'torch', kw: 'flashlight torch light' },
+    { name: 'Do Not Disturb', k: 'dnd', ico: 'dnd', kw: 'do not disturb dnd silence quiet' },
+    { name: 'Dark theme', k: 'dark', ico: 'moon', kw: 'dark theme night mode display' },
+    { name: 'Brightness', ico: 'sun', kw: 'brightness display screen' },
+    { name: 'Wallpaper', ico: 'palette', kw: 'wallpaper background style' },
+    { name: 'Volume', ico: 'vol', kw: 'volume sound audio media' },
+    { name: 'Battery', ico: 'battery', kw: 'battery charge power' },
+    { name: 'About phone', ico: 'info', kw: 'about phone build number version android developer', about: true }
+  ];
+  function openSearch() {
+    if (S.locked) return;
+    $('#lsInput').value = '';
+    show('search');
+    renderSearch();
+    log('D', 'com.sim.launcher', 'Search opened');
+    setTimeout(() => $('#lsInput').focus(), 60);
+  }
+  function renderSearch() {
+    const q = $('#lsInput').value.trim().toLowerCase();
+    const res = $('#lsResults');
+    $('#lsClear').hidden = !q;
+    const appTile = id => `<button class="app-ico" data-launch="${id}" aria-label="${APPS[id].name}">${icoHtml(id)}<span>${APPS[id].name}</span></button>`;
+    if (!q) {
+      res.innerHTML = `<h3>All apps</h3><div class="ls-apps">${Object.keys(APPS).sort((a, b) => APPS[a].name.localeCompare(APPS[b].name)).map(appTile).join('')}</div>`;
+      return;
+    }
+    const raw = $('#lsInput').value.trim();
+    const apps = Object.keys(APPS).filter(id => APPS[id].name.toLowerCase().includes(q));
+    const sets = SETTINGS_INDEX.filter(x => x.name.toLowerCase().includes(q) || x.kw.includes(q));
+    const notes = NOTES.filter(n => (n.title + ' ' + n.body).toLowerCase().includes(q)).slice(0, 4);
+    let h = '';
+    if (apps.length) h += `<h3>Apps</h3><div class="ls-apps">${apps.map(appTile).join('')}</div>`;
+    h += `<h3>Web</h3><button class="row" data-web="${esc(raw)}"><span class="row-ico">${svg(looksLikeUrl(raw) ? 'globe' : 'search')}</span><span class="row-txt"><b>${looksLikeUrl(raw) ? 'Open ' + esc(raw) : 'Search the web for “' + esc(raw) + '”'}</b><small>Opens in Browser</small></span>${svg('chevR')}</button>`;
+    if (sets.length) h += `<h3>Settings</h3>${sets.map(x => x.k
+      ? `<button class="row" data-toggle="${x.k}"><span class="row-ico">${svg(x.ico)}</span><span class="row-txt"><b>${x.name}</b><small data-sub="${x.k}"></small></span><span class="sw"></span></button>`
+      : `<button class="row" data-setting="${x.about ? 'about' : ''}"><span class="row-ico">${svg(x.ico)}</span><span class="row-txt"><b>${x.name}</b><small>Settings</small></span>${svg('chevR')}</button>`).join('')}`;
+    if (notes.length) h += `<h3>Notes</h3>${notes.map(n => `<button class="row" data-note="${n.id}"><span class="row-ico">${svg('notes')}</span><span class="row-txt"><b>${esc(n.title || 'Untitled')}</b><small>${esc(n.body.replace(/\n/g, ' · ').slice(0, 60))}</small></span></button>`).join('')}`;
+    res.innerHTML = h;
+    sync();
+  }
+  function openWeb(text) {
+    launch('browser');
+    inst.browser.go(text);
+  }
+  $('#lsIco').innerHTML = svg('search');
+  $('#lsClear').innerHTML = svg('x');
+  $('#lsClear').onclick = () => { $('#lsInput').value = ''; renderSearch(); $('#lsInput').focus(); };
+  $('#lsInput').addEventListener('input', renderSearch);
+  $('#lsInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.target.value.trim()) { e.preventDefault(); e.target.blur(); openWeb(e.target.value); }
+  });
+  $('#lsResults').addEventListener('click', e => {
+    const w = e.target.closest('[data-web]');
+    if (w) { openWeb(w.dataset.web); return; }
+    const st = e.target.closest('[data-setting]');
+    if (st) { launch('settings'); if (st.dataset.setting === 'about') inst.settings.openAbout(); return; }
+    const n = e.target.closest('[data-note]');
+    if (n) { launch('notes'); inst.notes.open(+n.dataset.note); }
+  });
+
   function mountSettings(el) {
     let sub = null;
     const row = (k, ico, name) => `<button class="row" data-toggle="${k}"><span class="row-ico">${svg(ico)}</span><span class="row-txt"><b>${name}</b><small data-sub="${k}"></small></span><span class="sw"></span></button>`;
@@ -1315,7 +1532,7 @@ select { border: 1px solid var(--line); background: var(--panel); border-radius:
       };
     }
     main();
-    return { onBack() { if (sub) { main(); return true; } return false; } };
+    return { onBack() { if (sub) { main(); return true; } return false; }, openAbout: about };
   }
 
   // ---------- Wiring ----------
