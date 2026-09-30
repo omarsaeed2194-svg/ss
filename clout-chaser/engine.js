@@ -58,6 +58,8 @@ function newGame(o) {
   mail({ type: 'system', from: 'Pixgram Team', subject: 'Welcome to Pixgram!', body: `Hey ${o.name}, your account @${o.handle} is live. Post consistently, ride trends, and don't feed the trolls. Your first 1,000 followers are the hardest.` });
   mail({ type: 'npc', npc: o.niche === 'gaming' ? 'milo' : 'skye', subject: 'hey neighbor', body: 'Saw you just started posting. The first month is rough, keep going! Maybe we collab once you get a few more followers?' });
   mail({ type: 'fan', from: '@' + fanHandle(), subject: 'first!!', body: "I don't know you yet but your vibe is immaculate. Following." });
+  S.notifs = []; S.bio = `${NICHES[o.niche].name} creator. Posting my way to the top.`;
+  notify('system', null, `Welcome to the timeline, ${o.name}. Your first post is waiting.`);
   S.dayStart = snap(); S.weekStart = snap();
   pushHistory();
   log(`Account @${o.handle} created. Niche: ${NICHES[o.niche].name}.`, 'gold');
@@ -72,7 +74,19 @@ function pushHistory() {
 
 function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { /* storage unavailable */ } }
 function loadSave() {
-  try { const raw = localStorage.getItem(SAVE_KEY); if (!raw) return null; const s = JSON.parse(raw); return s && s.v === 1 ? s : null; } catch (e) { return null; }
+  try { const raw = localStorage.getItem(SAVE_KEY); if (!raw) return null; const s = JSON.parse(raw); return s && s.v === 1 ? migrate(s) : null; } catch (e) { return null; }
+}
+/* Fill in fields added after a save was made */
+function migrate(s) {
+  s.notifs = s.notifs || [];
+  s.bio = s.bio || `${NICHES[s.niche].name} creator. Posting my way to the top.`;
+  (s.feed || []).forEach((f) => { if (!f.views) f.views = Math.round(f.likes * 25); if (!f.reposts) f.reposts = Math.round(f.likes * 0.04); });
+  (s.posts || []).forEach((p) => (p.comms || []).forEach((c) => { if (c.likes === undefined) c.likes = 0; }));
+  return s;
+}
+function notify(type, who, text, extra = {}) {
+  S.notifs.unshift({ id: uid(), d: S.day, type, who, text, read: false, ...extra });
+  if (S.notifs.length > 150) S.notifs.length = 150;
 }
 function wipeSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ } }
 
@@ -282,7 +296,7 @@ function genCaption(o, topic) {
 }
 
 function genComments(o, r) {
-  const out = [], n = Math.min(5, 2 + Math.floor(Math.log10(r.comments + 1)));
+  const out = [], n = Math.min(9, 2 + Math.floor(Math.log10(r.comments + 1) * 1.3));
   const neg = clamp(0.1 + (TONES[o.tone].heat + r.topic.heat) / 30 + (50 - S.rep) / 150 + S.heat / 250, 0.03, 0.8);
   for (let i = 0; i < n; i++) {
     let pool;
@@ -292,16 +306,17 @@ function genComments(o, r) {
     else if (chance(neg)) pool = COMMENTS.neg;
     else if (o.tone === 'funny' && chance(0.5)) pool = COMMENTS.fun;
     else pool = COMMENTS.pos;
-    out.push({ who: fanHandle(), text: pick(pool) });
+    out.push({ who: fanHandle(), text: pick(pool), likes: Math.round(r.likes * rnd(0.0005, 0.03)), neg: pool === COMMENTS.neg || pool === COMMENTS.heat });
   }
   // a celebrity friend might chime in
   const friends = Object.entries(S.npcs).filter(([, n]) => n.rel >= 35 && !n.feud);
   if (friends.length && chance(0.35)) {
     const [id] = pick(friends);
-    out.unshift({ who: NPCS[id].handle, npc: id, text: pick(['we need to collab fr', 'this is so good', 'proud of you', 'ok you ate', 'how are you this talented', 'the vision!!']) });
+    out.unshift({ who: NPCS[id].handle, npc: id, text: pick(['we need to collab fr', 'this is so good', 'proud of you', 'ok you ate', 'how are you this talented', 'the vision!!']), likes: Math.round(r.likes * rnd(0.05, 0.2)) });
   }
-  for (const [id, n] of Object.entries(S.npcs)) if (n.feud && chance(0.25)) out.unshift({ who: NPCS[id].handle, npc: id, text: pick(['lol who is this', 'desperate much?', 'still irrelevant I see', 'ratio']) });
-  return out.slice(0, 6);
+  for (const [id, n] of Object.entries(S.npcs)) if (n.feud && chance(0.25)) out.unshift({ who: NPCS[id].handle, npc: id, text: pick(['lol who is this', 'desperate much?', 'still irrelevant I see', 'ratio']), likes: Math.round(r.likes * rnd(0.05, 0.2)), neg: true });
+  const celeb = out.filter((c) => c.npc), rest = out.filter((c) => !c.npc).sort((a, b) => b.likes - a.likes);
+  return [...celeb, ...rest].slice(0, 9);
 }
 
 function addXp(skill, amount) {
@@ -335,6 +350,15 @@ function doPost(o) {
     viral: r.viral, flop: r.flop, sponsored: !!r.topic.deal, q: r.q, comms: genComments(o, r),
   };
   S.posts.unshift(post); if (S.posts.length > 80) S.posts.length = 80;
+  post.fresh = true;
+  // notifications, the way a real app would batch them
+  post.comms.slice(0, 3).forEach((c) => notify('reply', c.npc || c.who, c.text, { post: post.id, npc: !!c.npc }));
+  const starLiker = Object.entries(S.npcs).filter(([, n]) => n.rel >= 25 && !n.feud).map(([id]) => id);
+  const liker = starLiker.length && chance(0.4) ? pick(starLiker) : null;
+  if (r.likes > 0) notify('like', liker || fanHandle(), `and ${fmt(Math.max(0, r.likes - 1))} others liked your post`, { post: post.id, npc: !!liker });
+  if (r.shares > 2) notify('repost', fanHandle(), `and ${fmt(r.shares - 1)} others reposted your post`, { post: post.id });
+  if (post.gain > 0) notify('follow', fanHandle(), post.gain > 1 ? `and ${fmt(post.gain - 1)} others followed you` : 'followed you');
+  if (r.viral) notify('viral', null, `Your post is going viral: ${fmt(r.views)} views and counting.`, { post: post.id });
   S.stats.posts++; S.lastPostDay = S.day;
   if (o.tone === 'ragebait') S.stats.ragebait++;
   if (o.tone === 'wholesome') S.stats.wholesome++;
@@ -413,7 +437,7 @@ function npcPost(id, silent) {
   const tr = S.trends.length ? pick(S.trends).tag : '#fyp';
   const text = pick(NPC_POSTS[n.niche] || NPC_POSTS.lifestyle).replace('{trend}', tr);
   const likes = Math.round(S.npcs[id].followers * rnd(0.01, 0.06));
-  S.feed.unshift({ id: uid(), npc: id, day: S.day, text, likes, comments: Math.round(likes * rnd(0.01, 0.04)), liked: false, commented: false });
+  S.feed.unshift({ id: uid(), npc: id, day: S.day, text, likes, comments: Math.round(likes * rnd(0.01, 0.04)), reposts: Math.round(likes * rnd(0.02, 0.06)), views: Math.round(likes * rnd(15, 40)), liked: false, commented: false, reposted: false });
   if (S.feed.length > 40) S.feed.length = 40;
 }
 
@@ -430,6 +454,7 @@ function simulateNpcs(report) {
     if (n.rel >= 35 && !S.collab && chance(0.06 + n.rel / 1000)) {
       mail({ type: 'collab', npc: id, subject: 'collab?', body: pick(['Been loving your stuff lately. Want to film something together this week?', 'My audience would love you. Collab?', 'Down to make something fun together? I have an idea.']) });
     }
+    if (n.rel >= 30 && !n.followsYou && chance(0.12)) { n.followsYou = true; notify('follow', id, 'followed you', { npc: true }); log(`${NPCS[id].name} followed you.`, 'gold'); }
     if (n.rel >= 20 && chance(0.03)) mail({ type: 'npc', npc: id, subject: pick(['lol', 'random thought', 'saw your post']), body: pick(['your last post had me crying', 'we should get dinner next time I am in town', 'the algorithm has been weird this week right??', 'proud of how far you have come']) });
     // hostile NPCs
     if ((n.feud || n.rel <= -40) && chance(0.05 + NPCS[id].drama * 0.05)) S.queue.push({ ev: 'npc_callout', ctx: { npc: id } });

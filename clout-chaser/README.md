@@ -11,6 +11,19 @@ python3 -m http.server 8080   # then open http://localhost:8080
 
 Progress saves automatically to `localStorage`. The Account tab can export and import save codes.
 
+## Interface
+
+The game looks and plays like a social app (inspired by the Status social-media sim):
+
+- **Timeline** with For you / Following / Your posts tabs, post cards with reply, repost, like and view counts, and a compact status bar of your stats.
+- **Compose sheet**: write any post. The game reads the tone from your words (funny, rage bait, wholesome, clickbait and so on), picks the topic from your hashtags and @mentions, and shows a live forecast. You can override tone and topic, change format/effort/timing, or tap the dice for a suggested post.
+- **Threads**: open any post to see replies. Thank fans, like replies, clap back at haters, or write your own reply to a star's post. Your words decide whether it lands as a compliment, joke, self-promo or troll.
+- **Notifications** for likes, follows, reposts, replies, viral moments and stars following you back.
+- **Messages** in iMessage-style threads with stars, brands and fans. Type DMs to stars (mention "collab" to pitch one, or "date" when you're close); brand offers show up as cards you can accept, negotiate or decline.
+- **Profiles** for you and every star, with banner, bio (yours is editable), relationship meter and actions.
+- **Floating stat pop-ups** after every action show exactly what changed.
+- Desktop gets a sidebar and a trends/stats rail; phones get a bottom tab bar, a compose button and a side drawer. Dark, light or device theme.
+
 ## Core stats
 
 | Stat | What it does |
