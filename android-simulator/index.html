@@ -1,0 +1,1377 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pocket Android Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wdth,wght@8..144,25..151,100..1000&family=Roboto+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: an emulator workbench. The device sits on the left, the control panel and logcat on the right; they stack on narrow screens. */
+:root {
+  --bg: #E8ECE9;
+  --panel: #F8FAF8;
+  --fg: #16201A;
+  --muted: #5A675F;
+  --line: #D0D9D3;
+  --accent: #1C7A50;
+  --accent-ink: #FFFFFF;
+  --frame: #1B1F1D;
+  --frame-edge: #3B423E;
+  --log-bg: #121915;
+  --log-fg: #CADDD1;
+  --log-dim: #6F8277;
+  --log-i: #7FD3A6;
+  --log-d: #8FB3FF;
+  --log-w: #F2C46B;
+  --log-e: #FF8A80;
+  --f-display: "Roboto Flex", "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D110F; --panel: #151B17; --fg: #E1E8E3; --muted: #8E9F95; --line: #27302A;
+    --accent: #4DCB8C; --accent-ink: #04130B; --frame: #262C28; --frame-edge: #4A534D; --log-bg: #090C0A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D110F; --panel: #151B17; --fg: #E1E8E3; --muted: #8E9F95; --line: #27302A;
+  --accent: #4DCB8C; --accent-ink: #04130B; --frame: #262C28; --frame-edge: #4A534D; --log-bg: #090C0A;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--f-display); font-size: 14px; line-height: 1.45; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.bench { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 40px; }
+.bench-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; margin-bottom: 28px; }
+.bench-head h1 { margin: 0; font-size: clamp(26px, 5vw, 38px); font-weight: 780; font-variation-settings: "wdth" 132, "opsz" 72; letter-spacing: -0.02em; line-height: 1.05; text-wrap: balance; }
+.bench-head p { margin: 6px 0 0; color: var(--muted); max-width: 52ch; }
+.specs { display: flex; flex-wrap: wrap; gap: 6px; font-family: var(--f-mono); font-size: 12px; }
+.specs span { border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; color: var(--muted); background: var(--panel); }
+.bench-grid { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 40px; align-items: start; }
+@media (max-width: 880px) { .bench-grid { grid-template-columns: minmax(0, 1fr); gap: 28px; } }
+.device-col { display: flex; justify-content: center; min-width: 0; }
+#fit { position: relative; width: 394px; height: 784px; }
+
+/* Control panel */
+.panel { display: grid; gap: 22px; min-width: 0; }
+.pn-sec { display: grid; gap: 10px; }
+.pn-sec h2 { margin: 0; font-size: 11px; font-weight: 650; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.keys { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 9px 12px; font-weight: 550; transition: border-color .15s, background .15s; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.hint { margin: 0; color: var(--muted); font-size: 13px; }
+kbd { font-family: var(--f-mono); font-size: 12px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: var(--panel); }
+.bat-row { display: grid; grid-template-columns: auto minmax(0, 1fr) 4ch; gap: 12px; align-items: center; }
+.bat-row output { font-family: var(--f-mono); font-variant-numeric: tabular-nums; text-align: right; }
+input[type="range"] { accent-color: var(--accent); width: 100%; }
+.chk { display: flex; gap: 8px; align-items: center; }
+.chk input { accent-color: var(--accent); width: 16px; height: 16px; }
+.nt-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+select { border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 9px 10px; min-width: 0; }
+.log-head { display: flex; justify-content: space-between; align-items: center; }
+.log-head .btn { padding: 4px 10px; font-size: 12px; }
+.logcat { background: var(--log-bg); color: var(--log-fg); border-radius: 12px; font-family: var(--f-mono); font-size: 11.5px; line-height: 1.55; height: 300px; overflow: auto; padding: 10px 12px; }
+.ll { white-space: pre-wrap; word-break: break-word; }
+.ll .lt { color: var(--log-dim); }
+.ll .lv { font-weight: 500; }
+.ll-I .lv, .ll-I .lg { color: var(--log-i); }
+.ll-D .lv, .ll-D .lg { color: var(--log-d); }
+.ll-W .lv, .ll-W .lg { color: var(--log-w); }
+.ll-E .lv, .ll-E .lg { color: var(--log-e); }
+
+/* Device hardware */
+.device { position: absolute; left: 0; top: 0; width: 384px; height: 784px; border-radius: 54px; background: var(--frame); padding: 12px; transform-origin: top left;
+  box-shadow: 0 0 0 2px var(--frame-edge), 0 30px 60px -24px rgb(0 0 0 / .5); transition: box-shadow .3s; }
+.device.torch { box-shadow: 0 0 0 2px var(--frame-edge), 0 30px 60px -24px rgb(0 0 0 / .5), 0 0 70px 14px rgb(255 236 180 / .45); }
+.hw { position: absolute; right: -6px; width: 6px; padding: 0; border: 0; border-radius: 0 4px 4px 0; background: var(--frame-edge); }
+.hw:hover { filter: brightness(1.4); }
+.hw-power { top: 170px; height: 64px; }
+.hw-volup { top: 262px; height: 58px; }
+.hw-voldown { top: 326px; height: 58px; }
+
+/* Phone screen: its own Material-style world, themed by the phone's Dark theme setting */
+.screen {
+  --p-surface: #F6F8F5; --p-surface2: #E7EDE8; --p-on: #191C1A; --p-on2: #58615B; --p-primary: #2B6A4C; --p-on-primary: #FFFFFF;
+  --p-container: #CDEBD9; --p-on-container: #0B2716; --p-line: #DAE0DB; --p-scrim: rgb(0 0 0 / .42); --p-toast: #2E3230; --p-danger: #C4473B;
+  position: relative; width: 360px; height: 760px; border-radius: 42px; overflow: hidden; background: #000; color: var(--p-on);
+  font-family: var(--f-display); font-size: 14px; user-select: none; -webkit-user-select: none; isolation: isolate;
+}
+.screen.dark {
+  --p-surface: #111412; --p-surface2: #1D231F; --p-on: #E1E4E0; --p-on2: #A2ACA5; --p-primary: #8ED3AE; --p-on-primary: #00391F;
+  --p-container: #1F4F37; --p-on-container: #C6F0D7; --p-line: #2C332E; --p-toast: #E1E4E0; --p-danger: #FF8A7E;
+}
+.screen svg { width: 24px; height: 24px; display: block; }
+.screen button { border: 0; background: none; padding: 0; color: inherit; }
+.layer { position: absolute; inset: 0; }
+.wallpaper { background-size: cover; transition: background .4s; }
+
+.statusbar { position: absolute; top: 0; left: 0; right: 0; height: 30px; z-index: 8; display: flex; align-items: center; justify-content: space-between; padding: 0 22px; font-size: 13px; font-weight: 560; color: var(--p-on); cursor: pointer; font-variant-numeric: tabular-nums; }
+.statusbar .cam { position: absolute; left: 50%; top: 8px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: #050605; box-shadow: inset 0 0 0 2px #1a1d1b; }
+.sb-left, .sb-icons { display: flex; align-items: center; gap: 5px; }
+.sb-left svg { width: 13px; height: 13px; opacity: .85; }
+.sb-icons svg { width: 15px; height: 15px; }
+.sb-icons .bat { width: 24px; height: 13px; }
+.screen.on-wall .statusbar, .screen.on-wall .navbar { color: #fff; }
+.screen.shade-open .statusbar { color: var(--p-on); }
+
+.navbar { position: absolute; bottom: 0; left: 0; right: 0; height: 46px; z-index: 5; display: flex; align-items: center; justify-content: center; gap: 60px; color: var(--p-on2); transition: opacity .2s; }
+.navbar button { width: 48px; height: 38px; display: grid; place-items: center; border-radius: 19px; }
+.navbar button:active { background: rgb(128 128 128 / .25); }
+.navbar svg { width: 18px; height: 18px; }
+.screen.locked .navbar { opacity: 0; pointer-events: none; }
+
+/* Home */
+.home { padding: 52px 18px 54px; display: flex; flex-direction: column; color: #fff; }
+.glance { text-shadow: 0 1px 6px rgb(0 0 0 / .35); }
+.glance .g-date { font-size: 24px; font-weight: 420; }
+.glance .g-wx { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 15px; opacity: .95; }
+.glance .g-wx svg { width: 18px; height: 18px; }
+.home-grid { margin-top: auto; display: grid; grid-template-columns: repeat(4, 1fr); row-gap: 18px; }
+.app-ico { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; color: #fff; text-shadow: 0 1px 4px rgb(0 0 0 / .5); }
+.ico { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--ib); color: var(--if); box-shadow: 0 2px 6px rgb(0 0 0 / .18); transition: transform .12s; }
+.app-ico:active .ico { transform: scale(.9); }
+.ico.sm { width: 26px; height: 26px; box-shadow: none; }
+.ico.sm svg { width: 15px; height: 15px; }
+.screen .search-pill { margin: 22px 0 16px; height: 48px; border-radius: 24px; background: rgb(255 255 255 / .88); color: #3c4540; display: flex; align-items: center; gap: 10px; padding: 0 18px; font-size: 15px; }
+.dock { display: grid; grid-template-columns: repeat(4, 1fr); }
+.dock .app-ico span:last-child { display: none; }
+
+/* Lock */
+.lock { z-index: 4; background: linear-gradient(180deg, rgb(0 0 0 / .15), rgb(0 0 0 / .45)), var(--wall, #000); color: #fff; padding: 64px 22px 22px; display: flex; flex-direction: column; transition: transform .28s ease, opacity .28s ease; touch-action: none; }
+.lk-clock { font-size: 104px; line-height: .9; font-weight: 300; font-variation-settings: "wdth" 110, "opsz" 144; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.lk-date { margin-top: 12px; font-size: 16px; opacity: .9; }
+.lk-notifs { margin-top: 26px; display: grid; gap: 8px; }
+.lk-hint { margin-top: auto; align-self: center; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 13px; opacity: .9; animation: nudge 2.4s ease-in-out infinite; }
+.lk-hint svg { width: 20px; height: 20px; }
+@keyframes nudge { 0%, 70%, 100% { transform: none; } 80% { transform: translateY(-8px); } }
+
+/* Notifications */
+.nf { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: start; text-align: left; width: 100%; background: var(--p-surface); color: var(--p-on); border-radius: 20px; padding: 12px 10px 12px 14px; cursor: pointer; }
+.lk-notifs .nf { background: rgb(255 255 255 / .9); color: #191C1A; }
+.nf-txt { display: grid; min-width: 0; }
+.nf-txt small { font-size: 11px; opacity: .7; }
+.nf-txt b { font-weight: 600; font-size: 14px; }
+.nf-txt span { font-size: 13px; opacity: .85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nf-x { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; opacity: .6; }
+.nf-x svg { width: 15px !important; height: 15px !important; }
+.headsup { position: absolute; top: 36px; left: 10px; right: 10px; z-index: 9; box-shadow: 0 8px 24px rgb(0 0 0 / .28); border-radius: 20px; animation: drop .25s ease; }
+.headsup .nf { background: var(--p-surface2); }
+@keyframes drop { from { transform: translateY(-120%); } }
+
+/* Apps */
+.apphost { z-index: 2; pointer-events: none; }
+.apphost > .app { pointer-events: auto; }
+.app { position: absolute; inset: 0; background: var(--p-surface); padding: 30px 0 46px; display: flex; flex-direction: column; }
+.app.enter { animation: appIn .24s cubic-bezier(.2, .8, .2, 1); }
+@keyframes appIn { from { transform: scale(.9); opacity: 0; border-radius: 40px; } }
+.app-bar { height: 58px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 12px 0 18px; }
+.ab-title { font-size: 22px; font-weight: 450; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ib { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; color: var(--p-on2) !important; }
+.ib:active { background: var(--p-surface2) !important; }
+.app-body { flex: 1; min-height: 0; overflow: auto; padding: 0 16px 16px; scrollbar-width: none; }
+.app-body::-webkit-scrollbar { display: none; }
+.fab { position: absolute; right: 18px; bottom: 64px; width: 56px; height: 56px; border-radius: 18px !important; display: grid; place-items: center; background: var(--p-container) !important; color: var(--p-on-container) !important; box-shadow: 0 4px 12px rgb(0 0 0 / .2); }
+.empty { color: var(--p-on2); text-align: center; margin-top: 60px; }
+.seg { display: flex; background: var(--p-surface2); border-radius: 20px; padding: 3px; }
+.seg button { padding: 6px 14px; border-radius: 17px; font-size: 13px; font-weight: 550; color: var(--p-on2); }
+.seg button.on { background: var(--p-container); color: var(--p-on-container); }
+
+/* Phone app */
+.ph { display: flex; flex-direction: column; }
+.ph-num { height: 64px; display: flex; align-items: center; justify-content: center; font-size: 32px; letter-spacing: .04em; font-variant-numeric: tabular-nums; overflow: hidden; white-space: nowrap; }
+.ph-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 22px; padding: 8px 18px; }
+.ph-key { height: 62px; border-radius: 31px !important; background: var(--p-surface2) !important; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.ph-key:active { background: var(--p-container) !important; }
+.ph-key b { font-size: 26px; font-weight: 420; line-height: 1; }
+.ph-key small { font-size: 9px; letter-spacing: .12em; color: var(--p-on2); height: 11px; margin-top: 2px; }
+.ph-actions { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 12px 18px 0; }
+.ph-actions .ph-del { justify-self: center; }
+.ph-call { width: 64px; height: 64px; border-radius: 32px !important; background: #1E9E5A !important; color: #fff !important; display: grid; place-items: center; }
+.ph-end { background: #D2443A !important; }
+.call { display: flex; flex-direction: column; align-items: center; padding-top: 70px; gap: 8px; height: 100%; }
+.call .avatar { width: 96px; height: 96px; border-radius: 50%; background: var(--p-container); color: var(--p-on-container); display: grid; place-items: center; margin-bottom: 14px; }
+.call .avatar svg { width: 44px; height: 44px; }
+.call .cnum { font-size: 28px; }
+.call .cstate { color: var(--p-on2); font-variant-numeric: tabular-nums; }
+.call .ph-call { margin-top: auto; margin-bottom: 30px; }
+
+/* Calculator */
+.cl { display: flex; flex-direction: column; padding-top: 12px; }
+.cl-screen { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end; padding: 8px 6px 18px; min-height: 0; }
+.cl-expr { font-size: 40px; font-weight: 350; word-break: break-all; text-align: right; line-height: 1.15; }
+.cl-res { font-size: 22px; color: var(--p-on2); min-height: 30px; }
+.cl-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.cl-k { height: 66px; border-radius: 33px !important; font-size: 24px; background: var(--p-surface2) !important; }
+.cl-k.op { background: var(--p-container) !important; color: var(--p-on-container) !important; }
+.cl-k.fn { color: var(--p-primary) !important; }
+.cl-k.eq { background: var(--p-primary) !important; color: var(--p-on-primary) !important; }
+.cl-k.zero { grid-column: span 2; }
+.cl-k:active { filter: brightness(.9); }
+
+/* Notes */
+.nt-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+.nt-card { display: grid; gap: 6px; text-align: left; border: 1px solid var(--p-line) !important; border-radius: 16px !important; padding: 12px !important; }
+.nt-card b { font-weight: 600; }
+.nt-card span { color: var(--p-on2); font-size: 13px; white-space: pre-line; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; }
+.nt-ed { display: flex; flex-direction: column; gap: 8px; }
+.nt-ed input, .nt-ed textarea { border: 0; background: transparent; outline: none; color: var(--p-on); user-select: text; -webkit-user-select: text; }
+.nt-ed input { font-size: 24px; }
+.nt-ed textarea { flex: 1; resize: none; font-size: 15px; line-height: 1.55; }
+
+/* Clock */
+.ck-big { text-align: center; font-size: 68px; font-weight: 300; font-variant-numeric: tabular-nums; margin-top: 20px; }
+.ck-date { text-align: center; color: var(--p-on2); margin-bottom: 24px; }
+.ck-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 4px; border-top: 1px solid var(--p-line); }
+.ck-row small { display: block; color: var(--p-on2); }
+.ck-row .t { font-size: 26px; font-weight: 350; font-variant-numeric: tabular-nums; }
+.sw-disp { text-align: center; font-size: 56px; font-weight: 300; font-variant-numeric: tabular-nums; margin: 44px 0 24px; }
+.sw-btns { display: flex; justify-content: center; gap: 16px; margin-bottom: 16px; }
+.sw-btns button { width: 96px; height: 52px; border-radius: 26px !important; background: var(--p-surface2) !important; font-weight: 600; }
+.sw-btns button.go { background: var(--p-primary) !important; color: var(--p-on-primary) !important; }
+.lap { display: flex; justify-content: space-between; padding: 8px 6px; border-top: 1px solid var(--p-line); font-variant-numeric: tabular-nums; color: var(--p-on2); }
+
+/* Calendar */
+.cal-head { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 10px; }
+.cal-head b { font-size: 18px; font-weight: 500; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; row-gap: 4px; }
+.cal-grid .wd { font-size: 11px; color: var(--p-on2); padding: 6px 0; }
+.cal-grid button { height: 38px; border-radius: 19px !important; font-variant-numeric: tabular-nums; position: relative; }
+.cal-grid button.today { background: var(--p-primary) !important; color: var(--p-on-primary) !important; }
+.cal-grid button.sel:not(.today) { background: var(--p-container) !important; color: var(--p-on-container) !important; }
+.cal-grid button.ev::after { content: ""; position: absolute; bottom: 4px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: currentColor; opacity: .7; }
+.cal-ev { margin-top: 16px; display: grid; gap: 8px; }
+.cal-ev div { background: var(--p-surface2); border-radius: 14px; padding: 10px 14px; display: flex; gap: 12px; }
+.cal-ev time { color: var(--p-primary); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Weather */
+.app.wx { background: linear-gradient(180deg, #F4A65A 50%, var(--p-surface) 50%); }
+.wx .app-body { background: var(--p-surface); }
+.wx .app-bar, .wx .wx-now { color: #2A1706; }
+.wx-now { background: #F4A65A; }
+.wx-now { padding: 0 20px 34px; }
+.wx-now .deg { font-size: 88px; font-weight: 300; line-height: 1; }
+.wx-now small { display: block; font-size: 12px; opacity: .75; }
+.wx-hours { display: flex; gap: 8px; overflow-x: auto; padding: 16px 16px 8px; scrollbar-width: none; }
+.wx-hours div { flex: none; width: 56px; text-align: center; background: var(--p-surface2); border-radius: 16px; padding: 8px 0; font-size: 12px; }
+.wx-hours b { display: block; font-size: 16px; font-weight: 500; }
+.wx-days { padding: 8px 16px; }
+.wx-days div { display: grid; grid-template-columns: 1fr auto auto; gap: 14px; padding: 9px 0; border-bottom: 1px solid var(--p-line); font-variant-numeric: tabular-nums; }
+.wx-days span:last-child { color: var(--p-on2); }
+
+/* Snake */
+.sn { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.sn-wrap { position: relative; width: 100%; max-width: 320px; }
+.sn-cv { width: 100%; aspect-ratio: 1; border-radius: 16px; display: block; touch-action: none; }
+.sn-msg { position: absolute; inset: 0; white-space: pre-line; display: grid; place-items: center; text-align: center; font-weight: 600; font-size: 16px; color: var(--p-on); pointer-events: none; }
+.sn-score { font-size: 13px; color: var(--p-on2); font-variant-numeric: tabular-nums; }
+.dpad { display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(2, 48px); gap: 6px; }
+.dpad button { border-radius: 14px !important; background: var(--p-surface2) !important; display: grid; place-items: center; }
+.dpad button:active { background: var(--p-container) !important; }
+.dpad .u { grid-column: 2; }
+.dpad .l { grid-column: 1; grid-row: 2; }
+.dpad .d { grid-column: 2; grid-row: 2; }
+.dpad .r { grid-column: 3; grid-row: 2; }
+
+/* Settings */
+.st h3 { margin: 18px 4px 6px; font-size: 13px; font-weight: 600; color: var(--p-primary); }
+.row { width: 100%; display: flex; align-items: center; gap: 16px; padding: 12px 4px !important; text-align: left; border-radius: 14px !important; }
+.row:active { background: var(--p-surface2) !important; }
+.row-ico { color: var(--p-on2); }
+.row-txt { flex: 1; display: grid; min-width: 0; }
+.row-txt b { font-weight: 500; font-size: 15px; }
+.row-txt small { color: var(--p-on2); font-size: 13px; }
+.sw { width: 50px; height: 30px; border-radius: 15px; border: 2px solid var(--p-on2); position: relative; flex: none; transition: background .15s, border-color .15s; }
+.sw::after { content: ""; position: absolute; top: 5px; left: 5px; width: 16px; height: 16px; border-radius: 50%; background: var(--p-on2); transition: transform .15s, width .15s, height .15s, top .15s; }
+.on > .sw { background: var(--p-primary); border-color: var(--p-primary); }
+.on > .sw::after { transform: translateX(18px); background: var(--p-on-primary); top: 3px; width: 20px; height: 20px; }
+.st-range { display: flex; align-items: center; gap: 12px; padding: 6px 4px 10px; color: var(--p-on2); }
+.st-range input { flex: 1; accent-color: var(--p-primary); }
+.walls { display: flex; gap: 10px; padding: 6px 4px; }
+.walls button { width: 56px; height: 96px; border-radius: 14px !important; border: 3px solid transparent !important; }
+.walls button.on { border-color: var(--p-primary) !important; }
+.kv { padding: 12px 4px; border-bottom: 1px solid var(--p-line); display: grid; }
+.kv small { color: var(--p-on2); font-size: 13px; }
+.kv b { font-weight: 450; font-size: 15px; font-variant-numeric: tabular-nums; }
+.screen button.kv { width: 100%; text-align: left; padding: 12px 4px; border-bottom: 1px solid var(--p-line); }
+
+/* Recents */
+.recents { z-index: 3; background: rgb(0 0 0 / .38); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; flex-direction: column; justify-content: center; padding: 30px 0 50px; }
+.rec-track { display: flex; gap: 16px; overflow-x: auto; padding: 0 70px; scroll-snap-type: x mandatory; scrollbar-width: none; align-items: center; }
+.rec-track::-webkit-scrollbar { display: none; }
+.rc { flex: none; width: 220px; scroll-snap-align: center; touch-action: pan-x; transition: transform .25s, opacity .25s; cursor: pointer; }
+.rc-head { display: flex; align-items: center; gap: 8px; color: #fff; font-weight: 550; margin: 0 0 8px 6px; }
+.rc-shot { width: 220px; height: 464px; border-radius: 26px; overflow: hidden; position: relative; background: var(--p-surface); box-shadow: 0 10px 30px rgb(0 0 0 / .35); }
+.rc-shot .app { transform: scale(.6111); transform-origin: top left; width: 360px; height: 760px; inset: auto; top: 0; left: 0; pointer-events: none; }
+.rec-empty { color: #fff; text-align: center; opacity: .85; }
+.rec-clear { align-self: center; margin-top: 22px; color: #fff !important; background: rgb(255 255 255 / .2) !important; padding: 8px 18px !important; border-radius: 18px !important; font-weight: 550; }
+
+/* Shade */
+.shade-scrim { z-index: 6; background: var(--p-scrim); opacity: 0; pointer-events: none; transition: opacity .25s; }
+.shade-scrim.open { opacity: 1; pointer-events: auto; }
+.shade { position: absolute; top: 0; left: 0; right: 0; z-index: 7; max-height: 100%; overflow: auto; background: var(--p-surface); border-radius: 0 0 30px 30px; padding: 38px 14px 14px; transform: translateY(-104%); transition: transform .28s cubic-bezier(.2, .8, .2, 1); scrollbar-width: none; }
+.shade.open { transform: none; }
+.sh-head { display: flex; align-items: baseline; gap: 10px; padding: 0 6px 14px; }
+.sh-head b { font-size: 30px; font-weight: 380; font-variant-numeric: tabular-nums; }
+.sh-head span { color: var(--p-on2); }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tile { display: flex; align-items: center; gap: 10px; text-align: left; height: 62px; padding: 0 14px !important; border-radius: 20px !important; background: var(--p-surface2) !important; }
+.tile.on { background: var(--p-primary) !important; color: var(--p-on-primary) !important; }
+.tile span { display: grid; min-width: 0; }
+.tile b { font-weight: 550; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile small { font-size: 11px; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile svg { width: 20px; height: 20px; flex: none; }
+.sh-bright { display: flex; align-items: center; gap: 12px; margin: 14px 6px 6px; color: var(--p-on2); }
+.sh-bright input { flex: 1; accent-color: var(--p-primary); }
+.sh-notifs { display: grid; gap: 6px; margin-top: 10px; }
+.sh-notifs .nf { background: var(--p-surface2); }
+.sh-foot { display: flex; justify-content: space-between; align-items: center; padding: 10px 6px 0; color: var(--p-on2); font-size: 13px; }
+.sh-foot button { background: var(--p-surface2) !important; padding: 6px 14px !important; border-radius: 16px !important; font-weight: 550; }
+.sh-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--p-on2); opacity: .4; margin: 14px auto 0; }
+
+/* Overlays */
+.hud { position: absolute; right: 12px; top: 190px; z-index: 9; width: 48px; height: 180px; border-radius: 24px; background: var(--p-surface); box-shadow: 0 6px 20px rgb(0 0 0 / .3); padding: 8px; display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: 0; transform: translateX(20px); transition: opacity .2s, transform .2s; pointer-events: none; }
+.hud.show { opacity: 1; transform: none; }
+.hud-bar { flex: 1; width: 32px; border-radius: 16px; background: var(--p-surface2); position: relative; overflow: hidden; }
+.hud-fill { position: absolute; left: 0; right: 0; bottom: 0; background: var(--p-primary); transition: height .15s; }
+.hud svg { color: var(--p-on2); width: 20px !important; height: 20px !important; }
+.toast { position: absolute; left: 50%; bottom: 70px; z-index: 9; transform: translate(-50%, 10px); max-width: 300px; background: var(--p-toast); color: var(--p-surface); padding: 10px 16px; border-radius: 18px; font-size: 13px; text-align: center; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.dim { z-index: 10; background: #000; pointer-events: none; }
+.off { z-index: 11; background: #000; opacity: 0; pointer-events: none; transition: opacity .3s; display: grid; place-items: center; color: #9aa39d; font-size: 14px; }
+.off.on { opacity: 1; pointer-events: auto; }
+.off-msg { display: grid; justify-items: center; gap: 10px; }
+.off-msg svg { width: 44px !important; height: 24px !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+
+<main class="bench">
+  <header class="bench-head">
+    <div>
+      <h1>Pocket Android Simulator</h1>
+      <p>A virtual phone you can unlock, launch apps on, and poke with hardware keys. Every action shows up in logcat.</p>
+    </div>
+    <div class="specs" aria-label="Virtual device">
+      <span>Sim Phone 1</span><span>Android 15 · API 35</span><span>360 × 760 dp</span><span>x86_64</span>
+    </div>
+  </header>
+
+  <div class="bench-grid">
+    <section class="device-col" aria-label="Virtual device screen">
+      <div id="fit">
+        <div class="device" id="device">
+          <button class="hw hw-power" id="hwPower" aria-label="Power button" title="Power"></button>
+          <button class="hw hw-volup" id="hwVolUp" aria-label="Volume up" title="Volume up"></button>
+          <button class="hw hw-voldown" id="hwVolDown" aria-label="Volume down" title="Volume down"></button>
+          <div class="screen locked" id="screen">
+            <div class="statusbar" id="statusbar" title="Tap for Quick Settings">
+              <span class="sb-left"><span id="sbTime"></span><span class="sb-left" id="sbNotifs"></span></span>
+              <span class="cam"></span>
+              <span class="sb-icons" id="sbIcons"></span>
+            </div>
+            <div class="layer wallpaper" id="wallpaper"></div>
+            <div class="layer home" id="home"></div>
+            <div class="layer apphost" id="appHost"></div>
+            <div class="layer recents" id="recents" hidden>
+              <div class="rec-track" id="recTrack"></div>
+              <p class="rec-empty" id="recEmpty">No recent items</p>
+              <button class="rec-clear" id="recClear">Clear all</button>
+            </div>
+            <div class="layer lock" id="lock">
+              <div class="lk-clock" id="lkClock"></div>
+              <div class="lk-date" id="lkDate"></div>
+              <div class="lk-notifs" id="lkNotifs"></div>
+              <button class="lk-hint" id="lkHint"><span id="lkIcon"></span>Swipe up to unlock</button>
+            </div>
+            <div class="layer shade-scrim" id="shadeScrim"></div>
+            <div class="shade" id="shade" aria-label="Quick Settings">
+              <div class="sh-head"><b id="shTime"></b><span id="shDate"></span></div>
+              <div class="tiles" id="tiles"></div>
+              <div class="sh-bright" id="shBright"></div>
+              <div class="sh-notifs" id="shNotifs"></div>
+              <div class="sh-foot"><span id="shCount"></span><button id="shClear">Clear all</button></div>
+              <div class="sh-handle"></div>
+            </div>
+            <div id="headsup"></div>
+            <div class="hud" id="hud"><div class="hud-bar"><div class="hud-fill" id="hudFill"></div></div><span id="hudIco"></span></div>
+            <div class="toast" id="toast" role="status"></div>
+            <nav class="navbar" id="navbar">
+              <button id="navBack" aria-label="Back"></button>
+              <button id="navHome" aria-label="Home"></button>
+              <button id="navRecents" aria-label="Overview"></button>
+            </nav>
+            <div class="layer dim" id="dim"></div>
+            <div class="layer off" id="off"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel" aria-label="Emulator controls">
+      <section class="pn-sec">
+        <h2>Hardware keys</h2>
+        <div class="keys">
+          <button class="btn" id="kPower">Power</button>
+          <button class="btn" id="kVolUp">Volume +</button>
+          <button class="btn" id="kVolDown">Volume −</button>
+          <button class="btn" id="kBack">Back</button>
+          <button class="btn" id="kHome">Home</button>
+          <button class="btn" id="kRecents">Overview</button>
+        </div>
+        <p class="hint">Keyboard: <kbd>Esc</kbd> Back, <kbd>P</kbd> Power, arrow keys steer Snake. Tap the phone's status bar to pull down Quick Settings.</p>
+      </section>
+
+      <section class="pn-sec">
+        <h2>Battery</h2>
+        <div class="bat-row">
+          <label for="batLevel">Charge level</label>
+          <input type="range" id="batLevel" min="0" max="100" value="78">
+          <output id="batOut" for="batLevel">78%</output>
+        </div>
+        <label class="chk"><input type="checkbox" id="batCharge"> Plugged in (AC charger)</label>
+      </section>
+
+      <section class="pn-sec">
+        <h2>Send a notification</h2>
+        <div class="nt-row">
+          <select id="ntPreset" aria-label="Notification to send"></select>
+          <button class="btn primary" id="ntSend">Send</button>
+        </div>
+      </section>
+
+      <section class="pn-sec">
+        <div class="log-head"><h2>Logcat</h2><button class="btn" id="logClear">Clear</button></div>
+        <div class="logcat" id="logcat" role="log" aria-live="off"></div>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<script>
+(() => {
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const pad2 = n => String(n).padStart(2, '0');
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+
+  const P = {
+    phone: '<path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 6 6L15 14l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>',
+    calc: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01"/>',
+    notes: '<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 12h7M9 16h5"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    calendar: '<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',
+    weather: '<circle cx="9" cy="9" r="3.5"/><path d="M9 2v1.5M2 9h1.5M4 4l1 1M14 4l-1 1"/><path d="M8 20h9a3.5 3.5 0 0 0 0-7 5 5 0 0 0-9.5 1.5A2.8 2.8 0 0 0 8 20z"/>',
+    snake: '<path d="M4 18h6a3 3 0 0 0 0-6H8a3 3 0 0 1 0-6h10"/><circle cx="18" cy="6" r="1.2" fill="currentColor"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="6.5"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',
+    back: '<path d="M16 5 7 12l9 7z"/>',
+    home: '<circle cx="12" cy="12" r="7.5"/>',
+    recents: '<rect x="5.5" y="5.5" width="13" height="13" rx="2"/>',
+    wifi: '<path d="M2.5 9a14 14 0 0 1 19 0M5.5 12.5a9.5 9.5 0 0 1 13 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor"/>',
+    bt: '<path d="m7 7 10 10-5 4V3l5 4L7 17"/>',
+    plane: '<path d="M12 3c1 0 1.5 1 1.5 2v4l7 4v2l-7-2v4l2 1.5V20l-3.5-1-3.5 1v-1.5l2-1.5v-4l-7 2v-2l7-4V5c0-1 .5-2 1.5-2z" fill="currentColor" stroke="none"/>',
+    dnd: '<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',
+    torch: '<path d="M8 3h8v4l-2 4v10h-4V11L8 7z"/><path d="M12 14v2"/>',
+    moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+    search: '<circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/>',
+    arrowLeft: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
+    backspace: '<path d="M9 5h11v14H9l-6-7z"/><path d="m12 9 5 6M17 9l-5 6"/>',
+    x: '<path d="M6 6l12 12M18 6 6 18"/>',
+    chevR: '<path d="m9 6 6 6-6 6"/>',
+    chevL: '<path d="m15 6-6 6 6 6"/>',
+    up: '<path d="m6 15 6-6 6 6"/>', down: '<path d="m6 9 6 6 6-6"/>',
+    vol: '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/>',
+    mute: '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="m17 10 4 4M21 10l-4 4"/>',
+    palette: '<path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.7 0-1-.8-1.4-.8-2.3 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1" fill="currentColor"/><circle cx="10" cy="7" r="1" fill="currentColor"/><circle cx="15" cy="7.5" r="1" fill="currentColor"/>',
+    battery: '<rect x="3" y="7" width="16" height="10" rx="2"/><path d="M21 10v4M6 10v4M9 10v4"/>',
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/>',
+    bolt: '<path d="M13 2 5 13h6l-1 9 8-11h-6z" fill="currentColor" stroke="none"/>'
+  };
+  const svg = (k, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${P[k]}</svg>`;
+
+  const WALLS = [
+    { name: 'Dune', css: 'linear-gradient(165deg, #F4BE85 0%, #D9735A 42%, #6A3E6E 78%, #2B1D3A 100%)' },
+    { name: 'Fern', css: 'radial-gradient(120% 80% at 25% 15%, #A8E6C1 0%, #3C8F68 40%, #123A2A 80%, #0A1E16 100%)' },
+    { name: 'Tide', css: 'linear-gradient(200deg, #9CCBF7 0%, #4575BC 45%, #1D2E54 85%)' },
+    { name: 'Graphite', css: 'radial-gradient(100% 70% at 70% 20%, #56605C 0%, #2A302D 55%, #131615 100%)' }
+  ];
+
+  // ---------- State ----------
+  const rootTheme = document.documentElement.dataset.theme;
+  const S = {
+    screenOn: true, locked: true, dead: false, view: 'home', current: null, open: [], shade: false,
+    dark: rootTheme ? rootTheme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches,
+    wallpaper: clamp(+store.get('pas-wall', 1) || 0, 0, WALLS.length - 1),
+    brightness: 85, volume: 7, battery: 78, charging: false,
+    wifi: true, bt: false, airplane: false, flashlight: false, dnd: false,
+    notifs: [], nid: 1, devTaps: 0, lowWarned: false
+  };
+
+  const screen = $('#screen');
+  const windows = {}, inst = {};
+  let scale = 1;
+
+  // ---------- Logcat ----------
+  const logEl = $('#logcat');
+  const pids = {};
+  let nextPid = 2141;
+  function log(lvl, tag, msg) {
+    const d = new Date();
+    const ts = `${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}.${String(d.getMilliseconds()).padStart(3, '0')}`;
+    const stick = logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 30;
+    const line = document.createElement('div');
+    line.className = 'll ll-' + lvl;
+    line.innerHTML = `<span class="lt">${ts}</span> <span class="lv">${lvl}</span> <span class="lg">${esc(tag)}:</span> ${esc(msg)}`;
+    logEl.append(line);
+    while (logEl.children.length > 400) logEl.firstChild.remove();
+    if (stick) logEl.scrollTop = logEl.scrollHeight;
+  }
+  $('#logClear').onclick = () => { logEl.innerHTML = ''; };
+
+  // ---------- Toast / HUD ----------
+  let toastT;
+  function toast(msg) {
+    const t = $('#toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+  let hudT;
+  function showHud() {
+    $('#hudFill').style.height = (S.volume / 15 * 100) + '%';
+    $('#hudIco').innerHTML = svg(S.volume ? 'vol' : 'mute');
+    $('#hud').classList.add('show');
+    clearTimeout(hudT); hudT = setTimeout(() => $('#hud').classList.remove('show'), 1600);
+  }
+
+  // ---------- Apps ----------
+  const APPS = {
+    phone:    { name: 'Phone',      icon: 'phone',    bg: '#CDEFD9', fg: '#14613A', mount: mountPhone },
+    notes:    { name: 'Notes',      icon: 'notes',    bg: '#FBE4A6', fg: '#6B4B00', mount: mountNotes },
+    calc:     { name: 'Calculator', icon: 'calc',     bg: '#D6E0F5', fg: '#23406F', mount: mountCalc },
+    settings: { name: 'Settings',   icon: 'settings', bg: '#DDE3DF', fg: '#36413B', mount: mountSettings },
+    clock:    { name: 'Clock',      icon: 'clock',    bg: '#E2DAF7', fg: '#46307F', mount: mountClock },
+    calendar: { name: 'Calendar',   icon: 'calendar', bg: '#CFE6F7', fg: '#11507A', mount: mountCalendar },
+    weather:  { name: 'Weather',    icon: 'weather',  bg: '#FCD9BF', fg: '#8A3A0B', mount: mountWeather },
+    snake:    { name: 'Snake',      icon: 'snake',    bg: '#E0F0B8', fg: '#3F5A0A', mount: mountSnake }
+  };
+  const icoHtml = (id, cls = '') => { const a = APPS[id]; return `<span class="ico ${cls}" style="--ib:${a.bg};--if:${a.fg}">${svg(a.icon)}</span>`; };
+
+  function buildHome() {
+    const grid = ['clock', 'calendar', 'weather', 'snake'];
+    const dock = ['phone', 'notes', 'calc', 'settings'];
+    const tile = id => `<button class="app-ico" data-launch="${id}" aria-label="${APPS[id].name}">${icoHtml(id)}<span>${APPS[id].name}</span></button>`;
+    $('#home').innerHTML = `
+      <div class="glance"><div class="g-date" id="gDate"></div><div class="g-wx">${svg('sun')}<span>34°C · Riyadh</span></div></div>
+      <div class="home-grid">${grid.map(tile).join('')}</div>
+      <button class="search-pill" id="searchPill">${svg('search')}<span>Search</span></button>
+      <div class="dock">${dock.map(tile).join('')}</div>`;
+    $('#searchPill').onclick = () => toast('Search isn’t available in the simulator');
+  }
+
+  function launch(id) {
+    if (S.locked || !S.screenOn) return;
+    closeShade();
+    if (!windows[id]) {
+      const w = document.createElement('div');
+      w.className = 'app';
+      w.dataset.app = id;
+      $('#appHost').append(w);
+      windows[id] = w;
+      pids[id] = nextPid += 7 + Math.floor(Math.random() * 40);
+      log('I', 'ActivityManager', `Start proc ${pids[id]}:com.sim.${id}/u0a${100 + Object.keys(APPS).indexOf(id)} for top-activity {com.sim.${id}/.MainActivity}`);
+      inst[id] = APPS[id].mount(w) || {};
+    } else {
+      log('I', 'ActivityTaskManager', `START u0 {act=android.intent.action.MAIN cmp=com.sim.${id}/.MainActivity} (resumed)`);
+    }
+    S.open = [id, ...S.open.filter(x => x !== id)];
+    show('app', id);
+    const w = windows[id];
+    w.classList.remove('enter'); void w.offsetWidth; w.classList.add('enter');
+  }
+
+  function closeApp(id) {
+    if (!windows[id]) return;
+    inst[id].onDestroy?.();
+    windows[id].remove();
+    delete windows[id]; delete inst[id];
+    S.open = S.open.filter(x => x !== id);
+    if (S.current === id) S.current = null;
+    log('I', 'ActivityManager', `Killing ${pids[id]}:com.sim.${id} (adj 900): remove task`);
+  }
+
+  function show(view, id) {
+    const prevApp = S.view === 'app' && !S.locked ? S.current : null;
+    S.view = view;
+    if (id !== undefined) S.current = id;
+    const nowApp = view === 'app' && !S.locked ? S.current : null;
+    if (prevApp && prevApp !== nowApp) inst[prevApp]?.onPause?.();
+    if (nowApp && nowApp !== prevApp) inst[nowApp]?.onResume?.();
+    applyView();
+  }
+
+  function applyView() {
+    for (const [id, w] of Object.entries(windows)) w.hidden = !(S.view === 'app' && id === S.current);
+    $('#recents').hidden = S.view !== 'recents';
+    if (S.view === 'recents') renderRecents();
+    $('#lock').hidden = !S.locked;
+    screen.classList.toggle('locked', S.locked);
+    screen.classList.toggle('on-wall', S.locked || S.view !== 'app');
+  }
+
+  function goHome() {
+    if (!S.screenOn || S.locked) return;
+    closeShade();
+    log('D', 'InputDispatcher', 'Key event KEYCODE_HOME → com.sim.launcher');
+    show('home');
+  }
+  function back() {
+    if (!S.screenOn) return;
+    if (S.shade) { closeShade(); return; }
+    if (S.locked) return;
+    log('D', 'InputDispatcher', 'Key event KEYCODE_BACK');
+    if (S.view === 'recents') { show(S.current && windows[S.current] ? 'app' : 'home'); return; }
+    if (S.view === 'app') {
+      const handled = inst[S.current]?.onBack?.();
+      if (!handled) show('home');
+    }
+  }
+  function overview() {
+    if (!S.screenOn || S.locked) return;
+    closeShade();
+    log('D', 'InputDispatcher', 'Key event KEYCODE_APP_SWITCH');
+    if (S.view === 'recents') show(S.current && windows[S.current] ? 'app' : 'home');
+    else show('recents');
+  }
+
+  // ---------- Recents ----------
+  function renderRecents() {
+    const track = $('#recTrack');
+    track.innerHTML = '';
+    $('#recEmpty').hidden = S.open.length > 0;
+    $('#recClear').hidden = S.open.length === 0;
+    S.open.forEach(id => {
+      const card = document.createElement('div');
+      card.className = 'rc';
+      card.innerHTML = `<div class="rc-head">${icoHtml(id, 'sm')}<span>${APPS[id].name}</span></div><div class="rc-shot"></div>`;
+      const src = windows[id];
+      const clone = src.cloneNode(true);
+      clone.hidden = false; clone.classList.remove('enter'); clone.inert = true;
+      const oc = $$('canvas', src), cc = $$('canvas', clone);
+      cc.forEach((c, i) => { try { c.getContext('2d').drawImage(oc[i], 0, 0); } catch (e) {} });
+      $('.rc-shot', card).append(clone);
+      let drag = null;
+      card.addEventListener('pointerdown', e => { drag = { y: e.clientY, x: e.clientX, dy: 0 }; card.setPointerCapture(e.pointerId); card.style.transition = 'none'; });
+      card.addEventListener('pointermove', e => {
+        if (!drag) return;
+        drag.dy = Math.min(0, (e.clientY - drag.y) / scale);
+        if (Math.abs(e.clientX - drag.x) > 12 && drag.dy > -10) return;
+        card.style.transform = `translateY(${drag.dy}px)`; card.style.opacity = 1 + drag.dy / 400;
+      });
+      const end = e => {
+        if (!drag) return;
+        const { dy } = drag, moved = Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y);
+        drag = null; card.style.transition = '';
+        if (dy < -110) {
+          card.style.transform = 'translateY(-120%)'; card.style.opacity = 0;
+          setTimeout(() => { closeApp(id); renderRecents(); }, 220);
+        } else {
+          card.style.transform = ''; card.style.opacity = '';
+          if (moved < 8 && e.type === 'pointerup') launch(id);
+        }
+      };
+      card.addEventListener('pointerup', end);
+      card.addEventListener('pointercancel', end);
+      track.append(card);
+    });
+  }
+  $('#recTrack').addEventListener('wheel', e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.currentTarget.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
+  $('#recClear').onclick = () => { [...S.open].forEach(closeApp); show('home'); };
+
+  // ---------- Lock screen ----------
+  const lock = $('#lock');
+  let lockDrag = null;
+  lock.addEventListener('pointerdown', e => {
+    if (e.target.closest('.nf')) return;
+    lockDrag = { y: e.clientY, dy: 0, hint: !!e.target.closest('#lkHint') };
+    lock.setPointerCapture(e.pointerId);
+    lock.style.transition = 'none';
+  });
+  lock.addEventListener('pointermove', e => {
+    if (!lockDrag) return;
+    lockDrag.dy = Math.min(0, (e.clientY - lockDrag.y) / scale);
+    lock.style.transform = `translateY(${lockDrag.dy}px)`;
+    lock.style.opacity = 1 + lockDrag.dy / 500;
+  });
+  const lockEnd = e => {
+    if (!lockDrag) return;
+    const { dy, hint } = lockDrag; lockDrag = null;
+    lock.style.transition = '';
+    if (dy < -110 || (hint && dy > -6)) unlock();
+    else { lock.style.transform = ''; lock.style.opacity = ''; }
+  };
+  lock.addEventListener('pointerup', lockEnd);
+  lock.addEventListener('pointercancel', lockEnd);
+
+  function unlock(then) {
+    if (!S.locked) { then?.(); return; }
+    lock.style.transform = 'translateY(-100%)'; lock.style.opacity = '0';
+    setTimeout(() => {
+      S.locked = false;
+      lock.style.transform = ''; lock.style.opacity = '';
+      log('I', 'KeyguardViewMediator', 'Keyguard dismissed (swipe)');
+      show(S.view === 'recents' ? 'home' : S.view);
+      then?.();
+    }, 240);
+  }
+  function lockDevice() {
+    if (S.view === 'app' && S.current) inst[S.current]?.onPause?.();
+    if (S.view === 'recents') S.view = S.current ? 'app' : 'home';
+    S.locked = true;
+    applyView();
+    log('I', 'KeyguardViewMediator', 'Keyguard shown');
+  }
+
+  // ---------- Power / volume ----------
+  function power() {
+    if (S.screenOn) {
+      S.screenOn = false;
+      closeShade();
+      lockDevice();
+      $('#off').innerHTML = '';
+      $('#off').classList.add('on');
+      $('#headsup').innerHTML = '';
+      log('I', 'PowerManagerService', 'Going to sleep due to power_button (uid 1000)');
+    } else {
+      if (S.dead && !S.charging) {
+        $('#off').innerHTML = `<div class="off-msg">${batterySvg(0)}<span>Battery empty. Plug in to charge.</span></div>`;
+        log('W', 'BatteryService', 'Refusing to boot: battery level 0%');
+        return;
+      }
+      if (S.dead) { S.dead = false; log('I', 'SystemServer', 'Boot completed after charge'); }
+      S.screenOn = true;
+      $('#off').classList.remove('on');
+      log('I', 'PowerManagerService', 'Waking up from sleep (reason=WAKE_REASON_POWER_BUTTON)');
+    }
+  }
+  function volume(d) {
+    S.volume = clamp(S.volume + d, 0, 15);
+    if (S.screenOn) showHud();
+    log('I', 'AudioService', `setStreamVolume(STREAM_MUSIC, index=${S.volume}) max=15`);
+    sync();
+  }
+
+  // ---------- Quick settings & toggles ----------
+  const SUB = {
+    wifi: () => S.wifi ? 'SimNet-5G' : (S.airplane ? 'Airplane mode' : 'Off'),
+    bt: () => S.bt ? 'On · No devices' : 'Off',
+    airplane: () => S.airplane ? 'On' : 'Off',
+    flashlight: () => S.flashlight ? 'On' : 'Off',
+    dnd: () => S.dnd ? 'On · Alerts silenced' : 'Off',
+    dark: () => S.dark ? 'On' : 'Off',
+    battery: () => `${S.battery}% · ${S.charging ? (S.battery >= 100 ? 'Fully charged' : 'Charging') : 'Discharging'}`
+  };
+  const TOGGLE_LOG = {
+    wifi: v => ['WifiService', `setWifiEnabled package=com.android.systemui enable=${v}`],
+    bt: v => ['BluetoothManagerService', v ? 'enable(com.android.systemui)' : 'disable(com.android.systemui)'],
+    airplane: v => ['ConnectivityService', `Airplane mode changed: ${v ? 'on' : 'off'}`],
+    flashlight: v => ['CameraService', `Torch for camera id 0 turned ${v ? 'on' : 'off'}`],
+    dnd: v => ['ZenModeHelper', `setManualZenMode(${v ? 'IMPORTANT_INTERRUPTIONS' : 'OFF'})`],
+    dark: v => ['UiModeManager', `setNightMode(${v ? 2 : 1})`]
+  };
+  function toggle(k) {
+    S[k] = !S[k];
+    if (k === 'airplane' && S.airplane) { S.wifi = false; S.bt = false; }
+    const [tag, msg] = TOGGLE_LOG[k](S[k]);
+    log('I', tag, msg);
+    sync();
+  }
+
+  function buildShade() {
+    const tiles = [['wifi', 'wifi', 'Internet'], ['bt', 'bt', 'Bluetooth'], ['flashlight', 'torch', 'Flashlight'],
+      ['airplane', 'plane', 'Airplane mode'], ['dnd', 'dnd', 'Do Not Disturb'], ['dark', 'moon', 'Dark theme']];
+    $('#tiles').innerHTML = tiles.map(([k, i, n]) => `<button class="tile" data-toggle="${k}">${svg(i)}<span><b>${n}</b><small data-sub="${k}"></small></span></button>`).join('');
+    $('#shBright').innerHTML = `${svg('sun')}<input type="range" min="10" max="100" data-range="brightness" aria-label="Brightness" id="shBrightness">`;
+  }
+  function openShade() {
+    if (!S.screenOn) return;
+    S.shade = true;
+    renderNotifs();
+    $('#shade').classList.add('open'); $('#shadeScrim').classList.add('open'); screen.classList.add('shade-open');
+    $('#headsup').innerHTML = '';
+  }
+  function closeShade() {
+    S.shade = false;
+    $('#shade').classList.remove('open'); $('#shadeScrim').classList.remove('open'); screen.classList.remove('shade-open');
+  }
+  $('#statusbar').onclick = () => S.shade ? closeShade() : openShade();
+  $('#shadeScrim').onclick = closeShade;
+  let shDrag = null;
+  $('#shade').addEventListener('pointerdown', e => { if (e.target.closest('button, input')) return; shDrag = e.clientY; });
+  $('#shade').addEventListener('pointerup', e => { if (shDrag != null && (e.clientY - shDrag) / scale < -40) closeShade(); shDrag = null; });
+
+  // ---------- Notifications ----------
+  const PRESETS = [
+    { app: 'calendar', title: 'Design review', text: 'Starts in 10 minutes · Room 4B' },
+    { app: 'phone', title: 'Missed call', text: '(555) 014-2231 · 1 missed call' },
+    { app: 'weather', title: 'Heat advisory', text: 'Highs near 44°C this afternoon. Stay hydrated.' },
+    { app: 'settings', title: 'System update available', text: 'Android 15 QPR2 is ready to install' },
+    { app: 'notes', title: 'Reminder', text: 'Pick up cardamom on the way home' },
+    { app: 'snake', title: 'Beat your best?', text: 'Your high score is waiting' }
+  ];
+  $('#ntPreset').innerHTML = PRESETS.map((p, i) => `<option value="${i}">${APPS[p.app].name}: ${esc(p.title)}</option>`).join('');
+  $('#ntSend').onclick = () => notify(PRESETS[+$('#ntPreset').value]);
+
+  const ago = t => { const m = Math.floor((Date.now() - t) / 60000); return m < 1 ? 'now' : m < 60 ? `${m}m` : `${Math.floor(m / 60)}h`; };
+  const nfHtml = n => `<div class="nf" data-nid="${n.id}" role="button" tabindex="0">${icoHtml(n.app, 'sm')}<span class="nf-txt"><small>${APPS[n.app].name} · ${ago(n.t)}</small><b>${esc(n.title)}</b><span>${esc(n.text)}</span></span><button class="nf-x" data-dismiss="${n.id}" aria-label="Dismiss">${svg('x')}</button></div>`;
+
+  let huT;
+  function notify(p, quiet) {
+    const n = { ...p, id: S.nid++, t: Date.now() };
+    S.notifs.unshift(n);
+    log('I', 'NotificationService', `enqueueNotification pkg=com.sim.${n.app} id=${n.id} channel=default`);
+    renderNotifs();
+    if (!quiet && S.screenOn && !S.shade && !S.locked) {
+      if (S.dnd) { log('D', 'ZenModeHelper', `Intercepted notification ${n.id} (Do Not Disturb)`); return; }
+      $('#headsup').innerHTML = `<div class="headsup">${nfHtml(n)}</div>`;
+      clearTimeout(huT); huT = setTimeout(() => { $('#headsup').innerHTML = ''; }, 4000);
+    }
+  }
+  function renderNotifs() {
+    $('#shNotifs').innerHTML = S.notifs.map(nfHtml).join('');
+    $('#lkNotifs').innerHTML = S.notifs.slice(0, 3).map(nfHtml).join('');
+    $('#shCount').textContent = S.notifs.length ? `${S.notifs.length} notification${S.notifs.length > 1 ? 's' : ''}` : 'No notifications';
+    $('#shClear').hidden = !S.notifs.length;
+    $('#sbNotifs').innerHTML = [...new Set(S.notifs.map(n => n.app))].slice(0, 3).map(a => svg(APPS[a].icon)).join('');
+  }
+  function dismiss(id) {
+    S.notifs = S.notifs.filter(n => n.id !== id);
+    log('D', 'NotificationService', `cancelNotification id=${id}`);
+    renderNotifs();
+    const hu = $('#headsup [data-nid="' + id + '"]'); if (hu) $('#headsup').innerHTML = '';
+  }
+  $('#shClear').onclick = () => { S.notifs = []; log('D', 'NotificationService', 'cancelAll'); renderNotifs(); };
+
+  // ---------- Delegated clicks inside the screen ----------
+  screen.addEventListener('click', e => {
+    const d = e.target.closest('[data-dismiss]');
+    if (d) { e.stopPropagation(); dismiss(+d.dataset.dismiss); return; }
+    const nf = e.target.closest('.nf[data-nid]');
+    if (nf) {
+      const n = S.notifs.find(x => x.id === +nf.dataset.nid);
+      if (!n) return;
+      dismiss(n.id); closeShade(); $('#headsup').innerHTML = '';
+      unlock(() => launch(n.app));
+      return;
+    }
+    const t = e.target.closest('[data-toggle]');
+    if (t) { toggle(t.dataset.toggle); return; }
+    const w = e.target.closest('[data-wall]');
+    if (w) {
+      S.wallpaper = +w.dataset.wall; store.set('pas-wall', S.wallpaper);
+      log('I', 'WallpaperManagerService', `setWallpaper: ${WALLS[S.wallpaper].name}`);
+      sync(); return;
+    }
+    const l = e.target.closest('[data-launch]');
+    if (l) launch(l.dataset.launch);
+  });
+  screen.addEventListener('input', e => {
+    const r = e.target.closest('[data-range]');
+    if (!r) return;
+    S[r.dataset.range] = +r.value;
+    if (r.dataset.range === 'volume') showHud();
+    sync();
+  });
+  screen.addEventListener('change', e => {
+    const r = e.target.closest('[data-range]');
+    if (r?.dataset.range === 'brightness') log('I', 'DisplayPowerController', `Brightness set to ${S.brightness}%`);
+    if (r?.dataset.range === 'volume') log('I', 'AudioService', `setStreamVolume(STREAM_MUSIC, index=${S.volume}) max=15`);
+  });
+  screen.addEventListener('keydown', e => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.id === 'lkHint') { e.preventDefault(); unlock(); return; }
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.nf')) { e.preventDefault(); e.target.click(); }
+  });
+
+  // ---------- Status bar & sync ----------
+  function batterySvg(level) {
+    const w = Math.max(1.5, 19 * level / 100);
+    const c = level <= 15 && !S.charging ? '#FF6B5E' : 'currentColor';
+    return `<svg class="bat" viewBox="0 0 26 14" aria-hidden="true"><rect x="0.75" y="0.75" width="22" height="12.5" rx="3" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".55"/><rect x="23.6" y="4.5" width="1.9" height="5" rx="1" fill="currentColor" opacity=".55"/><rect x="2.3" y="2.3" width="${w}" height="9.4" rx="1.6" fill="${c}"/></svg>`;
+  }
+  function signalSvg() {
+    return `<svg viewBox="0 0 24 24" aria-hidden="true">${[0, 1, 2, 3].map(i => `<rect x="${3 + i * 5}" y="${17 - i * 4}" width="3.2" height="${4 + i * 4}" rx="1" fill="currentColor" opacity="${i < 3 ? 1 : .35}"/>`).join('')}</svg>`;
+  }
+  function fmtTime(d) { return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).replace(/\s?[AP]M$/i, ''); }
+  function renderClock() {
+    const d = new Date();
+    $('#sbTime').textContent = fmtTime(d);
+    $('#lkClock').innerHTML = `${pad2(d.getHours())}<br>${pad2(d.getMinutes())}`;
+    const long = d.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+    $('#lkDate').textContent = long;
+    const g = $('#gDate'); if (g) g.textContent = long;
+    $('#shTime').textContent = fmtTime(d);
+    $('#shDate').textContent = d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+  function renderStatus() {
+    $('#sbIcons').innerHTML =
+      (S.dnd ? svg('dnd') : '') + (S.bt ? svg('bt') : '') + (S.wifi ? svg('wifi') : '') +
+      (S.airplane ? svg('plane') : signalSvg()) +
+      (S.charging ? svg('bolt') : '') + batterySvg(S.battery) + `<span>${S.battery}%</span>`;
+  }
+  function sync() {
+    screen.classList.toggle('dark', S.dark);
+    $('#wallpaper').style.background = WALLS[S.wallpaper].css;
+    screen.style.setProperty('--wall', WALLS[S.wallpaper].css);
+    $('#dim').style.opacity = ((100 - S.brightness) / 90 * 0.65).toFixed(3);
+    $('#device').classList.toggle('torch', S.flashlight);
+    $$('[data-toggle]', screen).forEach(b => { const on = !!S[b.dataset.toggle]; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+    $$('[data-sub]', screen).forEach(s => { s.textContent = SUB[s.dataset.sub](); });
+    $$('[data-range]', screen).forEach(r => { if (document.activeElement !== r) r.value = S[r.dataset.range]; });
+    $$('[data-wall]', screen).forEach(w => w.classList.toggle('on', +w.dataset.wall === S.wallpaper));
+    if (document.activeElement !== $('#batLevel')) $('#batLevel').value = S.battery;
+    $('#batOut').textContent = S.battery + '%';
+    $('#batCharge').checked = S.charging;
+    renderStatus();
+  }
+
+  // ---------- Battery simulation ----------
+  let tickN = 0;
+  function tick() {
+    tickN++;
+    renderClock();
+    if (S.charging && S.battery < 100 && tickN % 2 === 0) { S.battery++; sync(); }
+    if (!S.charging && !S.dead && tickN % 20 === 0 && S.battery > 0) {
+      S.battery--;
+      if (S.battery <= 15 && !S.lowWarned) {
+        S.lowWarned = true;
+        log('W', 'BatteryService', `Battery low: ${S.battery}%`);
+        notify({ app: 'settings', title: 'Battery low', text: `${S.battery}% remaining. Plug in soon.` });
+      }
+      if (S.battery === 0) shutdown();
+      sync();
+    }
+    if (S.battery > 20) S.lowWarned = false;
+  }
+  function shutdown() {
+    log('E', 'BatteryService', 'Battery level 0%, shutting down');
+    if (S.screenOn) power();
+    S.dead = true;
+  }
+  $('#batLevel').addEventListener('input', e => {
+    S.battery = +e.target.value;
+    if (S.battery === 0 && !S.charging && !S.dead) shutdown();
+    sync();
+  });
+  $('#batLevel').addEventListener('change', () => log('I', 'BatteryService', `level=${S.battery} (set from emulator console)`));
+  $('#batCharge').addEventListener('change', e => {
+    S.charging = e.target.checked;
+    log('I', 'BatteryService', S.charging ? 'plugged=1 (AC), status=CHARGING' : 'plugged=0, status=DISCHARGING');
+    if (S.charging && S.screenOn) toast('Charging');
+    if (S.charging && !S.screenOn) $('#off').innerHTML = `<div class="off-msg">${batterySvg(S.battery)}<span>Charging · ${S.battery}%</span></div>`;
+    sync();
+  });
+
+  // ================= App implementations =================
+
+  function mountPhone(el) {
+    let num = '', timer = null, start = 0;
+    const keys = [['1', ''], ['2', 'ABC'], ['3', 'DEF'], ['4', 'GHI'], ['5', 'JKL'], ['6', 'MNO'], ['7', 'PQRS'], ['8', 'TUV'], ['9', 'WXYZ'], ['*', ''], ['0', '+'], ['#', '']];
+    function dialpad() {
+      el.innerHTML = `<div class="app-bar"><span class="ab-title">Phone</span></div>
+        <div class="app-body ph"><div class="ph-num"></div>
+        <div class="ph-keys">${keys.map(([d, l]) => `<button class="ph-key" data-d="${d}"><b>${d}</b><small>${l}</small></button>`).join('')}</div>
+        <div class="ph-actions"><span></span><button class="ph-call" aria-label="Call">${svg('phone')}</button><button class="ib ph-del" aria-label="Delete digit">${svg('backspace')}</button></div></div>`;
+      const numEl = $('.ph-num', el);
+      const upd = () => { numEl.textContent = num; };
+      upd();
+      $$('.ph-key', el).forEach(b => b.onclick = () => { if (num.length < 15) { num += b.dataset.d; upd(); } });
+      $('.ph-del', el).onclick = () => { num = num.slice(0, -1); upd(); };
+      $('.ph-call', el).onclick = call;
+    }
+    function call() {
+      if (!num) { toast('Enter a number to call'); return; }
+      if (S.airplane) { toast('Turn off airplane mode to make a call'); log('W', 'Telecom', 'Call blocked: airplane mode on'); return; }
+      log('I', 'Telecom', `Placing simulated call to ${num}`);
+      el.innerHTML = `<div class="app-body call"><div class="avatar">${svg('phone')}</div><div class="cnum">${esc(num)}</div><div class="cstate">Calling…</div><button class="ph-call ph-end" aria-label="End call">${svg('phone', 'style="transform:rotate(135deg)"')}</button></div>`;
+      $('.ph-end', el).onclick = end;
+      timer = setTimeout(() => {
+        start = Date.now();
+        log('I', 'Telecom', 'Call state ACTIVE (simulated answer)');
+        const st = $('.cstate', el);
+        timer = setInterval(() => { const s = Math.floor((Date.now() - start) / 1000); st.textContent = `${pad2(Math.floor(s / 60))}:${pad2(s % 60)}`; }, 250);
+      }, 1800);
+    }
+    function end() {
+      clearTimeout(timer); clearInterval(timer);
+      log('I', 'Telecom', 'Call disconnected (LOCAL)');
+      dialpad();
+    }
+    dialpad();
+    return { onDestroy() { clearTimeout(timer); clearInterval(timer); } };
+  }
+
+  function mountCalc(el) {
+    let expr = '', justEval = false;
+    const B = ['C', '⌫', '%', '÷', '7', '8', '9', '×', '4', '5', '6', '−', '1', '2', '3', '+', '0', '.', '='];
+    el.innerHTML = `<div class="app-body cl"><div class="cl-screen"><div class="cl-expr"></div><div class="cl-res"></div></div>
+      <div class="cl-keys">${B.map(b => `<button class="cl-k${/[÷×−+%]/.test(b) ? ' op' : ''}${b === '=' ? ' eq' : ''}${b === '0' ? ' zero' : ''}${b === 'C' || b === '⌫' ? ' fn' : ''}" data-k="${b}">${b}</button>`).join('')}</div></div>`;
+    const exEl = $('.cl-expr', el), resEl = $('.cl-res', el);
+    function evaluate(s) {
+      const t = s.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-').match(/\d+\.?\d*|\.\d+|[-+*/%]/g) || [];
+      let i = 0;
+      const peek = () => t[i], next = () => t[i++];
+      function ex() { let v = term(); while (peek() === '+' || peek() === '-') { const o = next(), r = term(); v = o === '+' ? v + r : v - r; } return v; }
+      function term() { let v = factor(); while (peek() === '*' || peek() === '/') { const o = next(), r = factor(); v = o === '*' ? v * r : v / r; } return v; }
+      function factor() {
+        if (peek() === '-') { next(); return -factor(); }
+        const n = next(); const v0 = parseFloat(n);
+        if (n == null || isNaN(v0)) throw new Error('syntax');
+        let v = v0; while (peek() === '%') { next(); v /= 100; } return v;
+      }
+      const v = ex(); if (i < t.length) throw new Error('syntax'); return v;
+    }
+    const fmt = v => !isFinite(v) ? 'Can’t divide by 0' : String(+v.toPrecision(12)).replace('-', '−');
+    const isOp = c => '÷×−+'.includes(c);
+    function render() {
+      exEl.textContent = expr || '0';
+      let prev = '';
+      if (/[÷×−+%]/.test(expr.slice(1)) && !justEval) {
+        try { const s = isOp(expr.slice(-1)) ? expr.slice(0, -1) : expr; prev = fmt(evaluate(s)); } catch (e) {}
+      }
+      resEl.textContent = prev;
+    }
+    function press(k) {
+      const last = expr.slice(-1);
+      if (/\d/.test(k)) { if (justEval) expr = ''; expr += k; }
+      else if (k === '.') {
+        if (justEval) expr = '';
+        const cur = expr.split(/[÷×−+]/).pop();
+        if (!cur.includes('.')) expr += cur === '' ? '0.' : '.';
+      }
+      else if (isOp(k)) {
+        if (!expr && k !== '−') return;
+        if (isOp(last)) expr = expr.slice(0, -1);
+        expr += k;
+      }
+      else if (k === '%') { if (/[\d%]/.test(last)) expr += '%'; }
+      else if (k === 'C') expr = '';
+      else if (k === '⌫') expr = justEval ? '' : expr.slice(0, -1);
+      else if (k === '=') {
+        if (!expr) return;
+        try { const r = fmt(evaluate(expr.replace(/^−/, '-'))); expr = r.startsWith('Can') ? '' : r; exEl.textContent = r; resEl.textContent = ''; justEval = true; return; }
+        catch (e) { toast('Can’t calculate that expression'); return; }
+      }
+      justEval = false;
+      render();
+    }
+    $$('.cl-k', el).forEach(b => b.onclick = () => press(b.dataset.k));
+    expr = '1250×12%';
+    render();
+    return {};
+  }
+
+  function mountNotes(el) {
+    let notes = store.get('pas-notes', null);
+    if (!Array.isArray(notes)) notes = [
+      { id: 1, title: 'Simulator shortcuts', body: 'Esc: Back\nP: Power\nArrow keys: steer Snake\nTap the status bar: Quick Settings\nSettings › About phone › tap Build number 7 times', t: Date.now() },
+      { id: 2, title: 'Groceries', body: 'Dates\nLaban\nKhubz\nCardamom\nTomatoes', t: Date.now() - 86400000 },
+      { id: 3, title: 'Ideas', body: 'Try swiping an app card up in Overview to close it.', t: Date.now() - 3 * 86400000 }
+    ];
+    let editing = null;
+    const save = () => store.set('pas-notes', notes);
+    function list() {
+      editing = null;
+      notes.sort((a, b) => b.t - a.t);
+      el.innerHTML = `<div class="app-bar"><span class="ab-title">Notes</span></div>
+        <div class="app-body">${notes.length ? `<div class="nt-list">${notes.map(n => `<button class="nt-card" data-id="${n.id}"><b>${esc(n.title || 'Untitled')}</b><span>${esc(n.body.slice(0, 160))}</span></button>`).join('')}</div>` : '<p class="empty">No notes yet. Tap + to write one.</p>'}</div>
+        <button class="fab" aria-label="New note">${svg('plus')}</button>`;
+      $$('.nt-card', el).forEach(b => b.onclick = () => edit(notes.find(n => n.id === +b.dataset.id)));
+      $('.fab', el).onclick = () => { const n = { id: Date.now(), title: '', body: '', t: Date.now() }; notes.push(n); edit(n); };
+    }
+    function edit(n) {
+      editing = n;
+      el.innerHTML = `<div class="app-bar"><button class="ib nt-back" aria-label="Back to notes">${svg('arrowLeft')}</button><span class="ab-title"></span><button class="ib nt-del" aria-label="Delete note">${svg('trash')}</button></div>
+        <div class="app-body nt-ed"><input class="nt-title" placeholder="Title" aria-label="Title"><textarea class="nt-body" placeholder="Note" aria-label="Note"></textarea></div>`;
+      const ti = $('.nt-title', el), bo = $('.nt-body', el);
+      ti.value = n.title; bo.value = n.body;
+      ti.oninput = () => { n.title = ti.value; n.t = Date.now(); save(); };
+      bo.oninput = () => { n.body = bo.value; n.t = Date.now(); save(); };
+      $('.nt-back', el).onclick = finish;
+      $('.nt-del', el).onclick = () => { notes = notes.filter(x => x !== n); save(); list(); toast('Note deleted'); };
+      if (!n.title && !n.body) setTimeout(() => ti.focus(), 50);
+    }
+    function finish() {
+      if (editing && !editing.title.trim() && !editing.body.trim()) { notes = notes.filter(x => x !== editing); save(); }
+      list();
+    }
+    list();
+    return { onBack() { if (editing) { finish(); return true; } return false; } };
+  }
+
+  function mountClock(el) {
+    let tab = 'clock';
+    const sw = { run: false, start: 0, acc: 0, laps: [] };
+    const zones = [['London', 'Europe/London'], ['New York', 'America/New_York'], ['Tokyo', 'Asia/Tokyo'], ['Riyadh', 'Asia/Riyadh']];
+    const elapsed = () => sw.acc + (sw.run ? Date.now() - sw.start : 0);
+    const fmtSw = ms => `${pad2(Math.floor(ms / 60000))}:${pad2(Math.floor(ms / 1000) % 60)}.${pad2(Math.floor(ms / 10) % 100)}`;
+    function render() {
+      el.innerHTML = `<div class="app-bar"><span class="ab-title">Clock</span><div class="seg"><button data-t="clock" class="${tab === 'clock' ? 'on' : ''}">Clock</button><button data-t="sw" class="${tab === 'sw' ? 'on' : ''}">Stopwatch</button></div></div>
+        <div class="app-body">${tab === 'clock'
+          ? `<div class="ck-big"></div><div class="ck-date"></div>${zones.map(([n, z]) => `<div class="ck-row" data-z="${z}"><div>${n}<small></small></div><span class="t"></span></div>`).join('')}`
+          : `<div class="sw-disp"></div><div class="sw-btns"><button class="sw-a"></button><button class="sw-b go"></button></div><div class="laps"></div>`}</div>`;
+      $$('.seg button', el).forEach(b => b.onclick = () => { tab = b.dataset.t; render(); });
+      if (tab === 'sw') {
+        $('.sw-b', el).onclick = () => {
+          if (sw.run) { sw.acc = elapsed(); sw.run = false; } else { sw.start = Date.now(); sw.run = true; }
+          renderSw();
+        };
+        $('.sw-a', el).onclick = () => {
+          if (sw.run) sw.laps.unshift(elapsed()); else { sw.acc = 0; sw.laps = []; }
+          renderSw();
+        };
+        renderSw();
+      }
+      update();
+    }
+    function renderSw() {
+      $('.sw-b', el).textContent = sw.run ? 'Pause' : (sw.acc ? 'Resume' : 'Start');
+      $('.sw-a', el).textContent = sw.run ? 'Lap' : 'Reset';
+      $('.laps', el).innerHTML = sw.laps.map((l, i) => `<div class="lap"><span>Lap ${sw.laps.length - i}</span><span>${fmtSw(l)}</span></div>`).join('');
+    }
+    function update() {
+      if (tab === 'clock') {
+        const d = new Date();
+        $('.ck-big', el).textContent = fmtTime(d);
+        $('.ck-date', el).textContent = d.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+        const localDay = d.toLocaleDateString('en-CA');
+        $$('.ck-row', el).forEach(r => {
+          const z = r.dataset.z;
+          r.querySelector('.t').textContent = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZone: z }).replace(/\s?[AP]M$/i, '');
+          const zd = d.toLocaleDateString('en-CA', { timeZone: z });
+          r.querySelector('small').textContent = zd === localDay ? 'Today' : zd > localDay ? 'Tomorrow' : 'Yesterday';
+        });
+      } else {
+        $('.sw-disp', el).textContent = fmtSw(elapsed());
+      }
+    }
+    render();
+    const iv = setInterval(() => { if (!el.hidden) update(); }, 50);
+    return { onDestroy() { clearInterval(iv); } };
+  }
+
+  function mountCalendar(el) {
+    const today = new Date();
+    let view = new Date(today.getFullYear(), today.getMonth(), 1);
+    let sel = new Date(today);
+    const key = d => d.toDateString();
+    const addDays = n => { const d = new Date(today); d.setDate(d.getDate() + n); return key(d); };
+    const EVENTS = {
+      [addDays(0)]: [['10:00', 'Team standup'], ['13:00', 'Lunch with Lina']],
+      [addDays(2)]: [['16:30', 'Dentist']],
+      [addDays(5)]: [['08:15', 'Flight to Jeddah']],
+      [addDays(-3)]: [['19:00', 'Football, 5-a-side']]
+    };
+    function render() {
+      const y = view.getFullYear(), m = view.getMonth();
+      const first = new Date(y, m, 1).getDay(), days = new Date(y, m + 1, 0).getDate();
+      let cells = '';
+      for (let i = 0; i < first; i++) cells += '<span></span>';
+      for (let d = 1; d <= days; d++) {
+        const dt = new Date(y, m, d);
+        const cls = [key(dt) === key(today) ? 'today' : '', key(dt) === key(sel) ? 'sel' : '', EVENTS[key(dt)] ? 'ev' : ''].join(' ');
+        cells += `<button class="${cls}" data-d="${d}">${d}</button>`;
+      }
+      const evs = EVENTS[key(sel)] || [];
+      el.innerHTML = `<div class="app-bar"><span class="ab-title">Calendar</span></div>
+        <div class="app-body"><div class="cal-head"><button class="ib cal-p" aria-label="Previous month">${svg('chevL')}</button><b>${view.toLocaleDateString([], { month: 'long', year: 'numeric' })}</b><button class="ib cal-n" aria-label="Next month">${svg('chevR')}</button></div>
+        <div class="cal-grid">${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(w => `<span class="wd">${w}</span>`).join('')}${cells}</div>
+        <div class="cal-ev">${evs.length ? evs.map(([t, n]) => `<div><time>${t}</time><span>${esc(n)}</span></div>`).join('') : `<p class="empty" style="margin-top:12px">No events on ${sel.toLocaleDateString([], { month: 'short', day: 'numeric' })}</p>`}</div></div>`;
+      $('.cal-p', el).onclick = () => { view = new Date(y, m - 1, 1); render(); };
+      $('.cal-n', el).onclick = () => { view = new Date(y, m + 1, 1); render(); };
+      $$('.cal-grid button', el).forEach(b => b.onclick = () => { sel = new Date(y, m, +b.dataset.d); render(); });
+    }
+    render();
+    return {};
+  }
+
+  function mountWeather(el) {
+    el.classList.add('wx');
+    const h = new Date().getHours();
+    const hours = Array.from({ length: 8 }, (_, i) => { const hh = (h + i) % 24; const t = Math.round(34 + 8 * Math.sin((hh - 9) / 24 * Math.PI * 2)); return [i ? pad2(hh) + ':00' : 'Now', t]; });
+    const days = [['Today', 44, 29], ['Thu', 43, 28], ['Fri', 41, 27], ['Sat', 40, 27], ['Sun', 42, 28]];
+    el.innerHTML = `<div class="app-bar"><span class="ab-title">Riyadh</span></div>
+      <div class="app-body" style="padding:0">
+        <div class="wx-now"><small>Sample forecast</small><div class="deg">${hours[0][1]}°</div><div>Sunny · Feels like ${hours[0][1] + 2}°</div><small>High 44° · Low 29° · UV 11 · Wind 14 km/h NW</small></div>
+        <div class="wx-hours">${hours.map(([t, v]) => `<div>${t}<b>${v}°</b></div>`).join('')}</div>
+        <div class="wx-days">${days.map(([d, hi, lo]) => `<div><span>${d}</span><span>${hi}°</span><span>${lo}°</span></div>`).join('')}</div>
+      </div>`;
+    return {};
+  }
+
+  function mountSnake(el) {
+    const N = 16, C = 20;
+    let best = store.get('pas-snake', 0), snake, dir, queue, food, score, timer = null, state = 'ready';
+    el.innerHTML = `<div class="app-bar"><span class="ab-title">Snake</span><span class="sn-score"></span></div>
+      <div class="app-body sn"><div class="sn-wrap"><canvas class="sn-cv" width="${N * C}" height="${N * C}"></canvas><div class="sn-msg">Tap to start</div></div>
+      <div class="dpad"><button class="u" data-dir="0,-1" aria-label="Up">${svg('up')}</button><button class="l" data-dir="-1,0" aria-label="Left">${svg('chevL')}</button><button class="d" data-dir="0,1" aria-label="Down">${svg('down')}</button><button class="r" data-dir="1,0" aria-label="Right">${svg('chevR')}</button></div></div>`;
+    const cv = $('.sn-cv', el), ctx = cv.getContext('2d'), msg = $('.sn-msg', el), sc = $('.sn-score', el);
+    const col = n => getComputedStyle(screen).getPropertyValue(n).trim();
+    function reset() { snake = [{ x: 6, y: 8 }, { x: 5, y: 8 }, { x: 4, y: 8 }]; dir = { x: 1, y: 0 }; queue = []; score = 0; place(); }
+    function place() { do { food = { x: Math.floor(Math.random() * N), y: Math.floor(Math.random() * N) }; } while (snake.some(s => s.x === food.x && s.y === food.y)); }
+    function draw() {
+      ctx.fillStyle = col('--p-surface2'); ctx.fillRect(0, 0, N * C, N * C);
+      ctx.fillStyle = '#E4574B';
+      ctx.beginPath(); ctx.arc(food.x * C + C / 2, food.y * C + C / 2, C / 2 - 3, 0, 7); ctx.fill();
+      const p = col('--p-primary');
+      snake.forEach((s, i) => { ctx.fillStyle = p; ctx.globalAlpha = i ? 0.85 : 1; ctx.beginPath(); ctx.roundRect(s.x * C + 1.5, s.y * C + 1.5, C - 3, C - 3, i ? 5 : 7); ctx.fill(); });
+      ctx.globalAlpha = 1;
+      sc.textContent = `Score ${score} · Best ${best}`;
+    }
+    function step() {
+      if (queue.length) dir = queue.shift();
+      const h = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+      if (h.x < 0 || h.y < 0 || h.x >= N || h.y >= N || snake.some(s => s.x === h.x && s.y === h.y)) return over();
+      snake.unshift(h);
+      if (h.x === food.x && h.y === food.y) { score++; place(); if (score > best) { best = score; store.set('pas-snake', best); } }
+      else snake.pop();
+      draw();
+    }
+    function run() { if (state === 'over') reset(); state = 'run'; msg.textContent = ''; clearInterval(timer); timer = setInterval(step, 130); }
+    function pause() { if (state !== 'run') return; clearInterval(timer); state = 'paused'; msg.textContent = 'Paused · tap to resume'; }
+    function over() { clearInterval(timer); state = 'over'; msg.textContent = `Game over · ${score} points\nTap to play again`; log('D', 'com.sim.snake', `Game over score=${score} best=${best}`); draw(); }
+    function turn(x, y) {
+      if (state !== 'run') { run(); }
+      const last = queue.length ? queue[queue.length - 1] : dir;
+      if (last.x === -x && last.y === -y) return;
+      if (last.x === x && last.y === y) return;
+      if (queue.length < 3) queue.push({ x, y });
+    }
+    cv.addEventListener('click', () => { if (state !== 'run') run(); else pause(); });
+    let sw = null;
+    cv.addEventListener('pointerdown', e => { sw = [e.clientX, e.clientY]; });
+    cv.addEventListener('pointerup', e => {
+      if (!sw) return;
+      const dx = e.clientX - sw[0], dy = e.clientY - sw[1]; sw = null;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) return;
+      if (Math.abs(dx) > Math.abs(dy)) turn(Math.sign(dx), 0); else turn(0, Math.sign(dy));
+    });
+    $$('.dpad button', el).forEach(b => b.onclick = () => { const [x, y] = b.dataset.dir.split(',').map(Number); turn(x, y); });
+    reset(); draw();
+    return {
+      onPause: pause, onDestroy() { clearInterval(timer); },
+      onKey(k) { const m = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }[k]; if (m) { turn(...m); return true; } if (k === ' ') { state === 'run' ? pause() : run(); return true; } return false; },
+      redraw: draw
+    };
+  }
+
+  function mountSettings(el) {
+    let sub = null;
+    const row = (k, ico, name) => `<button class="row" data-toggle="${k}"><span class="row-ico">${svg(ico)}</span><span class="row-txt"><b>${name}</b><small data-sub="${k}"></small></span><span class="sw"></span></button>`;
+    function main() {
+      sub = null;
+      el.innerHTML = `<div class="app-bar"><span class="ab-title">Settings</span></div>
+        <div class="app-body st">
+          <h3>Network &amp; internet</h3>${row('wifi', 'wifi', 'Wi‑Fi')}${row('airplane', 'plane', 'Airplane mode')}
+          <h3>Connected devices</h3>${row('bt', 'bt', 'Bluetooth')}
+          <h3>Display</h3>${row('dark', 'moon', 'Dark theme')}
+          <div class="st-range">${svg('sun')}<input type="range" min="10" max="100" data-range="brightness" aria-label="Brightness"></div>
+          <h3>Wallpaper</h3><div class="walls">${WALLS.map((w, i) => `<button data-wall="${i}" style="background:${w.css}" aria-label="${w.name} wallpaper" title="${w.name}"></button>`).join('')}</div>
+          <h3>Sound</h3><div class="st-range">${svg('vol')}<input type="range" min="0" max="15" data-range="volume" aria-label="Media volume"></div>
+          <h3>Battery</h3><div class="row"><span class="row-ico">${svg('battery')}</span><span class="row-txt"><b>Battery</b><small data-sub="battery"></small></span></div>
+          <h3>System</h3><button class="row st-about"><span class="row-ico">${svg('info')}</span><span class="row-txt"><b>About phone</b><small>Sim Phone 1</small></span>${svg('chevR')}</button>
+        </div>`;
+      $('.st-about', el).onclick = about;
+      sync();
+    }
+    function about() {
+      sub = 'about';
+      const kv = (k, v, cls = '') => `<div class="kv ${cls}"><small>${k}</small><b>${v}</b></div>`;
+      el.innerHTML = `<div class="app-bar"><button class="ib st-back" aria-label="Back">${svg('arrowLeft')}</button><span class="ab-title">About phone</span></div>
+        <div class="app-body">
+          ${kv('Device name', 'Sim Phone 1')}${kv('Model', 'SP1-360 (sdk_gphone64_x86_64)')}${kv('Android version', '15')}
+          ${kv('Android security update', 'September 5, 2026')}${kv('IP address', '10.0.2.15')}${kv('Screen', '360 × 760 dp · 420 dpi')}
+          <button class="kv st-build"><small>Build number</small><b>AP4A.260905.001</b></button>
+        </div>`;
+      $('.st-back', el).onclick = main;
+      $('.st-build', el).onclick = () => {
+        if (S.devTaps >= 7) { toast('No need, you are already a developer.'); return; }
+        S.devTaps++;
+        if (S.devTaps === 7) { toast('You are now a developer!'); log('I', 'DevelopmentSettings', 'Developer options enabled'); }
+        else if (S.devTaps >= 3) toast(`You are now ${7 - S.devTaps} step${7 - S.devTaps > 1 ? 's' : ''} away from being a developer.`);
+      };
+    }
+    main();
+    return { onBack() { if (sub) { main(); return true; } return false; } };
+  }
+
+  // ---------- Wiring ----------
+  $('#navBack').innerHTML = svg('back');
+  $('#navHome').innerHTML = svg('home');
+  $('#navRecents').innerHTML = svg('recents');
+  $('#lkIcon').innerHTML = svg('lock');
+  $('#navBack').onclick = back;
+  $('#navHome').onclick = goHome;
+  $('#navRecents').onclick = overview;
+  $('#kBack').onclick = back;
+  $('#kHome').onclick = goHome;
+  $('#kRecents').onclick = overview;
+  $('#kPower').onclick = $('#hwPower').onclick = power;
+  $('#kVolUp').onclick = $('#hwVolUp').onclick = () => volume(1);
+  $('#kVolDown').onclick = $('#hwVolDown').onclick = () => volume(-1);
+
+  document.addEventListener('keydown', e => {
+    if (e.target.closest('input, textarea, select')) { if (e.key === 'Escape') { e.target.blur(); back(); } return; }
+    if (e.key === 'Escape') { back(); return; }
+    if (e.key === 'p' || e.key === 'P') { power(); return; }
+    if (S.screenOn && !S.locked && S.view === 'app' && inst[S.current]?.onKey?.(e.key)) e.preventDefault();
+  });
+
+  // Keep the Snake board's colors in step with the phone's theme
+  new MutationObserver(() => inst.snake?.redraw?.()).observe(screen, { attributes: true, attributeFilter: ['class'] });
+
+  // Scale the device to the column width
+  const fit = $('#fit'), dev = $('#device');
+  function doFit() {
+    const avail = $('.bench').clientWidth - 32;
+    scale = Math.min(1, avail / 394);
+    fit.style.width = 394 * scale + 'px';
+    fit.style.height = 784 * scale + 'px';
+    dev.style.transform = scale < 1 ? `scale(${scale})` : '';
+  }
+  new ResizeObserver(doFit).observe($('.bench'));
+  doFit();
+
+  // ---------- Boot ----------
+  buildHome();
+  buildShade();
+  [['I', 'Zygote', 'Forked child process 1021 (system_server)'],
+   ['I', 'SystemServer', 'Entered the Android system server!'],
+   ['I', 'ActivityManager', 'System now ready'],
+   ['I', 'WifiService', 'Connected to "SimNet-5G" (10.0.2.15)'],
+   ['I', 'SurfaceFlinger', 'Boot is finished (4213 ms)']].forEach(l => log(...l));
+  notify({ ...PRESETS[0] }, true);
+  S.notifs[0].t = Date.now() - 4 * 60000;
+  notify({ ...PRESETS[1] }, true);
+  S.notifs[0].t = Date.now() - 22 * 60000;
+  S.notifs.reverse();
+  renderNotifs();
+  renderClock();
+  applyView();
+  sync();
+  setInterval(tick, 1000);
+})();
+</script>
