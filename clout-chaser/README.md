@@ -111,6 +111,8 @@ A sixth platform, unlocked at 1K followers. Fans pay monthly for exclusive drops
 - **Shady schemes** (scam links in replies, a fake giveaway, a pump-and-dump coin, a fake merch preorder, selling fans' emails) pay out right away, fill your inbox with scammed fans, and raise a hidden investigation meter. Getting exposed means a choice between refunds, blaming hackers (suspension if it fails), fleeing the country, or doubling down into a cancellation. Scam bots impersonating you also show up in your replies.
 - **Polls on any post**: tap "Add poll" in the composer (Chirp still has a dedicated poll format). Polls boost engagement.
 
+- **Stunt prizes**: a landed stunt pays sponsor and ad money plus a big follower jump, scaled by how risky it is. Viral clips pay ×2.5 cash and ×2 followers; a rare jackpot (Red Bolt sponsorship) pays ×3 cash. Successful stunts in a row build a daredevil streak (up to ×2.25 prizes); a fail resets it. A second stunt on the same day pays less and is riskier.
+
 ## Creativity
 
 - **Originality score** (0–100) for every post: your own words, a wide vocabulary, questions, emoji and @mentions raise it. Repeating yourself or using the dice's canned captions lowers it. Higher originality means more reach and viral chance, and 85+ gives a small energy bonus.

@@ -29,11 +29,24 @@ function stuntOdds(id) {
   let r = st.risk * (1 + Math.max(0, S.stress - 50) / 100) * (injured() ? 1.3 : 1);
   if (st.harm === 'injury' && S.team.bodyguard) r *= 0.7;
   if (st.harm === 'arrest' && S.team.lawyer) r *= 0.75;
+  r *= 1 + stuntsToday() * 0.15; // tired daredevils slip
   return clamp(r, 0.05, 0.9);
 }
 function schemeOdds(id) {
   let r = SCHEMES[id].risk * (0.5 + (S.investigation || 0) / 100) * (S.team.pr ? 0.8 : 1) * (S.team.lawyer ? 0.85 : 1);
   return clamp(r, 0.05, 0.95);
+}
+
+/* The prize: the riskier the stunt, the bigger the payout. A daredevil streak multiplies it. */
+const stuntStreakX = () => 1 + Math.min(5, S.stuntStreak || 0) * 0.25;
+const stuntsToday = () => (S.flags.stuntDay === S.day ? S.flags.stuntN || 0 : 0);
+const stuntNumb = () => Math.pow(0.6, stuntsToday()); // the audience gets numb to a second stunt in one day
+function stuntPrize(id, viral = false) {
+  const st = STUNTS[id], k = 1 + st.risk * 4;
+  return {
+    cash: Math.round(Math.max(800, totalFollowers() * 0.08) * k * (viral ? 2.5 : 1) * stuntStreakX() * stuntNumb() / 50) * 50,
+    fp: st.boost * 2 * (viral ? 2 : 1) * stuntStreakX() * stuntNumb(),
+  };
 }
 
 /* ---------- doing them ---------- */
@@ -44,15 +57,32 @@ function doStunt(id) {
   const fail = chance(stuntOdds(id));
   let title, text, fx;
   if (!fail) {
-    const viral = chance(0.35);
-    fx = { fp: st.boost * (viral ? 2 : 1), heat: id === 'hoax' ? 25 : id === 'driving' ? 15 : 6, rep: id === 'driving' || id === 'hoax' ? -3 : 0 };
-    title = viral ? `${st.name}: it went VIRAL` : `${st.name}: you pulled it off`;
+    const viral = chance(0.35 + st.risk * 0.2);
+    const jackpot = chance(0.06 + st.risk * 0.12);
+    const prize = stuntPrize(id, viral);
+    S.flags.stuntN = stuntsToday() + 1; S.flags.stuntDay = S.day;
+    let cash = prize.cash;
+    if (jackpot) cash *= 3;
+    fx = { fp: prize.fp, money: cash, heat: id === 'hoax' ? 25 : id === 'driving' ? 15 : 6, rep: id === 'driving' || id === 'hoax' ? -3 : 1 };
+    S.stuntStreak = (S.stuntStreak || 0) + 1;
+    S.stats.stuntWins = (S.stats.stuntWins || 0) + 1;
+    S.stats.stuntCash = (S.stats.stuntCash || 0) + cash;
+    title = jackpot ? `${st.name}: JACKPOT` : viral ? `${st.name}: it went VIRAL` : `${st.name}: you pulled it off`;
     text = viral ? 'The clip is everywhere. Reaction channels are reacting to the reaction channels.' : 'Hands shaking, but the footage is incredible.';
-    if (viral) { S.stats.viral++; gainEnergy(20, 'Adrenaline'); news(`@${S.handle}'s ${st.name.toLowerCase()} clip is the most-watched video of the day`, true); }
+    text += ` Sponsors and ad money: ${money(cash)}.`;
+    if (jackpot) text += ' Red Bolt energy drink saw the clip and paid triple to put their logo on it. 🏆';
+    if (S.stuntStreak >= 2) text += ` Daredevil streak ×${S.stuntStreak}: prizes are ×${stuntStreakX().toFixed(2)} now. Don't push your luck… or do.`;
+    gainEnergy(Math.round(st.e * 0.6), 'Adrenaline rush');
+    if (viral) { S.stats.viral++; gainEnergy(20, 'Your stunt went viral'); news(`@${S.handle}'s ${st.name.toLowerCase()} clip is the most-watched video of the day`, true); }
+    if (jackpot) news(`Red Bolt signs @${S.handle} after insane ${st.name.toLowerCase()} clip`, true);
+    if ((viral || jackpot) && typeof celebrate === 'function') celebrate(jackpot ? 'gold' : 'viral');
+    sound('cash');
     if (id === 'hoax') { S.queue.push({ ev: 'hoax_fallout', ctx: {} }); text = 'Fans spent 3 days looking for you. Your "comeback" video has 40M views. Now people are asking questions.'; }
     if (id === 'nosleep') fx.stress = 35;
   } else {
     S.stats.stuntFails = (S.stats.stuntFails || 0) + 1;
+    S.stuntStreak = 0;
+    S.flags.stuntN = stuntsToday() + 1; S.flags.stuntDay = S.day;
     const pay = (n) => -Math.round(Math.max(n, S.money * 0.06));
     if (st.harm === 'injury' || st.harm === 'crash') {
       const days = st.harm === 'crash' ? 5 : ri(2, 4);
