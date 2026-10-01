@@ -182,6 +182,8 @@ function gainEnergy(n, reason) {
   }
   return got;
 }
+const MONEY_MILESTONES = [1e3, 1e4, 5e4, 1e5, 5e5, 1e6, 1e7, 1e8, 1e9];
+const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100];
 const FOLLOWER_MILESTONES = [500, 1e3, 2500, 5e3, 1e4, 25e3, 5e4, 1e5, 25e4, 5e5, 1e6, 25e5, 5e6, 1e7, 25e6, 5e7, 1e8, 25e7, 5e8, 1e9];
 
 function log(msg, cls = '') { S.log.unshift({ d: S.day, m: msg, c: cls }); if (S.log.length > 80) S.log.length = 80; }
@@ -1059,6 +1061,19 @@ function checkAll() {
     notify('system', null, `You hit ${fmt(m)} followers! Max energy +2.`);
     gainEnergy(15, `${fmt(m)} followers`);
     if (typeof celebrate === 'function') celebrate('gold');
+  }
+  // money and streak milestones
+  if (S.flags.mm === undefined) S.flags.mm = MONEY_MILESTONES.filter((m) => S.money >= m).length;
+  while (S.flags.mm < MONEY_MILESTONES.length && S.money >= MONEY_MILESTONES[S.flags.mm]) {
+    const m = MONEY_MILESTONES[S.flags.mm++];
+    notify('system', null, `Money milestone: ${money(m)} in the bank!`); gainEnergy(10, `${money(m)} milestone`);
+    if (typeof celebrate === 'function') celebrate('gold');
+  }
+  if (S.flags.sm === undefined) S.flags.sm = STREAK_MILESTONES.filter((m) => (S.stats.bestStreak || 0) >= m).length;
+  while (S.flags.sm < STREAK_MILESTONES.length && (S.streak || 0) >= STREAK_MILESTONES[S.flags.sm]) {
+    const m = STREAK_MILESTONES[S.flags.sm++];
+    S.bonusMaxE = (S.bonusMaxE || 0) + 3;
+    notify('system', null, `${m}-day posting streak! Max energy +3.`); gainEnergy(12, `${m}-day streak`);
   }
   if (ti > S.flags.tierMax) {
     S.flags.tierMax = ti;

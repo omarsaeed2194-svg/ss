@@ -252,12 +252,32 @@ function statGrid() {
   </div>`;
 }
 
+/* Milestones: what's next, how close you are, and what you get */
+function milestonesPanel() {
+  const t = totalFollowers(), ti = tierIndex();
+  const row = (icon, name, cur, goal, reward, fmtv = fmt, logScale = false) => {
+    const pct = logScale && goal > 1 ? clamp(Math.log10(Math.max(cur, 1)) / Math.log10(goal) * 100, 0, 100) : clamp(cur / goal * 100, 0, 100);
+    return `<div class="ms"><div class="row between" style="flex-wrap:nowrap"><span class="ms-n">${icon} ${name}</span><span class="small muted num">${fmtv(Math.max(0, Math.floor(cur)))} / ${fmtv(goal)}</span></div><div class="meter gold"><i style="width:${pct}%"></i></div><span class="small muted">${reward}</span></div>`;
+  };
+  const fm = FOLLOWER_MILESTONES.find((m) => m > t), mm = MONEY_MILESTONES.find((m) => m > S.money), sm = STREAK_MILESTONES.find((m) => m > (S.streak || 0)), nt = TIERS[ti + 1];
+  const nextStam = 5 - ((S.day - 1) % 5);
+  const locked = ACHIEVEMENTS.filter(([id]) => !(S.ach || {})[id] && !(S.achievements || {})[id]).slice(0, 2);
+  return `<div class="panel ms-panel"><h3>Milestones</h3><div class="ms-list">
+    ${fm ? row('👥', 'Followers', t, fm, '+2 max energy, +15 energy', fmt, true) : ''}
+    ${nt ? row('👑', `${nt.name} tier`, t, nt.min, 'Energy refill, +5 max energy, confetti', fmt, true) : ''}
+    ${mm ? row('💰', 'Bank balance', S.money, mm, '+10 energy', money, true) : ''}
+    ${sm ? row('🔥', 'Posting streak', S.streak || 0, sm, '+3 max energy, +12 energy', (v) => v + 'd') : ''}
+    ${stamina() < 150 ? row('⚡', 'Stamina', 5 - nextStam, 5, `+5 max energy in ${nextStam} day${nextStam > 1 ? 's' : ''}`, (v) => v + 'd') : ''}
+    ${locked.length ? `<div class="ms"><span class="ms-n">🏆 Next trophies</span>${locked.map(([, n, d]) => `<span class="small"><b>${esc(n)}</b> <span class="muted">· ${esc(d)}</span></span>`).join('')}</div>` : ''}
+  </div><button class="panel-foot" data-act="go" data-arg="trophies">All trophies</button></div>`;
+}
 function renderRail() {
   if (window.innerWidth <= 1060) { $('#rail').innerHTML = ''; return; }
   const follow = Object.entries(S.npcs).filter(([, n]) => !n.following).sort((a, b) => b[1].rel - a[1].rel || b[1].followers - a[1].followers).slice(0, 3);
   $('#rail').innerHTML = `
     <label class="search">${ico('search')}<input id="railSearch" placeholder="Search stars and trends" value="${esc(ui.q)}" aria-label="Search"></label>
     <div class="panel"><h3>Your status</h3>${statGrid()}<button class="panel-foot" data-act="go" data-arg="profile">Open profile</button></div>
+    ${milestonesPanel()}
     <div class="panel"><h3>What's happening</h3>${S.trends.slice(0, 5).map((t, i) => trendRow(t, i)).join('')}<button class="panel-foot" data-act="go" data-arg="explore">Show more</button></div>
     <div class="panel"><h3>Who to follow</h3>${follow.map(([id]) => personRow(id)).join('')}<button class="panel-foot" data-act="go" data-arg="explore">Show more</button></div>
     <div class="panel"><h3>Algorithm today</h3>${unlockedIds().map((id) => { const a = S.algo[id] || 1; const [l, c] = algoLabel(a); return `<div class="panel-row row between" style="cursor:default">${pdot(id)}<span style="flex:1">${PLATFORMS[id].name}</span><span class="pill ${c}">${l} ×${a.toFixed(2)}</span></div>`; }).join('')}</div>
@@ -642,6 +662,7 @@ function vProfile() {
       <div class="counts"><span><b>${following}</b> Following</span><span><b>${fmt(t)}</b> Followers</span>${S.partner ? `<span style="color:var(--like)">Dating ${esc(npcName(S.partner))}</span>` : ''}</div>
     </div>
     <div style="margin:0 16px 12px;border-radius:16px;overflow:hidden">${statGrid()}</div>
+    ${window.innerWidth <= 1060 ? `<div style="margin:0 16px 12px">${milestonesPanel()}</div>` : ''}
     <div class="scroller" style="padding:0 16px 12px">${Object.keys(PLATFORMS).map((id) => { const p = S.platforms[id]; return `<span class="pill" style="padding:6px 10px">${pdot(id)} ${PLATFORMS[id].name} ${p.unlocked ? `<b style="color:var(--ink)">${fmt(p.followers)}</b>` : ico('lock')}</span>`; }).join('')}</div>
     ${tabsBar([['posts', 'Posts'], ['analytics', 'Analytics'], ['trophies', 'Trophies']], ui.profTab, 'profTab')}${body}`;
 }
@@ -907,6 +928,9 @@ function renderCompose(focus) {
   if (c.platform === 'vault') body = vaultBody();
   else if (c.platform === 'live') {
     body = `<div class="opts" style="border-top:0"><b style="font-size:20px">Go live on Streamly</b><span class="muted">Chat throws surprises at you mid-stream: raids, celebrity drop-ins, sponsor moments. Earn donations, virtual gifts (🌹 to 🪐 Universe at $10K), PR packages and Streamly followers.</span>
+      <span class="opt-lbl">Stream theme</span>
+      <div class="scroller">${Object.entries(STREAM_THEMES).map(([id, t]) => { const locked = (t.min && totalFollowers() < t.min) || (t.need && !t.need()); return chip(`${t.icon} ${t.name}`, 'cTheme', id, (c.streamTheme || 'chat') === id, locked, locked ? ` <span class="cost">${t.need ? 'needs a star friend' : fmt(t.min) + '+'}</span>` : ''); }).join('')}</div>
+      <span class="small muted">${STREAM_THEMES[c.streamTheme || 'chat'].desc} Every theme has its own chat moments, and no two streams in a row play the same ones.</span>
       <div class="cards">${Object.entries(STREAMS).map(([id, s]) => `<div class="card"><div class="t"><span>${s.name}</span><span class="pill blue">${s.e} energy</span></div><span class="small muted">${s.chats} chat moment${s.chats > 1 ? 's' : ''}${s.stress ? ' · extra stress' : ''}</span>${btn(`${ico('live')} Go live`, 'stream', id, 'blue sm', S.energy < s.e)}</div>`).join('')}</div>
       <span class="small muted">Expected viewers: ~${fmt((S.platforms.live.followers * 0.06 + totalFollowers() * 0.002 + 5) * (S.algo.live || 1))}</span></div>`;
   } else {
@@ -1073,7 +1097,8 @@ const ACT = {
     processQueue();
   },
   unlock: (a) => { unlockPlatform(a); if (ui.c && !$('#composeWrap').hidden) { ui.c.platform = a; ui.c.format = null; renderCompose(false); } },
-  stream: (a) => { closeCompose(); startStream(a); },
+  stream: (a) => { const th = (ui.c && ui.c.streamTheme) || 'chat'; closeCompose(); startStream(a, th); },
+  cTheme: (a) => { ui.c.streamTheme = a; renderCompose(false); return 'norender'; },
   dzStunt: (a) => { if (!needEnergy(STUNTS[a].e)) return 'norender'; doStunt(a); checkAll(); processQueue(); },
   dzSpicy: (a) => { const sp = SPICY[a]; if ((sp.min && totalFollowers() < sp.min) || !needEnergy(sp.e)) return 'norender'; doSpicy(a); checkAll(); processQueue(); },
   dzScheme: (a) => { if (!needEnergy(SCHEMES[a].e)) return 'norender'; doScheme(a); checkAll(); processQueue(); },
@@ -1362,7 +1387,7 @@ const ACT = {
 Object.assign(ACT, MONEY_ACT, VAULT_ACT);
 
 const NO_FLASH = new Set(['go', 'back', 'open', 'openDm', 'endDay', 'dmSend', 'noop']);
-const SHEET_ONLY = new Set(['vPrice', 'vLink', 'vDrop', 'cAff', 'cPoll', 'cCross', 'duet', 'spin', 'cIntent', 'dmChip', 'postAbout', 'cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);
+const SHEET_ONLY = new Set(['cTheme', 'vPrice', 'vLink', 'vDrop', 'cAff', 'cPoll', 'cCross', 'duet', 'spin', 'cIntent', 'dmChip', 'postAbout', 'cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);
 function ACT_RUN(act, arg = '') {
   if (!S || !ACT[act]) return;
   const before = statSnap();

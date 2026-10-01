@@ -111,6 +111,11 @@ A sixth platform, unlocked at 1K followers. Fans pay monthly for exclusive drops
 - **Team levels**: upgrade anyone from Junior → Pro → Senior → Elite → Legend. Each level adds +25% to what they do (Legend = double) and raises their salary. Hiring 4+ people gives a dream-team reach bonus (+1% per extra hire, up to +10%).
 - **Spicy moves** in the Danger Zone: fake a showmance with a star, troll rivals with a burner account, drop a diss track, stage a public breakup, crash an award show stage, join the Love Villa reality dating show, or get paid to start a fake feud. Each has odds, a payoff and a messy way to fail.
 
+## Milestones and stream themes
+
+- **Milestones panel** in the right sidebar (on phones, on your profile): progress bars toward your next follower milestone, next tier, bank balance goal, posting streak and stamina boost, plus your next trophies. Money milestones give +10 energy; streak milestones (3, 7, 14, 30, 60, 100 days) give +3 max energy.
+- **Stream themes**: Just chatting, Gaming, Cooking, IRL city walk, Karaoke night, Q&A, Charity stream and Collab stream. Each changes payouts and brings its own chat moments (clutch plays, kitchen fires, street battles, power ballads, salary questions, donation matching, co-streamers going off-script), and no two streams in a row repeat the same moments. A hype meter builds during the stream and boosts gifts and followers.
+
 ## Danger Zone
 
 - **Stunts** (rooftop selfie, public prank, world's hottest pepper, filming while speeding, posing with a "tame" tiger, urban exploring, a 48-hour no-sleep stream, faking your own disappearance) can go hugely viral, or go wrong. You can get injured (hospital bill, max energy cut by 40% for days), arrested (fine, a lost day, a mugshot meme), collapse from burnout, or face public outrage. Stress raises the odds of failure; a bodyguard and a lawyer lower them. Afterwards you can post a "hospital update" or "own the mugshot" for sympathy and reach.

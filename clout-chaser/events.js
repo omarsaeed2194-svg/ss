@@ -465,7 +465,7 @@ const EVENTS = {
 
   /* ---------- livestream ---------- */
   _chat: {
-    eyebrow: (c) => `Live on Streamly · ${fmt(c.viewers)} watching`, title: (c) => CHAT[c.list[c.i]].title(c),
+    eyebrow: (c) => `${(STREAM_THEMES[c.theme] || STREAM_THEMES.chat).icon} Live · ${fmt(c.viewers)} watching${c.hype ? ` · hype ${'🔥'.repeat(Math.min(5, c.hype))}` : ''} · moment ${c.i + 1}/${c.list.length}`, title: (c) => CHAT[c.list[c.i]].title(c),
     text: (c) => CHAT[c.list[c.i]].text(c),
     choices: (c) => CHAT[c.list[c.i]].choices(c).map((ch) => ({ ...ch, fn: () => {
       const res = ch.fn() || R('');
@@ -480,11 +480,16 @@ const EVENTS = {
     onShow: (c) => {
       const L = STREAMS[c.len];
       const ch = 1 + (skillLvl('charisma') - 1) * 0.06;
+      const TH = STREAM_THEMES[c.theme] || STREAM_THEMES.chat;
+      c.giftX = (c.giftX || 1) * (TH.mod.gift || 1) * (1 + (c.hype || 0) * 0.05);
       c.don = Math.round(c.don + c.viewers * L.hours * rnd(0.03, 0.08) * ch);
       c.gain = Math.round(c.viewers * L.hours * rnd(0.05, 0.11) * ch * diffM() / (1 + Math.log10(Math.max(1, S.platforms.live.followers) / 100 + 1) * 0.6));
       const gifts = rollGifts(c);
-      S.money += gifts; S.stats.earned += gifts; S.stats.giftsEarned = (S.stats.giftsEarned || 0) + gifts;
+      if (TH.mod.charity) { c.charity = c.don + gifts; S.stats.donated = (S.stats.donated || 0) + c.charity; changeRep(TH.mod.rep); addFollowersPct(0.01); c.don = Math.round(c.don * 0.1); c.giftTotal = Math.round(gifts * 0.1); news(`@${S.handle} raised ${money(c.charity)} for charity on stream`, true); }
+      else if (TH.mod.rep) changeRep(TH.mod.rep);
+      if (!TH.mod.charity) { S.money += gifts; S.stats.earned += gifts; } else { S.money += c.giftTotal; } S.stats.giftsEarned = (S.stats.giftsEarned || 0) + gifts;
       if (chance(L.hours >= 12 ? 0.8 : L.hours >= 3 ? 0.45 : 0.25)) { const pk = pick(PR_PACKAGES); const note = pk.fx(); c.pkg = pk.text + (typeof note === 'string' ? `. ${note}` : ''); }
+      c.gain = Math.round(c.gain * (TH.mod.gain || 1) * (1 + (c.hype || 0) * 0.04));
       S.platforms.live.followers += c.gain;
       for (const id of unlockedIds()) if (id !== 'live' && id !== 'vault') S.platforms[id].followers += c.gain * 0.1;
       S.money += c.don; S.stats.earned += c.don; S.stats.streams++;
@@ -499,7 +504,7 @@ const EVENTS = {
       sound('cash');
       checkAll();
     },
-    text: (c) => `<div class="summary-lines"><div><span>Peak viewers</span><span class="num">${fmt(c.viewers)}</span></div><div><span>Donations & subs</span><span class="num good">${money(c.don)}</span></div><div><span>Gifts</span><span class="num gold">${money(c.giftTotal || 0)}</span></div><div><span>New Streamly followers</span><span class="num good">${signed(c.gain)}</span></div></div>
+    text: (c) => `<div class="summary-lines">${c.charity ? `<div><span>Raised for charity 💚</span><span class="num good">${money(c.charity)}</span></div>` : ''}${c.hype ? `<div><span>Peak hype</span><span>${'🔥'.repeat(Math.min(5, c.hype))}</span></div>` : ''}<div><span>Peak viewers</span><span class="num">${fmt(c.viewers)}</span></div><div><span>Donations & subs</span><span class="num good">${money(c.don)}</span></div><div><span>Gifts</span><span class="num gold">${money(c.giftTotal || 0)}</span></div><div><span>New Streamly followers</span><span class="num good">${signed(c.gain)}</span></div></div>
       ${(c.gifts || []).length ? `<div class="gifts">${c.gifts.map((g) => `<span class="gift" title="${g.name} · $${g.v} each"><b>${g.icon}</b>×${fmt(g.n)}</span>`).join('')}</div>` : ''}
       ${c.topGifter ? `<div class="small muted">Top gifter: <b style="color:var(--ink)">@${esc(c.topGifter.who)}</b> ${c.topGifter.gift.icon}</div>` : ''}
       ${c.pkg ? `<div class="hint">📦 PR package arrived: ${esc(c.pkg)}</div>` : ''}`,
@@ -614,17 +619,101 @@ const CHAT = {
       { label: 'Thank them and move on', fn: () => { c.don += 500; return R('Classy.'); } }] },
 };
 
-function startStream(len) {
-  const L = STREAMS[len];
+/* ---------- Stream themes: each one changes the vibe, the payouts and the chat moments ---------- */
+const STREAM_THEMES = {
+  chat:     { name: 'Just chatting', icon: '💬', desc: 'Hang out and talk. Balanced.', mod: {} },
+  gaming:   { name: 'Gaming',        icon: '🎮', desc: 'Clutch plays and rage moments. More new followers.', mod: { gain: 1.25 } },
+  cooking:  { name: 'Cooking',       icon: '🍳', desc: 'Food blogging, live. Gifts are generous, reputation goes up.', mod: { gift: 1.15, rep: 0.5 } },
+  irl:      { name: 'IRL city walk', icon: '🏙️', desc: 'Roam the streets with a camera. Big viewer swings, more stress.', mod: { viewers: 1.3, stress: 6 } },
+  karaoke:  { name: 'Karaoke night', icon: '🎤', desc: 'Sing badly, earn well. Gifts ×1.3.', mod: { gift: 1.3 } },
+  qna:      { name: 'Q&A / AMA',     icon: '❓', desc: 'Answer anything. Fans trust you more.', mod: { rep: 1 } },
+  charity:  { name: 'Charity stream', icon: '💚', desc: 'Donations go to a cause. Huge reputation, sponsors notice.', mod: { charity: true, rep: 4, gain: 1.15 }, min: 2000 },
+  collab:   { name: 'Collab stream', icon: '🤝', desc: 'Go live with a friendly star. Their fans pour in.', mod: { viewers: 1.6, gain: 1.3 }, need: () => !!randomNpc((id) => S.npcs[id].rel >= 20 && !S.npcs[id].feud) },
+};
+const tName = () => pick(['lunar', 'chaotic', 'soft', 'midnight', 'rogue', 'velvet', 'crispy', 'pixel']) + '.' + pick(['otter', 'bean', 'goblin', 'moth', 'raccoon', 'mango', 'noodle', 'comet']) + ri(1, 99);
+Object.assign(CHAT, {
+  /* generic, but different every time */
+  clipviral: { title: () => 'A clip is blowing up mid-stream', text: (c) => `Someone clipped you ${pick(['tripping over your chair', 'laughing at your own joke for 40 seconds', 'getting jump-scared by a notification', 'singing the ad music'])}. It's spreading on Clipz right now.`,
+    choices: (c) => [
+      { label: 'Lean in and recreate it', fn: () => { c.viewers = Math.round(c.viewers * 1.5); c.hype = (c.hype || 0) + 2; return R('Chat is spamming the clip emote. New viewers keep arriving.', { fp: 0.004 }); } },
+      { label: 'Ask chat to stop clipping', fn: () => { c.viewers = Math.round(c.viewers * 0.95); return R('The Streisand effect kicks in. They clip that too.', { heat: 3 }); } }] },
+  poll: { title: () => 'Chat poll: what next?', text: () => `${pick(['Spicy noodle challenge', 'Rate viewers\' setups', 'React to old posts', 'Prank call a friend'])} vs ${pick(['Draw fan requests', 'Speedrun a kids game', 'Read hate comments', 'Tier-list snacks'])}. Chat is voting.`,
+    choices: (c) => [
+      { label: 'Do whatever wins', fn: () => { c.viewers = Math.round(c.viewers * 1.25); c.hype = (c.hype || 0) + 1; return R('Chat loves being in charge.', { rep: 0.5 }); } },
+      { label: 'Do both, back to back', sub: '−8 energy', fn: () => { c.viewers = Math.round(c.viewers * 1.45); c.hype = (c.hype || 0) + 2; return R('Chaotic double feature. Nobody left.', { energy: -8, stress: 4 }); } }] },
+  brandlive: { title: () => 'A brand is in your chat', text: () => `<b>${pick(Object.values(BRANDS).filter((b) => !b.shady)).name}</b> offers $${fmt(Math.round(Math.max(150, T() * 0.004)))} to use their product live, right now.`,
+    choices: (c) => [
+      { label: 'Do it on the spot', fn: () => { const v = Math.round(Math.max(150, T() * 0.004)); c.don += v; c.viewers = Math.round(c.viewers * 0.92); return R(`Easy ${money(v)}. A few viewers rolled their eyes.`, { rep: -0.3 }); } },
+      { label: 'Roast the product (lovingly)', sub: `Charisma ${skillLvl('charisma')}`, fn: () => chance(0.35 + skillLvl('charisma') * 0.06) ? (c.don += Math.round(Math.max(300, T() * 0.008)), R('They LOVED it and doubled the pay.', { fp: 0.003 })) : R('They left the chat. Chat thought it was hilarious though.', { heat: 2 }) },
+      { label: 'Decline', fn: () => R('Integrity points.', { rep: 0.5 }) }] },
+  speedrun: { title: () => 'Hype train incoming 🚂', text: (c) => `Level ${ri(2, 5)} hype train! ${fmt(Math.round(c.viewers * 0.08) + 3)} gifts in the last minute.`,
+    choices: (c) => [
+      { label: 'Ride it: promise a reward at level 10', fn: () => { c.giftX = (c.giftX || 1) * 1.6; c.hype = (c.hype || 0) + 3; return R('Level 10 reached. You now owe chat a dramatic reading of your old tweets.', { stress: 5 }); } },
+      { label: 'Thank everyone by name', fn: () => { c.giftX = (c.giftX || 1) * 1.2; return R('It took 9 minutes. Chat felt seen.', { rep: 1 }); } }] },
+  /* themed moments */
+  g_clutch: { theme: 'gaming', title: () => '1v4 clutch moment', text: () => 'Last one alive. Chat is holding its breath.',
+    choices: (c) => [
+      { label: 'Go for the clutch', fn: () => chance(0.45 + skillLvl('creativity') * 0.03) ? (c.viewers = Math.round(c.viewers * 1.9), c.hype = (c.hype || 0) + 3, R('ACE. Chat exploded. That clip is going everywhere.', { fp: 0.006 })) : R('You lost. You slammed the desk a little too hard. That clip is going everywhere too.', { heat: 6 }) },
+      { label: 'Play it safe', fn: () => R('You survived. Chat says "boring" but stays.') }] },
+  g_cheater: { theme: 'gaming', title: () => 'Chat thinks you\'re cheating', text: () => '"no way that shot was legit" is spreading in chat.',
+    choices: (c) => [
+      { label: 'Hand-cam to prove it', fn: () => { c.viewers = Math.round(c.viewers * 1.3); return R('Clean hands, cleaner aim. Doubters converted.', { rep: 1 }); } },
+      { label: 'Ban the accusers', fn: () => { c.viewers = Math.round(c.viewers * 0.9); return R('Chat is quieter. Reddit is louder.', { heat: 5 }); } }] },
+  c_fire: { theme: 'cooking', title: () => 'Kitchen fire! 🔥', text: () => 'The pan is on fire. Chat is typing "LMAOOO" faster than you can find the lid.',
+    choices: (c) => [
+      { label: 'Calmly put it out with a lid', fn: () => { c.viewers = Math.round(c.viewers * 1.3); return R('Chef energy. Chat is impressed.', { rep: 1 }); } },
+      { label: 'Panic theatrically', fn: () => { c.viewers = Math.round(c.viewers * 1.6); c.hype = (c.hype || 0) + 2; return R('The scream clip is iconic. Kitchen is fine. Mostly.', { stress: 6 }); } }] },
+  c_secret: { theme: 'cooking', title: () => 'Chat picks the secret ingredient', text: () => `Winning vote: <b>${pick(['pickle juice', 'gummy bears', 'hot cheetos', 'maple syrup', 'cereal'])}</b>. In a pasta.`,
+    choices: (c) => [
+      { label: 'Commit and rate it honestly', fn: () => { c.viewers = Math.round(c.viewers * 1.35); c.giftX = (c.giftX || 1) * 1.2; return R(chance(0.5) ? 'Shockingly good. 7/10. Chat demands the recipe.' : 'It was a crime. 2/10. Chat gifted out of pity.', { rep: 0.5 }); } },
+      { label: 'Fake it', fn: () => R('Chat noticed the swap. Trust -1.', { rep: -1 }) }] },
+  i_fan: { theme: 'irl', title: () => 'A fan spots you on the street', text: () => `"OMG are you @${S.handle}?!" A crowd is forming.`,
+    choices: (c) => [
+      { label: 'Take selfies with everyone', fn: () => { c.viewers = Math.round(c.viewers * 1.4); return R('Wholesome chaos. Chat loved it.', { rep: 1.5, stress: 4 }); } },
+      { label: 'Run away dramatically', fn: () => { c.viewers = Math.round(c.viewers * 1.5); c.hype = (c.hype || 0) + 2; return R('A chase through the city. Peak content.', { heat: 3 }); } }] },
+  i_busker: { theme: 'irl', title: () => 'A street performer pulls you in', text: () => 'A breakdancer wants you to battle him. The crowd is chanting.',
+    choices: (c) => [
+      { label: 'Battle him', fn: () => chance(0.5) ? (c.viewers = Math.round(c.viewers * 1.7), R('You hit a worm. The crowd lost it.', { fp: 0.005 })) : (c.viewers = Math.round(c.viewers * 1.4), R('You fell. Hard. Still the best moment of the day.', { stress: 5 })) },
+      { label: 'Tip him and hype him up', fn: () => R('He went viral too. Good karma.', { money: -50, rep: 1.5 }) }] },
+  k_ballad: { theme: 'karaoke', title: () => 'Chat demands a power ballad', text: () => `${pick(['"My Heart Will Go On"', '"I Will Always Love You"', '"Bohemian Rhapsody"', '"Total Eclipse of the Heart"'])}. Key change included.`,
+    choices: (c) => [
+      { label: 'Go for the high note', fn: () => chance(0.4 + skillLvl('charisma') * 0.04) ? (c.giftX = (c.giftX || 1) * 1.8, R('YOU HIT IT. Gifts are raining.', { fp: 0.005 })) : (c.giftX = (c.giftX || 1) * 1.4, R('You did not hit it. Gifts are raining anyway.', { heat: 2 })) },
+      { label: 'Lip-sync with dramatic choreography', fn: () => { c.viewers = Math.round(c.viewers * 1.3); return R('Theatre kid energy. Respect.'); } }] },
+  q_salary: { theme: 'qna', title: () => '"How much do you make?"', text: () => 'The most-upvoted question. Chat is waiting.',
+    choices: (c) => [
+      { label: 'Tell the truth', fn: () => { c.viewers = Math.round(c.viewers * 1.4); return R(`You said ${money(S.stats.earned)} lifetime. Chat is stunned. Clips everywhere.`, { heat: 6, rep: 1 }); } },
+      { label: '"Enough to buy chat pizza"', fn: () => { c.hype = (c.hype || 0) + 1; return R('Charming dodge.', { rep: 0.5 }); } }] },
+  q_deep: { theme: 'qna', title: () => 'A real question', text: () => `<b>${tName()}</b>: "how do you deal with hate comments?"`,
+    choices: (c) => [
+      { label: 'Answer honestly', fn: () => { c.giftX = (c.giftX || 1) * 1.25; return R('Chat got emotional. People thanked you for hours.', { rep: 2, stress: -6 }); } },
+      { label: 'Joke your way out', fn: () => R('Laughs, but a missed moment.') }] },
+  ch_match: { theme: 'charity', title: () => 'Match the donations?', text: () => 'Chat is at 80% of the charity goal. You could match every donation from here.',
+    choices: (c) => [
+      { label: 'Match them', sub: '$' + 1000, disabled: () => S.money < 1000, fn: () => { c.viewers = Math.round(c.viewers * 1.5); return R('Goal smashed. Headlines: "Creator doubles charity haul".', { money: -1000, rep: 4, fp: 0.01 }); } },
+      { label: 'Cheer chat on', fn: () => { c.hype = (c.hype || 0) + 2; return R('Chat got the goal on its own. Beautiful.', { rep: 1 }); } }] },
+  co_offscript: { theme: 'collab', init: (c) => { c.co = c.co || randomNpc((id) => S.npcs[id].rel >= 20 && !S.npcs[id].feud) || randomNpc(); }, title: (c) => `${npcName(c.co)} goes off-script`, text: (c) => `${npcName(c.co)} just brought up your most embarrassing old post. Live.`,
+    choices: (c) => [
+      { label: 'Roast them right back', fn: () => { c.viewers = Math.round(c.viewers * 1.5); c.hype = (c.hype || 0) + 2; return R('A legendary roast battle. Both fanbases are thrilled.', { rel: { [c.co]: 4 } }); } },
+      { label: 'Laugh it off', fn: () => R('Good sport. They respect you more.', { rep: 1, rel: { [c.co]: 6 } }) }] },
+});
+
+function startStream(len, theme = 'chat') {
+  const L = STREAMS[len], TH = STREAM_THEMES[theme] || STREAM_THEMES.chat;
   if (S.energy < L.e) return toast(`You need ${L.e} energy for this stream.`, 'bad');
   if (S.hackedUntil >= S.day) return toast('Your account is locked while you recover it.', 'bad');
   S.energy -= L.e;
-  S.stress = clamp(S.stress + L.e * 0.12 + (L.stress || 0), 0, 100);
+  S.stress = clamp(S.stress + L.e * 0.12 + (L.stress || 0) + (TH.mod.stress || 0), 0, 100);
   const ch = 1 + (skillLvl('charisma') - 1) * 0.06;
-  const viewers = Math.round((S.platforms.live.followers * 0.06 + T() * 0.002 + 5) * ch * (S.algo.live || 1) * (1 + gearQ('live')) * diffM());
-  let pool = Object.keys(CHAT).filter((k) => k !== 'rival' || Object.values(S.npcs).some((n) => n.feud));
-  const list = shuffle(pool).slice(0, L.chats);
-  const c = { len, viewers, don: 0, gain: 0, list, i: 0 };
+  const viewers = Math.round((S.platforms.live.followers * 0.06 + T() * 0.002 + 5) * ch * (S.algo.live || 1) * (1 + gearQ('live')) * diffM() * (TH.mod.viewers || 1));
+  // never the same stream twice: themed moments first, then a shuffle of everything else, avoiding last stream's moments
+  const recent = S.flags.lastChats || [];
+  const ok = (k) => (k !== 'rival' || Object.values(S.npcs).some((n) => n.feud)) && !recent.includes(k);
+  let themed = shuffle(Object.keys(CHAT).filter((k) => CHAT[k].theme === theme && ok(k)));
+  if (!themed.length) themed = shuffle(Object.keys(CHAT).filter((k) => CHAT[k].theme === theme)); // always at least one themed moment
+  const generic = shuffle(Object.keys(CHAT).filter((k) => !CHAT[k].theme && ok(k)));
+  const list = [...themed.slice(0, Math.max(1, Math.ceil(L.chats / 2))), ...generic].slice(0, L.chats);
+  S.flags.lastChats = list;
+  const c = { len, theme, viewers, don: 0, gain: 0, list, i: 0, hype: 0 };
   list.forEach((k) => CHAT[k].init && CHAT[k].init(c));
   S.queue.unshift({ ev: '_chat', ctx: c });
   sound('post');
