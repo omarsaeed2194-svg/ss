@@ -787,9 +787,14 @@ function endDay() {
   const lines = [];
   const before = snap();
   // Salaries & upkeep
-  let salaries = 0; for (const k of Object.keys(S.team)) if (S.team[k]) salaries += TEAM[k].pay;
+  // Salaries are monthly: each team member is paid every 30 days from the day you hired them
+  let salaries = 0; S.teamDue = S.teamDue || {};
+  for (const k of Object.keys(S.team)) if (S.team[k]) {
+    if (!S.teamDue[k]) S.teamDue[k] = S.day + 30;
+    if (S.day >= S.teamDue[k]) { salaries += TEAM[k].pay; S.teamDue[k] += 30; }
+  }
   let upkeep = 0; for (const it of SHOP) if (S.owned[it.id] && it.upkeep) upkeep += it.upkeep;
-  if (salaries) { S.money -= salaries; lines.push(['Team salaries', -salaries]); }
+  if (salaries) { S.money -= salaries; lines.push(['Team payday (monthly salaries)', -salaries]); }
   if (upkeep) { S.money -= upkeep; lines.push(['Lifestyle upkeep', -upkeep]); }
   const fameTax = [0, 10, 45, 160, 550, 1600, 6500, 26000][tierIndex()];
   if (fameTax) { S.money -= fameTax; lines.push(['Cost of fame (rent, stylist, security)', -fameTax]); }

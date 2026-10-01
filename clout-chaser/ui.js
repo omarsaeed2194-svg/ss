@@ -695,11 +695,12 @@ function vShop() {
 function vTeam() {
   const t = totalFollowers();
   let payroll = 0; Object.keys(S.team).forEach((k) => { if (S.team[k]) payroll += TEAM[k].pay; });
-  return `<div class="col-head">${head('Your team', `Payroll ${money(payroll)}/day`)}</div>
-    <div class="sect"><div class="hint">Hiring costs 3 days of salary up front. Three days in debt and everyone quits.</div><div class="cards">${Object.entries(TEAM).map(([k, m]) => {
+  const due = (k) => Math.max(0, ((S.teamDue || {})[k] || S.day + 30) - S.day);
+  return `<div class="col-head">${head('Your team', `Payroll ${money(payroll)}/month`)}</div>
+    <div class="sect"><div class="hint">Salaries are monthly. Hiring pays the first month up front; after that each person is paid every 30 days. Three days in debt and everyone quits.</div><div class="cards">${Object.entries(TEAM).map(([k, m]) => {
       const hired = !!S.team[k], locked = t < m.req;
-      return `<div class="card ${hired ? 'owned' : ''}"><div class="t"><span>${m.name}</span><span class="num">${money(m.pay)}/day</span></div><span class="small muted">${m.desc}</span>
-        ${hired ? `<div class="row"><span class="pill good">On the team</span>${btn('Let go', 'fire', k, 'sm danger')}</div>${k === 'socialmgr' ? mgrPanel() : ''}` : locked ? `<span class="small muted row">${ico('lock')} Needs ${fmt(m.req)} followers</span>` : btn(`Hire · ${money(m.pay * 3)}`, 'hire', k, 'sm primary', S.money < m.pay * 3)}</div>`;
+      return `<div class="card ${hired ? 'owned' : ''}"><div class="t"><span>${m.name}</span><span class="num">${money(m.pay)}/mo</span></div><span class="small muted">${m.desc}</span>
+        ${hired ? `<div class="row"><span class="pill good">On the team</span><span class="small muted">Next payday in ${due(k)} day${due(k) === 1 ? '' : 's'}</span>${btn('Let go', 'fire', k, 'sm danger')}</div>${k === 'socialmgr' ? mgrPanel() : ''}` : locked ? `<span class="small muted row">${ico('lock')} Needs ${fmt(m.req)} followers</span>` : btn(`Hire · ${money(m.pay)} first month`, 'hire', k, 'sm primary', S.money < m.pay)}</div>`;
     }).join('')}</div></div>`;
 }
 function productName() { return `${S.handle} ${{ beauty: 'Cosmetics', gaming: 'Gear', fitness: 'Protein', comedy: 'Hot Sauce', tech: 'Audio', food: 'Snacks', music: 'Headphones', fashion: 'Studio', travel: 'Luggage', lifestyle: 'Home' }[S.niche]}`; }
@@ -1294,8 +1295,8 @@ const ACT = {
     checkAll();
   },
   course: (a) => { const l = skillLvl(a); const price = Math.round(COURSES[a].base * Math.pow(l, 1.6)); if (l >= 10) return 'norender'; if (!spend(price)) { toast('Not enough money.', 'bad'); return 'norender'; } S.skills[a].lvl++; S.skills[a].xp = 0; toast(`${a[0].toUpperCase() + a.slice(1)} is now level ${l + 1}`, 'gold'); log(`Finished ${COURSES[a].name}.`, 'good'); checkAll(); },
-  hire: (a) => { const m = TEAM[a]; if (!spend(m.pay * 3)) { toast('Not enough money.', 'bad'); return 'norender'; } S.team[a] = true; if (a === 'assistant') S.energy += 20; log(`Hired a ${m.name.toLowerCase()}.`, 'good'); toast(`${m.name} hired`); checkAll(); },
-  fire: (a) => { S.team[a] = false; log(`Let your ${TEAM[a].name.toLowerCase()} go.`); },
+  hire: (a) => { const m = TEAM[a]; if (!spend(m.pay)) { toast('Not enough money.', 'bad'); return 'norender'; } S.team[a] = true; S.teamDue = S.teamDue || {}; S.teamDue[a] = S.day + 30; if (a === 'assistant') S.energy += 20; log(`Hired a ${m.name.toLowerCase()}.`, 'good'); toast(`${m.name} hired`); checkAll(); },
+  fire: (a) => { S.team[a] = false; if (S.teamDue) delete S.teamDue[a]; log(`Let your ${TEAM[a].name.toLowerCase()} go.`); },
   merchLaunch: () => { if (!spend(3000)) return 'norender'; S.merch = { lvl: 1, sold: 0, boost: 2 }; log('Merch line launched.', 'gold'); news(`@${S.handle} drops a merch line`, true); toast('Merch is live. Sales arrive overnight.', 'gold'); checkAll(); },
   merchUp: () => { const c = 5000 * S.merch.lvl ** 2; if (!spend(c)) return 'norender'; S.merch.lvl++; toast(`Merch quality level ${S.merch.lvl}`); },
   merchDrop: () => { if (!needEnergy(20)) return 'norender'; S.merch.boost += 3; applyFx({ fp: 0.005 }); toast('New collection dropped. Expect a sales spike tonight.', 'gold'); log('Dropped a merch collection.'); },

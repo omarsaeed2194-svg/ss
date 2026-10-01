@@ -161,7 +161,7 @@ Doing well gives you a second wind, shown as a gold energy pop-up:
 - **40+ random events** with choices: resurfaced old posts, paparazzi, stalkers, algorithm changes, shadowbans, becoming a meme, copyright strikes, hacks, reality TV, talk shows, galas, book deals, breakups, bot exposés and more.
 - **Cancellation** when heat hits 100, with apology options: sincere video, notes-app apology, tearful video, disappearing, or doubling down.
 - **Shop**: gear that raises post quality, lifestyle purchases with upkeep (supercar, mansion, jet, island), courses, energy and recovery items, bot followers, paid badge, ad campaigns.
-- **Team**: assistant, editor, manager, community manager, PR agent, therapist, lawyer, bodyguard, each with daily salaries.
+- **Team**: assistant, editor, social media manager, talent manager, community manager, PR agent, therapist, lawyer, bodyguard. Monthly salaries: the first month is paid when you hire, then every 30 days.
 - **Empire**: merch line with levels and drops, your own product brand, a podcast with celebrity guests, savings with interest, charity donations.
 - **Life & skills**: self-care actions, fan meetups, giveaways, industry parties, and four skills (charisma, creativity, editing, business) that level up with practice.
 - **Analytics**: history chart (followers, reputation, money, engagement, heat), platform breakdowns, top posts, daily wrap-ups and weekly reports.
