@@ -205,7 +205,8 @@ function renderAll() {
   if (!S) return;
   if (mentionState && !document.body.contains(mentionState.el)) hideMentions();
   applyTheme();
-  renderSidebar(); renderTopbar(); renderTabbar(); renderCol(); renderRail();
+  // one broken panel should never take down the whole screen
+  for (const f of [renderSidebar, renderTopbar, renderTabbar, renderCol, renderRail]) { try { f(); } catch (e) { console.error(`${f.name} failed`, e); } }
 }
 function badges() { return { notifs: S.notifs.filter((n) => !n.read).length, messages: S.inbox.filter((m) => !m.read && m.type !== 'me').length, deals: S.deals.filter((d) => d.status === 'active').length }; }
 
@@ -259,7 +260,7 @@ function renderRail() {
     <div class="panel"><h3>Your status</h3>${statGrid()}<button class="panel-foot" data-act="go" data-arg="profile">Open profile</button></div>
     <div class="panel"><h3>What's happening</h3>${S.trends.slice(0, 5).map((t, i) => trendRow(t, i)).join('')}<button class="panel-foot" data-act="go" data-arg="explore">Show more</button></div>
     <div class="panel"><h3>Who to follow</h3>${follow.map(([id]) => personRow(id)).join('')}<button class="panel-foot" data-act="go" data-arg="explore">Show more</button></div>
-    <div class="panel"><h3>Algorithm today</h3>${unlockedIds().map((id) => { const [l, c] = algoLabel(S.algo[id]); return `<div class="panel-row row between" style="cursor:default">${pdot(id)}<span style="flex:1">${PLATFORMS[id].name}</span><span class="pill ${c}">${l} ×${S.algo[id].toFixed(2)}</span></div>`; }).join('')}</div>
+    <div class="panel"><h3>Algorithm today</h3>${unlockedIds().map((id) => { const a = S.algo[id] || 1; const [l, c] = algoLabel(a); return `<div class="panel-row row between" style="cursor:default">${pdot(id)}<span style="flex:1">${PLATFORMS[id].name}</span><span class="pill ${c}">${l} ×${a.toFixed(2)}</span></div>`; }).join('')}</div>
     <div class="panel"><h3>Activity</h3>${S.log.slice(0, 8).map((l) => `<div class="panel-row small" style="cursor:default"><span class="muted">Day ${l.d} · </span><span class="${l.c}">${esc(l.m)}</span></div>`).join('')}</div>`;
   const rs = $('#railSearch');
   rs.addEventListener('keydown', (e) => { if (e.key === 'Enter') { ui.q = rs.value; tab = 'explore'; ui.view = null; renderAll(); } });
@@ -736,7 +737,7 @@ function vLife() {
     <div class="hint"><b>Getting energy back:</b> posts that land well refund energy, viral posts give +25, and every follower milestone, new tier, achievement, skill level, paid deal, collab, shoutout and star follow-back gives a burst. Milestones and tiers also raise your max energy for good. Post every day to build a streak for extra morning energy (+5 per day, up to +30). Rewards can overcharge you past your max.</div></div>
     <div class="sect"><h3>${ico('plane')} World tour</h3><span class="small muted">Travel for content: 25 energy, unlocks a trip topic for 3 days, grows your fans in that country, and you might run into a local star. Visited ${(S.visited || []).length} countries.</span>
       <div class="scroller" style="flex-wrap:wrap">${TRAVEL_SPOTS.filter((cc) => cc !== S.country).map((cc) => btn(`${COUNTRIES[cc].flag} ${COUNTRIES[cc].name} · ${money(travelCost(cc))}`, 'travel', cc, 'sm', S.money < travelCost(cc) || S.energy < 25 || S.travelUntil >= S.day)).join('')}</div>
-      ${S.travelUntil >= S.day ? `<span class="small gold">You're in ${COUNTRIES[S.travelCountry].name} ${COUNTRIES[S.travelCountry].flag}. Post a trip topic before you fly home.</span>` : ''}</div>
+      ${S.travelUntil >= S.day ? `<span class="small gold">You're in ${COUNTRIES[S.travelCountry || 'id'].name} ${COUNTRIES[S.travelCountry || 'id'].flag}. Post a trip topic before you fly home.</span>` : ''}</div>
     <div class="sect"><h3>${ico('tea')} Tea vault</h3><span class="small muted">Secrets you picked up at parties, collabs and in DMs. Spilling one gets huge reach and heat, and the star will not forget it.</span>
       ${(S.tea || []).length ? S.tea.map((t) => `<div class="card" style="flex-direction:row;align-items:center">${npcAv(t.npc, 'sm')}<div style="flex:1;min-width:0"><b>${esc(NPCS[t.npc].name)}</b><div class="small">${esc(t.text)}</div></div>${btn('Spill it', 'teaSpill', t.id, 'sm danger')}${btn('Keep it', 'teaDrop', t.id, 'sm')}</div>`).join('') : '<p class="small muted">Empty. Go to industry parties, collab, and get close to stars in DMs.</p>'}</div>
     <div class="sect"><h3>Skills</h3><div class="cards">${Object.entries(S.skills).map(([k, s]) => `<div class="card"><div class="t"><span>${k[0].toUpperCase() + k.slice(1)}</span><span class="pill ${s.lvl >= 10 ? 'gold' : ''}">Level ${s.lvl}</span></div><div class="meter"><i style="width:${s.lvl >= 10 ? 100 : (s.xp / (s.lvl * 60)) * 100}%"></i></div><span class="small muted">${COURSES[k].desc}</span>${btn('Practice · 15', 'practice', k, 'sm', S.energy < 15 || s.lvl >= 10)}</div>`).join('')}</div></div>`;
@@ -1089,7 +1090,7 @@ const ACT = {
       if (prize.k === 'energy') gainEnergy(35, 'Daily spin');
       if (prize.k === 'money') applyFx({ money: Math.round(Math.max(150, t * 0.02) / 10) * 10 });
       if (prize.k === 'followers') applyFx({ fp: 0.03 });
-      if (prize.k === 'boost') { const pid = pick(unlockedIds()); S.algo[pid] = +(S.algo[pid] * 1.5).toFixed(2); toast(`${PLATFORMS[pid].name} algorithm is hot for you today`, 'gold'); }
+      if (prize.k === 'boost') { const pid = pick(unlockedIds()); S.algo[pid] = +((S.algo[pid] || 1) * 1.5).toFixed(2); toast(`${PLATFORMS[pid].name} algorithm is hot for you today`, 'gold'); }
       if (prize.k === 'stress') applyFx({ stress: -25 });
       if (prize.k === 'tea') gainTea(pick(Object.keys(NPCS)), 'from a mysterious source');
       if (prize.k === 'mystery') { const pool = Object.entries(EVENTS).filter(([, e]) => e.random && (!e.when || e.when()) && !e.once); const [id, e] = pick(pool); S.queue.push({ ev: id, ctx: e.ctx ? e.ctx() : {} }); }
@@ -1274,7 +1275,7 @@ const ACT = {
   buy: (a) => { const it = SHOP.find((x) => x.id === a); if (S.owned[a]) return 'norender'; if (!spend(it.price)) { toast('Not enough money.', 'bad'); return 'norender'; } S.owned[a] = true; log(`Bought: ${it.name}.`, 'good'); toast(`Bought ${it.name}`); sound('cash'); if (it.cat === 'Lifestyle') news(`@${S.handle} shows off a new ${it.name.toLowerCase()}`, true); checkAll(); },
   consume: (a) => {
     const c = CONSUMABLES.find((x) => x.id === a); if (!spend(c.price)) { toast('Not enough money.', 'bad'); return 'norender'; }
-    if (c.special === 'vacation') { S.day += 3; S.stress = 0; S.energy = maxEnergy(); S.travelUntil = S.day + 3; S.lastPostDay = S.day - 1; S.stats.vacations++; addFollowersPct(-0.01); log('Back from Bali. Travel content ready to post.', 'good'); toast('Back from vacation, fully recharged', 'gold'); S.dayStart = snap(); }
+    if (c.special === 'vacation') { S.day += 3; S.stress = 0; S.energy = maxEnergy(); S.travelUntil = S.day + 3; S.travelCountry = 'id'; S.lastPostDay = S.day - 1; S.stats.vacations++; addFollowersPct(-0.01); log('Back from Bali. Travel content ready to post.', 'good'); toast('Back from vacation, fully recharged', 'gold'); S.dayStart = snap(); }
     else if (c.special) consumeSpecial(c.special);
     else applyFx(c.fx);
     sound('cash');
@@ -1354,7 +1355,8 @@ const SHEET_ONLY = new Set(['vPrice', 'vLink', 'vDrop', 'cAff', 'cPoll', 'cCross
 function ACT_RUN(act, arg = '') {
   if (!S || !ACT[act]) return;
   const before = statSnap();
-  const res = ACT[act](arg);
+  let res;
+  try { res = ACT[act](arg); } catch (e) { console.error(`Action ${act} failed`, e); toast('Something went wrong there. Your game is safe.', 'bad'); res = undefined; }
   if (!S) return;
   if (!NO_FLASH.has(act)) flashDelta(before, statSnap());
   save();

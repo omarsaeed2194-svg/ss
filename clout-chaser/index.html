@@ -446,6 +446,15 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100
 @keyframes blink { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
 
 /* ---------- Responsive ---------- */
+@media (max-height: 1000px) and (min-width: 701px) {
+  .brand { padding-block: 6px 8px; }
+  .nav-item { padding-block: 8px; }
+  .nav-sub { padding-block: 5px; }
+  .nav-sep { margin-block: 4px; }
+  .post-btn { padding: 11px; margin: 8px 0 6px; }
+  .sidebar .btn.big { min-height: 38px; }
+  .me-chip { padding-block: 6px; }
+}
 @media (max-width: 1260px) { .layout { grid-template-columns: 88px 600px 350px; } .sidebar .lbl, .brand .full, .me-chip .grow { display: none; } .nav-item, .nav-sub { width: auto; justify-content: center; } .post-btn { width: 52px; height: 52px; padding: 0; display: grid; place-items: center; margin-inline: auto; } .brand { text-align: center; padding-inline: 0; } .nav-sep { margin-inline: 4px; } }
 @media (max-width: 1060px) { .layout { grid-template-columns: 88px minmax(0, 600px); } .rail { display: none; } }
 @media (max-width: 700px) {

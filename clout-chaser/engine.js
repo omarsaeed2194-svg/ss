@@ -98,6 +98,7 @@ function migrate(s) {
   if (!s.geo) { s.geo = { [s.country]: 0.7, us: 0.1, br: 0.08, in: 0.07, gb: 0.05 }; }
   s.aesthetic = s.aesthetic || 'neon';
   for (const [id, p] of Object.entries(PLATFORMS)) if (!s.platforms[id]) s.platforms[id] = { unlocked: false, followers: 0, eng: p.baseEng };
+  s.algo = s.algo || {}; s.algoBoost = s.algoBoost || {}; for (const id of Object.keys(PLATFORMS)) if (!(s.algo[id] > 0)) s.algo[id] = 1;
   if (s.subs && s.subs.on) { s.platforms.vault.unlocked = true; s.platforms.vault.followers += s.subs.count || 0; s.vault = { price: 9.99, link: false, lastDrop: s.subs.lastEx || 0, lastPpv: -9, earned: 0, ppvSold: 0, drops: [], ownApp: false }; }
   delete s.subs;
   s.frames = s.frames || []; s.banners = s.banners || []; if (s.frame === undefined) s.frame = null; if (s.banner === undefined) s.banner = null;
@@ -915,7 +916,7 @@ function canUnlock(id) { return !S.platforms[id].unlocked && totalFollowers() >=
 function unlockPlatform(id) {
   if (!canUnlock(id)) return;
   const p = S.platforms[id];
-  p.unlocked = true; p.followers = Math.round(totalFollowers() * (id === 'vault' ? 0.008 : 0.04) + 20);
+  p.unlocked = true; if (!(S.algo[id] > 0)) S.algo[id] = 1; p.followers = Math.round(totalFollowers() * (id === 'vault' ? 0.008 : 0.04) + 20);
   if (id === 'vault') { vaultInit(); changeRep(-1); }
   log(`Joined ${PLATFORMS[id].name}. ${fmt(p.followers)} fans followed you over.`, 'gold');
   toast(`${PLATFORMS[id].name} unlocked`, 'gold');
