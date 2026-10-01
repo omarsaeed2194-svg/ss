@@ -196,3 +196,12 @@ Doing well gives you a second wind, shown as a gold energy pop-up:
 - `ui.js` – rendering, player actions, start screen
 
 All people, brands and platforms in the game are fictional or clearly marked parody with tweaked names; everything they do in the game is invented.
+
+## Android app
+
+`android/` turns the game into an installable APK (a full-screen WebView wrapper; saves stay on the phone).
+
+- Download: `android/dist/clout-chaser.apk`, copy it to your phone, open it, and allow "Install unknown apps" when asked.
+- Rebuild: `cd android && ./build.sh` (needs a JDK 17+ and Python 3 with `cryptography`; no Android SDK — the platform jar and dex compiler come from Maven Central).
+- The build signs with a local key in `android/.tools/` (not committed). A build made with a different key can't update an existing install: export your save in Settings, uninstall, install, then import.
+- Android 7.0+ (API 24). Back button closes sheets and pop-ups first, then goes back, then exits. "Add your photo" opens the phone's photo picker.
