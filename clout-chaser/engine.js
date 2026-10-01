@@ -59,6 +59,9 @@ function newGame(o) {
   mail({ type: 'npc', npc: o.niche === 'gaming' ? 'milo' : 'skye', subject: 'hey neighbor', body: 'Saw you just started posting. The first month is rough, keep going! Maybe we collab once you get a few more followers?' });
   mail({ type: 'fan', from: '@' + fanHandle(), subject: 'first!!', body: "I don't know you yet but your vibe is immaculate. Following." });
   S.notifs = []; S.bio = `${NICHES[o.niche].name} creator. Posting my way to the top.`;
+  S.clashes = []; S.aesthetic = pick(Object.keys(FILTERS));
+  startClash(true);
+  newChallenge();
   notify('system', null, `Welcome to the timeline, ${o.name}. Your first post is waiting.`);
   S.dayStart = snap(); S.weekStart = snap();
   pushHistory();
@@ -82,6 +85,10 @@ function migrate(s) {
   s.bio = s.bio || `${NICHES[s.niche].name} creator. Posting my way to the top.`;
   (s.feed || []).forEach((f) => { if (!f.views) f.views = Math.round(f.likes * 25); if (!f.reposts) f.reposts = Math.round(f.likes * 0.04); });
   (s.posts || []).forEach((p) => (p.comms || []).forEach((c) => { if (c.likes === undefined) c.likes = 0; }));
+  for (const [id, n] of Object.entries(NPCS)) if (!s.npcs[id]) s.npcs[id] = { followers: n.followers, rel: 0, following: false, followsYou: false, feud: false, rep: n.rep };
+  s.clashes = s.clashes || [];
+  s.aesthetic = s.aesthetic || 'neon';
+  if (!s.challenge) { const prev = S; S = s; newChallenge(); S = prev; }
   return s;
 }
 function notify(type, who, text, extra = {}) {
@@ -232,6 +239,7 @@ function topicsFor() {
   }
   if (S.collab && S.collab.until >= S.day) t.push({ id: 'collab', label: `Collab with ${npcName(S.collab.npc)}`, group: 'Collab', reach: 1.6, eng: 1.3, rep: (S.npcs[S.collab.npc].rep - 55) / 20, heat: 0, viral: 0.06, collab: S.collab.npc, phrase: `a day with @${NPCS[S.collab.npc].handle}` });
   for (const [id, n] of Object.entries(S.npcs)) if (n.feud) t.push({ id: 'diss:' + id, label: `Diss ${NPCS[id].name}`, group: 'Feud', reach: 2.3, eng: 1.5, rep: -4, heat: 16, viral: 0.08, diss: id, phrase: '@' + NPCS[id].handle });
+  for (const c of (S.clashes || []).filter((x) => !x.done)) t.push({ id: 'clash:' + c.id, label: `${NPCS[c.a].name.split(' ')[0]} vs ${NPCS[c.b].name.split(' ')[0]}`, group: 'Clash', reach: 1.9, eng: 1.35, rep: -0.3, heat: 5, viral: 0.06, clash: c.id, phrase: `the ${NPCS[c.a].name} vs ${NPCS[c.b].name} ${c.kind.toLowerCase()}` });
   if (S.partner) t.push({ id: 'couple', label: `Couple content`, group: 'Partner', reach: 1.7, eng: 1.35, rep: 0.5, heat: 2, viral: 0.05, phrase: `date night with @${NPCS[S.partner].handle}` });
   return t;
 }
@@ -243,16 +251,49 @@ function tagValue(tag) {
   return 0;
 }
 
+const hasLook = (format) => !!format && format !== 'take' && format !== 'thread';
+const capWords = (t) => (t || '').toLowerCase().replace(/[^a-z0-9#@\s]/g, ' ').split(/\s+/).filter((w) => w.length > 2);
+const TEMPLATE_STARTS = Object.values(CAPTIONS).flat().map((c) => c.split('{')[0].toLowerCase().trim()).filter((c) => c.length > 6);
+/* Originality: rewards writing your own words, punishes repeating yourself and canned captions */
+function originality(text) {
+  const t = (text || '').trim();
+  if (!t) return 20;
+  const words = capWords(t);
+  if (!words.length) return 25;
+  const set = new Set(words);
+  let maxSim = 0;
+  for (const p of S.posts.slice(0, 12)) {
+    const o = new Set(capWords(p.caption)); if (!o.size) continue;
+    let inter = 0; set.forEach((w) => { if (o.has(w)) inter++; });
+    maxSim = Math.max(maxSim, inter / Math.min(set.size, o.size));
+  }
+  let sc = 35 + Math.min(25, set.size * 2.2);
+  if (set.size / words.length > 0.85) sc += 8;
+  if (t.includes('?')) sc += 5;
+  if (/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/u.test(t)) sc += 4;
+  if (/@\w/.test(t)) sc += 4;
+  if (t.length < 15) sc -= 15;
+  sc += (skillLvl('creativity') - 1) * 1.5;
+  sc -= maxSim * 45;
+  if (TEMPLATE_STARTS.some((c) => t.toLowerCase().startsWith(c))) sc -= 12;
+  return Math.round(clamp(sc, 0, 100));
+}
+const mentionedNpcs = (t) => { const low = (t || '').toLowerCase(); return Object.keys(NPCS).filter((id) => low.includes('@' + NPCS[id].handle)); };
+
 function computePost(o, det = false) {
   const R = det ? (a, b) => (a + b) / 2 : rnd;
   const P = PLATFORMS[o.platform], ps = S.platforms[o.platform];
   const F = FORMATS[o.format], T = TONES[o.tone], E = EFFORT[o.effort], TM = TIMES[o.time];
   const topics = topicsFor();
   const topic = topics.find((x) => x.id === o.topic) || topics[0];
-  const energy = Math.max(2, Math.round(F.e * E.e * (S.team.editor && F.video ? 0.8 : 1)));
+  const FL = hasLook(o.format) && o.filter && FILTERS[o.filter] ? FILTERS[o.filter] : null;
+  const lookMatch = !!FL && o.filter === S.aesthetic;
+  const energy = Math.max(2, Math.round(F.e * E.e * (S.team.editor && F.video ? 0.8 : 1)) + (FL && FL.e ? FL.e : 0));
+  const orig = originality(o.caption);
   let q = E.q * (1 + 0.07 * (skillLvl(F.skill) - 1)) * (1 + gearQ(o.platform));
   if (T.skill) q *= 1 + 0.03 * (skillLvl(T.skill) - 1);
   if (S.stress > 70) q *= 0.85;
+  if (FL && FL.q) q *= 1 + FL.q;
   q *= R(0.7, 1.3);
   let tagB = 0;
   for (const tg of o.tags) tagB += tagValue(tg);
@@ -271,10 +312,11 @@ function computePost(o, det = false) {
   if (sellout) mult *= 0.7;
   const repeat = recent.slice(0, 3).filter((p) => p.topicId === topic.id && p.platform === o.platform).length;
   mult *= 1 - repeat * 0.12; // audiences tire of the same thing
+  mult *= (0.82 + orig / 280) * (1 + (FL && FL.reach ? FL.reach : 0)) * (lookMatch ? 1.12 : 1); // original writing and on-trend looks travel further
   mult = Math.pow(Math.max(mult, 0.01), 0.6); // stacked bonuses have diminishing returns
   const today = S.posts.filter((p) => p.day === S.day);
   mult *= Math.pow(0.72, today.filter((p) => p.platform === o.platform).length) * Math.pow(0.86, today.length); // followers tire of spam
-  const viralP = clamp(0.01 + clamp(q - 1, 0, 0.4) * 0.04 + (topic.viral || 0) + (F.viral || 0) + (TM.viral || 0) + (T.viral || 0), 0, 0.4);
+  const viralP = clamp(0.01 + clamp(q - 1, 0, 0.4) * 0.04 + (topic.viral || 0) + (F.viral || 0) + (TM.viral || 0) + (T.viral || 0) + orig / 2500 + (FL && FL.viral ? FL.viral : 0) + (lookMatch ? 0.01 : 0), 0, 0.4);
   let viral = false, flop = false;
   if (!det) {
     if (chance(viralP)) { viral = true; mult *= rnd(3, 8); }
@@ -283,6 +325,7 @@ function computePost(o, det = false) {
   const views = Math.max(3, Math.round(base * mult * R(0.85, 1.15)));
   let er = P.baseEng * T.eng * topic.eng * (F.eng || 1) * clamp(q, 0.5, 1.6) * realRatio() * R(0.8, 1.2);
   if (topic.deal && !o.disclose) er *= 1.1;
+  if (FL && FL.eng) er *= 1 + FL.eng;
   er = clamp(er, 0.3, 40);
   const likes = Math.round((views * er) / 100);
   const refund = viral || flop ? 0 : Math.round(energy * clamp((er / P.baseEng - 0.6) * 0.5, 0, 0.6)); // a warm reception gives energy back
@@ -295,13 +338,13 @@ function computePost(o, det = false) {
   let loss = 0;
   if (spicy && S.rep < 45) loss += ps.followers * R(0.005, 0.02);
   if (sellout) loss += ps.followers * 0.01;
-  let rep = T.rep + topic.rep + (F.rep || 0) + (q > 1.25 ? 0.5 : 0);
+  let rep = T.rep + topic.rep + (F.rep || 0) + (q > 1.25 ? 0.5 : 0) + (FL && FL.rep ? FL.rep : 0);
   if (views > total * 3 && total > 500) rep *= 1.4; // bigger stage, bigger swing
-  const heat = T.heat + topic.heat + (viral && spicy ? 10 : 0);
+  const heat = T.heat + topic.heat + (viral && spicy ? 10 : 0) + (FL && FL.heat ? FL.heat : 0);
   let cash = 0;
   if (o.platform === 'tube' && ps.followers >= 1000) cash += (views / 1000) * P.cpm * (1 + 0.05 * skillLvl('business'));
   if (o.platform === 'clipz') cash += (views / 1000) * P.cpm;
-  return { energy, refund, q, views, er, likes, comments, shares, gain: Math.round(gain), loss: Math.round(loss), rep, heat, cash, viral, flop, topic, viralP, sellout };
+  return { energy, refund, orig, lookMatch, q, views, er, likes, comments, shares, gain: Math.round(gain), loss: Math.round(loss), rep, heat, cash, viral, flop, topic, viralP, sellout };
 }
 
 function genCaption(o, topic) {
@@ -363,9 +406,20 @@ function doPost(o) {
     caption: (o.caption || '').trim().slice(0, 220) || genCaption(o, r.topic), tags: o.tags.slice(0, 6),
     views: r.views, likes: r.likes, comments: r.comments, shares: r.shares, gain: r.gain - r.loss, rep: r.rep, cash: r.cash,
     viral: r.viral, flop: r.flop, sponsored: !!r.topic.deal, q: r.q, comms: genComments(o, r),
+    filter: hasLook(o.format) && o.filter ? o.filter : null, orig: r.orig, lookMatch: r.lookMatch,
   };
   S.posts.unshift(post); if (S.posts.length > 80) S.posts.length = 80;
   post.fresh = true;
+  // @mentions: stars notice, friends might answer
+  post.mentions = mentionedNpcs(o.caption).slice(0, 2);
+  for (const id of post.mentions) {
+    const n = S.npcs[id];
+    if (n.feud) { changeRel(id, -3); continue; }
+    changeRel(id, TONES[o.tone].heat >= 10 ? -4 : 1.5);
+    if (n.rel >= 25 && chance(0.4) && !post.comms.some((c) => c.npc === id)) post.comms.unshift({ who: NPCS[id].handle, npc: id, text: pick(['haha thank you for the mention!', 'this is so real', 'love you for this', 'ok I see you 👀']), likes: Math.round(r.likes * rnd(0.05, 0.2)) });
+  }
+  if (r.topic.clash) { const c = S.clashes.find((x) => x.id === r.topic.clash); if (c) c.playerPosts = (c.playerPosts || 0) + 1; }
+  if (r.orig >= 85) S.stats.originals = (S.stats.originals || 0) + 1;
   // notifications, the way a real app would batch them
   post.comms.slice(0, 3).forEach((c) => notify('reply', c.npc || c.who, c.text, { post: post.id, npc: !!c.npc }));
   const starLiker = Object.entries(S.npcs).filter(([, n]) => n.rel >= 25 && !n.feud).map(([id]) => id);
@@ -395,6 +449,14 @@ function doPost(o) {
     if (prev.length >= 3 && r.views > avg * 1.6) gainEnergy(8, 'Beat your average views');
   }
   if (post.comms.some((c) => c.npc && !c.neg)) gainEnergy(5, 'A star replied to you');
+  if (r.orig >= 85) gainEnergy(4, 'That was original');
+  if (S.challenge && !S.challenge.done && challengeMet(S.challenge.req, o, r, post)) {
+    S.challenge.done = true; S.stats.challenges = (S.stats.challenges || 0) + 1;
+    addFollowersPct(0.02 * diffM());
+    notify('system', null, `Daily challenge complete: ${S.challenge.text}`);
+    log(`Daily challenge complete: ${S.challenge.text}.`, 'gold');
+    gainEnergy(20, 'Daily challenge complete');
+  }
 
   // Deal progress
   if (r.topic.deal) {
@@ -426,6 +488,40 @@ function doPost(o) {
   else if (S.heat >= 60 && S.heat - h0 >= 8 && chance(0.4)) S.queue.push({ ev: 'backlash', ctx: { platform: o.platform } });
   checkAll();
   return post;
+}
+
+/* ---------- daily creative challenge ---------- */
+function newChallenge() {
+  const plats = unlockedIds().filter((p) => p !== 'live');
+  const plat = pick(plats);
+  const fm = pick(Object.keys(FORMATS).filter((f) => FORMATS[f].p === plat));
+  const lookFm = pick(Object.keys(FORMATS).filter((f) => plats.includes(FORMATS[f].p) && hasLook(f)));
+  const tr = pick(S.trends);
+  const opts = [
+    { text: `Post a Funny ${FORMATS[fm].name} on ${PLATFORMS[plat].name}`, req: { tone: 'funny', format: fm } },
+    { text: `Ride ${tr.tag} before it peaks`, req: { trend: tr.tag } },
+    { text: 'Write a post with 75+ originality', req: { minOrig: 75 } },
+    { text: `Post a ${FORMATS[lookFm].name} with this week's ${FILTERS[S.aesthetic].name} look`, req: { filter: S.aesthetic } },
+    { text: 'Shout out a star with an @mention in a Wholesome post', req: { tone: 'wholesome', mention: true } },
+    { text: 'Ask your followers a question in an Educational post', req: { tone: 'educational', question: true } },
+    { text: `Post a Polished ${FORMATS[fm].name}`, req: { format: fm, effort: 'polished' } },
+  ];
+  const live = (S.clashes || []).filter((c) => !c.done);
+  if (live.length) { const c = pick(live); opts.push({ text: `Post about the ${NPCS[c.a].name} vs ${NPCS[c.b].name} clash`, req: { clash: c.id } }); }
+  const ch = pick(opts);
+  S.challenge = { ...ch, day: S.day, done: false };
+}
+function challengeMet(q, o, r, post) {
+  if (q.tone && o.tone !== q.tone) return false;
+  if (q.format && o.format !== q.format) return false;
+  if (q.effort && o.effort !== q.effort) return false;
+  if (q.trend && r.topic.trend !== q.trend && !o.tags.includes(q.trend)) return false;
+  if (q.minOrig && r.orig < q.minOrig) return false;
+  if (q.filter && (post.filter !== q.filter)) return false;
+  if (q.mention && !(post.mentions || []).length) return false;
+  if (q.question && !(o.caption || '').includes('?')) return false;
+  if (q.clash && r.topic.clash !== q.clash) return false;
+  return true;
 }
 
 /* ---------- deals ---------- */
@@ -461,7 +557,7 @@ function completeDeal(d) {
 function npcPost(id, silent) {
   const n = NPCS[id];
   const tr = S.trends.length ? pick(S.trends).tag : '#fyp';
-  const text = pick(NPC_POSTS[n.niche] || NPC_POSTS.lifestyle).replace('{trend}', tr);
+  const text = (n.lines && chance(0.65) ? pick(n.lines) : pick(NPC_POSTS[n.niche] || NPC_POSTS.lifestyle)).replace('{trend}', tr);
   const likes = Math.round(S.npcs[id].followers * rnd(0.01, 0.06));
   S.feed.unshift({ id: uid(), npc: id, day: S.day, text, likes, comments: Math.round(likes * rnd(0.01, 0.04)), reposts: Math.round(likes * rnd(0.02, 0.06)), views: Math.round(likes * rnd(15, 40)), liked: false, commented: false, reposted: false });
   if (S.feed.length > 40) S.feed.length = 40;
@@ -491,7 +587,8 @@ function simulateNpcs(report) {
   const ids = Object.keys(NPCS);
   for (let i = 0; i < ri(1, 2); i++) {
     const a = pick(ids); let b = pick(ids); if (b === a) b = pick(ids);
-    const h = pick(NEWS_NPC).replace('{npc}', npcName(a)).replace('{npc2}', npcName(b));
+    const pool = NPCS[a].lines ? NEWS_NPC.filter((x) => !/under fire|sketchy|rumors/.test(x)) : NEWS_NPC; // parody stars only get light gossip
+    const h = pick(pool).replace('{npc}', npcName(a)).replace('{npc2}', npcName(b));
     news(h);
     if (h.includes('under fire')) S.npcs[a].rep = clamp(S.npcs[a].rep - 5, 5, 95);
     if (h.includes('charity')) S.npcs[a].rep = clamp(S.npcs[a].rep + 3, 5, 95);
@@ -580,6 +677,11 @@ function endDay() {
   if (fakeShare > 0.15 && chance(0.05 + fakeShare * 0.2)) S.queue.push({ ev: 'exposed_bots', ctx: {} });
   // Random events
   rollRandomEvents();
+  tickClashes();
+  if (chance(0.35)) startClash();
+  if ((S.day - 1) % 7 === 0) { S.aesthetic = pick(Object.keys(FILTERS).filter((k) => k !== S.aesthetic)); news(`This week's look: everyone is posting ${FILTERS[S.aesthetic].name}.`); }
+  if (S.challenge && !S.challenge.done) log('Missed yesterday\'s challenge.', '');
+  newChallenge();
   // Awards season every 30 days
   if (S.day % 30 === 0) S.queue.push({ ev: 'awards', ctx: {} });
 
@@ -702,6 +804,14 @@ const ACHIEVEMENTS = [
   ['wholesome', 'Wholesome king/queen', 'Post 25 wholesome posts', () => S.stats.wholesome >= 25],
   ['ragebait', 'Professional troll', 'Post 25 rage-bait posts', () => S.stats.ragebait >= 25],
   ['bestie', 'Bestie', 'Reach Bestie with any star', () => Object.values(S.npcs).some((n) => n.rel >= 65)],
+  ['clash1', 'Main event', 'Win a clash battle against a star', () => (S.stats.battleWins || 0) >= 1],
+  ['clash5', 'Undisputed', 'Win 5 clash battles', () => (S.stats.battleWins || 0) >= 5],
+  ['sidewin', 'Right side of history', 'Back the winning side of 3 celebrity clashes', () => (S.stats.sideWins || 0) >= 3],
+  ['peace', 'Peacemaker', 'End a celebrity clash with a truce', () => (S.stats.truces || 0) >= 1],
+  ['original', 'Original thinker', 'Write 10 posts with 85+ originality', () => (S.stats.originals || 0) >= 10],
+  ['challenge1', 'Challenge accepted', 'Complete a daily challenge', () => (S.stats.challenges || 0) >= 1],
+  ['challenge10', 'Daily grinder', 'Complete 10 daily challenges', () => (S.stats.challenges || 0) >= 10],
+  ['alist', 'A-list friends', 'Reach Friend (40+) with a parody A-lister', () => Object.keys(PARODY_NPCS).some((id) => S.npcs[id] && S.npcs[id].rel >= 40)],
   ['nemesis', 'Arch-nemesis', 'Make a Nemesis', () => Object.values(S.npcs).some((n) => n.rel <= -60)],
   ['top10', 'Top 10', 'Pass 10 stars on the leaderboard', () => Object.values(S.npcs).filter((n) => n.followers < totalFollowers()).length >= 10],
   ['number1', 'Number one', 'Top the leaderboard', () => Object.values(S.npcs).every((n) => n.followers < totalFollowers())],

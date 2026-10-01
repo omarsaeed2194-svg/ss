@@ -36,6 +36,20 @@ The game looks and plays like a social app (inspired by the Status social-media 
 | Stress | Rises with work and heat. Above 80 it cuts energy; at 100 you burn out. |
 | Money | Earned from ads, deals, streams, merch, products, podcasts, events. |
 
+## Celebrity clashes
+
+- **Parody A-listers**: 20 satirical stand-ins for real celebrities with tweaked names (Taylor Shift, Elon Tusk, Mark Zuckerburger, Kym Kardashion, Kylie Jenmer, Cristiano Ronaldough, Leonel Messy, MrFeast, Drayke, Kendrik Lamarr, Rihannah Fenti, Beyonslay, Justin Beaver, Ariana Venti, Dwayne "The Pebble" Johnson, Logan and Jake Pall, Kai Senate, Snoop Doug, Billie Eyelash). They post in their own voice and are tagged as parody in the game. Everything they say and do is invented, and they only get light gossip.
+- **World clashes**: stars start public beefs with each other: classic rivalries (diss track war, cage match, GOAT debate, beauty empire war, snack vs drink war, award snubs) plus random subtweet wars and unfollow drama. Each clash runs 3–5 days with a live public vote, and both sides post disses in the feed.
+- **Your move**: back a side (their fans follow you, the other side resents you, and backing the winner pays off), broker peace (a charisma check that ends the clash in a truce), stir the pot (followers and heat), or post about it (a high-reach topic). Stars who like you DM you to ask for your support.
+- **Clash battles**: challenge any star from their profile to three rounds judged by a public vote. Roast beats meme, meme beats receipts, receipts beat roast. Taking the high road wins against attacks, and fan armies depend on who has more followers. Winning brings followers, energy and the option to end the feud with a handshake.
+
+## Creativity
+
+- **Originality score** (0–100) for every post: your own words, a wide vocabulary, questions, emoji and @mentions raise it. Repeating yourself or using the dice's canned captions lowers it. Higher originality means more reach and viral chance, and 85+ gives a small energy bonus.
+- **Looks** for photo and video posts: Clean, Neon, Vintage, Chaotic, Cinematic, Lo-fi, each with its own effect. One look trends each week for +12% reach. The post's media is drawn in that look.
+- **Daily creative challenge**: a new prompt every day (a funny short, ride a trend, 75+ originality, use this week's look, mention a star, ask a question, post about a clash). The composer tells you when your draft completes it. Reward: +20 energy and +2% followers.
+- **@mentions** notify stars; friends may reply in your thread.
+
 ## Energy rewards
 
 Doing well gives you a second wind, shown as a gold energy pop-up:

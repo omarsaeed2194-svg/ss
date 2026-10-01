@@ -228,12 +228,13 @@ function animateFresh() {
 }
 
 /* ---------- post cards ---------- */
-function media(format, label, color, seed) {
+function media(format, label, color, seed, look) {
   const F = FORMATS[format]; if (!F) return '';
   if (format === 'take' || format === 'thread') return '';
   const r = srand(seed);
+  const L = look && FILTERS[look];
   const dur = F.video ? `${Math.floor(r() * (F.p === 'tube' ? 20 : 1)) + (F.p === 'tube' ? 8 : 0)}:${String(Math.floor(r() * 60)).padStart(2, '0')}` : '';
-  return `<div class="tw-media" style="background:linear-gradient(${Math.floor(r() * 360)}deg, ${color}, #111 140%)"><div class="lbl">${esc(label)}</div>${F.video ? `<span class="play">${ico('live')}</span><span class="dur">${dur}</span>` : ''}${format === 'carousel' ? '<span class="dur">1/5</span>' : ''}</div>`;
+  return `<div class="tw-media" style="background:${L ? `linear-gradient(${Math.floor(r() * 360)}deg, ${L.g[0]}, ${L.g[1]})` : `linear-gradient(${Math.floor(r() * 360)}deg, ${color}, #111 140%)`};${L && L.ink ? `color:${L.ink}` : ''}"><div class="lbl" style="${L && L.ink ? 'text-shadow:none' : ''}">${esc(label)}</div>${L ? `<span class="dur" style="left:auto;right:10px">${L.name}</span>` : ''}${F.video ? `<span class="play">${ico('live')}</span><span class="dur">${dur}</span>` : ''}${format === 'carousel' ? '<span class="dur">1/5</span>' : ''}</div>`;
 }
 function actions(o) {
   const c = (v, fresh) => fresh ? `<span data-count="${v}">0</span>` : fmt(v);
@@ -250,7 +251,7 @@ function myPostCard(p) {
   return `<article class="tw ${p.fresh ? 'fresh' : ''}" data-act="open" data-arg="post:${p.id}">${ctx}${meAv()}<div class="tw-main">
     <div class="tw-head"><b>${esc(S.name)}</b>${meBadge()}<span class="h">@${esc(S.handle)} · ${ago(p.day)}</span><span class="pl">${pdot(p.platform)}${P.name}</span></div>
     <div class="tw-text">${rich(p.caption)}${extra.length ? ' ' + rich(extra.join(' ')) : ''}</div>
-    ${media(p.format, `${FORMATS[p.format].name}: ${p.topic}`, P.color, p.id)}
+    ${media(p.format, `${FORMATS[p.format].name}: ${p.topic}`, P.color, p.id, p.filter)}
     ${actions({ replyAct: 'open', arg: 'post:' + p.id, replies: p.comments, reposts: p.shares, likes: p.likes, views: p.views, fresh: p.fresh })}
     ${p.fresh ? `<div class="row small">${p.gain ? `<span class="pill ${p.gain > 0 ? 'good' : 'bad'}">${signed(p.gain)} followers</span>` : ''}<span class="pill ${p.rep >= 0 ? 'good' : 'bad'}">${signed1(p.rep)} rep</span>${p.cash > 0.5 ? `<span class="pill gold">${money(p.cash)} ads</span>` : ''}</div>` : ''}
   </div></article>`;
@@ -260,13 +261,33 @@ function npcPostCard(f) {
   const r = srand(f.id);
   const hasMedia = r() < 0.35;
   const fmtK = ['photo', 'reel', 'carousel'][Math.floor(r() * 3)];
-  return `<article class="tw" data-act="open" data-arg="npcpost:${f.id}">${n.feud ? `<div class="tw-ctx bad">${ico('fire')} Your rival</div>` : S.partner === f.npc ? `<div class="tw-ctx" style="color:var(--like)">${ico('heart')} Your partner</div>` : ''}
+  const clash = f.clash && (S.clashes || []).find((c) => c.id === f.clash);
+  return `<article class="tw" data-act="open" data-arg="npcpost:${f.id}">${clash ? `<div class="tw-ctx" style="color:var(--like)">${ico('fire')} ${esc(clash.kind)}: ${esc(firstName(clash.a))} vs ${esc(firstName(clash.b))}</div>` : n.feud ? `<div class="tw-ctx bad">${ico('fire')} Your rival</div>` : S.partner === f.npc ? `<div class="tw-ctx" style="color:var(--like)">${ico('heart')} Your partner</div>` : ''}
     <span data-act="open" data-arg="star:${f.npc}">${npcAv(f.npc)}</span><div class="tw-main">
     <div class="tw-head"><b>${esc(N.name)}</b>${npcBadge(f.npc)}<span class="h">@${N.handle} · ${ago(f.day)}</span></div>
     <div class="tw-text">${rich(f.text)}</div>
     ${hasMedia ? media(fmtK, N.type, N.color, f.id) : ''}
     ${actions({ replyAct: 'open', arg: 'npcpost:' + f.id, id: String(f.id), replies: f.comments + (f.commented ? 1 : 0), reposts: f.reposts || 0, likes: f.likes, views: f.views || f.likes * 25, liked: f.liked, reposted: f.reposted, likeAct: f.liked ? 'noop' : 'like', repostAct: f.reposted ? 'noop' : 'repost' })}
   </div></article>`;
+}
+
+/* ---------- Clash and challenge cards ---------- */
+function clashCard(c) {
+  const pa = Math.round(c.votes * 100), left = c.ends - S.day;
+  const side = (k) => `<button class="cv" data-act="open" data-arg="star:${k}">${npcAv(k, 'lg')}<b>${esc(NPCS[k].name)}</b><span class="small muted">${fmt(S.npcs[k].followers)}</span></button>`;
+  const status = c.done ? (c.winner === 'truce' ? 'Ended in a truce' : `${esc(firstName(c.winner))} won`) : left > 0 ? `${left} day${left > 1 ? 's' : ''} left` : 'Final day';
+  const mine = c.side === 'peace' ? 'You made peace' : c.side ? `You backed ${esc(firstName(c.side === 'a' ? c.a : c.b))}` : '';
+  return `<div class="clash ${c.done ? 'done' : ''}">
+    <div class="row between"><span class="pill like">${ico('fire')} ${esc(c.kind)}</span><span class="small muted">${status}</span></div>
+    <div class="clash-vs">${side(c.a)}<span class="vs">VS</span>${side(c.b)}</div>
+    <div class="clash-bar"><i style="width:${pa}%"></i></div><div class="row between small"><b>${pa}%</b><span class="muted">public vote</span><b>${100 - pa}%</b></div>
+    ${mine ? `<div class="small gold">${mine}</div>` : ''}
+    ${!c.done ? `<div class="row">${!c.side ? btn(`Team ${esc(firstName(c.a))} · 5`, 'clashSide', c.id + ':a', 'sm') + btn(`Team ${esc(firstName(c.b))} · 5`, 'clashSide', c.id + ':b', 'sm') + btn('Make peace · 15', 'clashPeace', c.id, 'sm') + btn('Stir the pot · 5', 'clashStir', c.id, 'sm danger') : ''}${btn(`${ico('feather')} Post about it`, 'clashMeme', c.id, 'sm blue')}</div>` : ''}
+  </div>`;
+}
+function challengeCard() {
+  const ch = S.challenge; if (!ch) return '';
+  return `<div class="challenge ${ch.done ? 'done' : ''}">${ico(ch.done ? 'star' : 'sparkle', 'ico-lg')}<div style="flex:1;min-width:0"><div class="small muted">Daily creative challenge · +20 energy, +2% followers</div><b>${esc(ch.text)}</b></div>${ch.done ? '<span class="pill good">Done</span>' : btn('Start', 'compose', '', 'sm blue')}</div>`;
 }
 
 /* ---------- Home ---------- */
@@ -283,7 +304,7 @@ function vHome() {
     : `<div class="empty"><h3>Nothing yet</h3><p>Your posts show up here. Write your first one.</p>${btn('Post', 'compose', '', 'blue')}</div>`;
   return `<div class="col-head">${head('Home', `Day ${S.day} · ${weekday()} · ${tier().name} creator${S.streak ? ` · <span class="gold">${S.streak}-day streak</span>` : ''}`, false, `<button class="btn sm" data-act="endDay" title="Sleep to end the day">${ico('moon')} Sleep</button>`)}
     ${tabsBar([['foryou', 'For you'], ['following', 'Following'], ['mine', 'Your posts']], ui.feedTab, 'feedTab')}</div>
-    ${statusStrip()}${prompt}
+    ${statusStrip()}${prompt}${ui.feedTab !== 'mine' ? challengeCard() + activeClashes().map(clashCard).join('') : ''}
     ${items.length ? items.slice(0, 50).map((it) => it.k === 'me' ? myPostCard(it.p) : npcPostCard(it.f)).join('') : empty}`;
 }
 
@@ -310,8 +331,8 @@ function vThread(id, isNpc) {
   return `<div class="col-head">${head('Post', P.name, true)}</div><div class="thread-main">
     <div class="row" style="flex-wrap:nowrap">${meAv()}<div style="min-width:0"><b style="display:flex;gap:4px;align-items:center">${esc(S.name)} ${meBadge()}</b><span class="muted">@${esc(S.handle)}</span></div></div>
     <div class="tw-text">${rich(p.caption)}</div>
-    ${media(p.format, `${FORMATS[p.format].name}: ${p.topic}`, P.color, p.id)}
-    <div class="thread-meta">Day ${p.day} · ${P.name} · ${FORMATS[p.format].name} · ${TONES[p.tone].name} · <b style="color:var(--ink)">${fmt(p.views)}</b> Views</div>
+    ${media(p.format, `${FORMATS[p.format].name}: ${p.topic}`, P.color, p.id, p.filter)}
+    <div class="thread-meta">Day ${p.day} · ${P.name} · ${FORMATS[p.format].name} · ${TONES[p.tone].name}${p.orig !== undefined ? ` · Originality ${p.orig}` : ''}${p.filter ? ` · ${FILTERS[p.filter].name} look${p.lookMatch ? ' (on trend)' : ''}` : ''} · <b style="color:var(--ink)">${fmt(p.views)}</b> Views</div>
     <div class="thread-counts"><span><b>${fmt(p.shares)}</b> Reposts</span><span><b>${fmt(p.likes)}</b> Likes</span><span><b>${fmt(p.comments)}</b> Replies</span><span class="${p.gain >= 0 ? 'good' : 'bad'}"><b style="color:inherit">${signed(p.gain)}</b> Followers</span><span class="${p.rep >= 0 ? 'good' : 'bad'}"><b style="color:inherit">${signed1(p.rep)}</b> Rep</span>${p.cash > 0.5 ? `<span><b>${money(p.cash)}</b> Ad revenue</span>` : ''}</div></div>
     <div class="hint" style="margin:12px 16px">Talk to your replies. Thanking fans builds engagement and reputation. Clapping back at haters gets attention but raises heat. 2 energy each.</div>
     ${p.comms.map((c, i) => {
@@ -341,7 +362,10 @@ function vExplore() {
   const follow = Object.keys(S.npcs).filter((id) => !S.npcs[id].following).sort((a, b) => (NPCS[b].niche === S.niche) - (NPCS[a].niche === S.niche) || S.npcs[b].rel - S.npcs[a].rel);
   return `<div class="col-head"><div class="col-title"><label class="search" style="flex:1">${ico('search')}<input id="exploreSearch" placeholder="Search stars and trends" value="${esc(ui.q)}" aria-label="Search"></label></div></div>
     <div id="exploreResults">${exploreResults()}</div>
-    <div class="sect" style="padding-bottom:4px;border:0"><h3>Trends for you</h3><span class="small muted">Tap a trend to post about it. Fresh trends that fit your niche reach furthest.</span></div>
+    <div class="sect" style="border:0"><h3>Celebrity clashes</h3><span class="small muted">Pick a side, broker peace, stir the pot, or turn it into content. Backing the winner pays off.</span></div>
+    ${activeClashes().length ? activeClashes().map(clashCard).join('') : '<div class="empty" style="padding:16px">No clashes right now. Give it a day.</div>'}
+    ${(S.clashes || []).filter((c) => c.done).slice(0, 4).map((c) => `<div class="list-row" style="cursor:default">${npcAv(c.a, 'xs')}<span class="small">vs</span>${npcAv(c.b, 'xs')}<div class="grow"><span class="small">${esc(c.kind)}</span><span class="small muted">${c.winner === 'truce' ? 'Truce' : esc(NPCS[c.winner].name) + ' won'} · Day ${c.ends}</span></div></div>`).join('')}
+    <div class="sect" style="padding-bottom:4px;border:0;border-top:1px solid var(--line)"><h3>Trends for you</h3><span class="small muted">Tap a trend to post about it. Fresh trends that fit your niche reach furthest.</span></div>
     ${S.trends.map((t, i) => trendRow(t, i)).join('')}
     <div class="sect" style="padding-bottom:4px;border:0;border-top:1px solid var(--line)"><h3>Who to follow</h3></div>${follow.slice(0, 6).map((id) => personRow(id)).join('')}
     <div class="sect" style="border-top:1px solid var(--line)"><h3>Leaderboard</h3><div class="table-wrap"><table class="lb"><tbody>${rows.map((r, i) => `<tr class="${r.id === 'you' ? 'you' : ''}" ${r.id !== 'you' ? `data-act="open" data-arg="star:${r.id}" style="cursor:pointer"` : ''}><td class="num muted">${i + 1}</td><td><div class="row" style="flex-wrap:nowrap">${r.id === 'you' ? meAv('xs') : npcAv(r.id, 'xs')}<span>${esc(r.name)}</span></div></td><td class="n">${fmt(r.f)}</td></tr>`).join('')}</tbody></table></div></div>`;
@@ -361,11 +385,12 @@ function vStar(id) {
     if (S.partner === id) more.push(btn('Break up', 'breakup', id, 'sm danger'));
     more.push(btn('Call out · 10', 'feud', id, 'sm danger'));
   } else more.push(btn('Make peace · 10', 'makeup', id, 'sm'));
+  more.push(btn(`${ico('fire')} Clash battle · 20`, 'battle', id, 'sm danger', S.energy < 20, 'Three rounds, public vote. Starts a feud.'));
   return `<div class="col-head">${head(esc(N.name) + ' ' + npcBadge(id), `${posts.length} posts`, true)}</div>
     <div class="banner" style="background:linear-gradient(120deg, ${N.color}, #111)"></div>
     <div class="prof">${npcAv(id, 'xl')}
       <div class="prof-actions"><button class="icon-btn" style="border:1px solid var(--line)" data-act="openDm" data-arg="${id}" aria-label="Message">${ico('mail')}</button>${btn(n.following ? 'Following' : 'Follow', 'follow', id, n.following ? '' : 'primary')}</div>
-      <h2>${esc(N.name)} ${npcBadge(id)}</h2><div class="handle">@${N.handle} ${n.followsYou ? '<span class="pill">Follows you</span>' : ''}</div>
+      <h2>${esc(N.name)} ${npcBadge(id)}</h2><div class="handle">@${N.handle} ${n.followsYou ? '<span class="pill">Follows you</span>' : ''} ${N.lines ? '<span class="pill" title="Satirical character with a tweaked name. Everything they do in the game is invented.">Parody</span>' : ''}</div>
       <div class="bio">${esc(N.bio)}</div>
       <div class="meta"><span>${N.type}</span><span>${NICHES[N.niche].name}</span><span>Public rep ${Math.round(n.rep)}</span></div>
       <div class="counts"><span><b>${fmt(n.followers)}</b> Followers</span></div>
@@ -374,6 +399,7 @@ function vStar(id) {
         <span class="small muted">Collab at 15, shoutout at 40, date at 65. Relationships fade without contact. Ego ${Math.round(N.ego * 10)}/10 · Drama ${Math.round(N.drama * 10)}/10</span></div>
       <div class="row" style="margin-bottom:12px">${more.join('')}</div>
     </div>
+    ${activeClashes().filter((c) => c.a === id || c.b === id).map(clashCard).join('')}
     ${tabsBar([['posts', 'Posts']], 'posts', 'noop')}
     ${posts.length ? posts.map(npcPostCard).join('') : '<div class="empty">No recent posts.</div>'}`;
 }
@@ -621,6 +647,9 @@ function vAccount() {
       <p><b>Sleep</b> to end the day: growth, income, salaries, trends, DMs and random events happen overnight.</p>
       <p><b>Heat</b> at 100 gets you cancelled. <b>Reputation</b> at 0 gets you deplatformed. <b>Stress</b> at 100 burns you out.</p>
       <p><b>Stars</b> answer DMs, reply to your posts, collab, date, and feud. Be nice, be funny, or be messy.</p>
+      <p><b>Clashes</b>: stars feud with each other in public. Back a side (pay off if they win), broker peace, stir the pot, or post about it for huge reach. You can also challenge any star to a three-round clash battle from their profile.</p>
+      <p><b>Creativity</b>: write your own words for a higher originality score (more reach and viral chance), pick a look for photos and videos (this week's trending look gets +12% reach), and complete the daily creative challenge.</p>
+      <p class="muted">Parody stars with tweaked names are satire. Everything they say and do here is invented.</p>
       <p><b>Win</b> with 100M followers and 60+ reputation. Keyboard: N opens the composer, Ctrl/Cmd+E sleeps.</p></div></div>`;
 }
 function applyTheme() {
@@ -634,7 +663,7 @@ function applyTheme() {
 function openCompose(preset = {}) {
   if (!S || modalBusy) return;
   const last = ui.c || {};
-  ui.c = { platform: last.platform && S.platforms[last.platform] && S.platforms[last.platform].unlocked ? last.platform : 'pix', format: null, topic: 'niche', topicManual: false, toneMode: 'auto', effort: last.effort || 'normal', time: last.time || 'prime', text: '', disclose: true, opts: false, ...preset };
+  ui.c = { platform: last.platform && S.platforms[last.platform] && S.platforms[last.platform].unlocked ? last.platform : 'pix', format: null, topic: 'niche', topicManual: false, toneMode: 'auto', effort: last.effort || 'normal', time: last.time || 'prime', text: '', disclose: true, opts: false, filter: last.filter === undefined ? null : last.filter, ...preset };
   $('#composeWrap').hidden = false;
   renderCompose(true);
 }
@@ -653,7 +682,7 @@ function composeInput() {
     else c.topic = 'niche';
   }
   const tone = c.toneMode === 'auto' ? detectTone(c.text) : c.toneMode;
-  return { platform: c.platform, format: c.format, topic: c.topic, tone, effort: c.effort, time: c.time, tags, caption: c.text, disclose: c.disclose };
+  return { platform: c.platform, format: c.format, topic: c.topic, tone, effort: c.effort, time: c.time, tags, caption: c.text, disclose: c.disclose, filter: c.filter };
 }
 function renderCompose(focus) {
   const c = ui.c; if (!c) return;
@@ -683,6 +712,7 @@ function renderCompose(focus) {
         <div id="cLive"></div>
       </div></div>
       <div class="opts">
+        ${hasLook(c.format) ? `<span class="opt-lbl">Look · this week everyone is posting <span class="gold">${FILTERS[S.aesthetic].name}</span></span><div class="scroller">${chip('None', 'cLook', '', !c.filter)}${Object.entries(FILTERS).map(([k, f]) => `<button class="chip" data-act="cLook" data-arg="${k}" aria-pressed="${c.filter === k}" title="${esc(f.desc)}"><span class="swatch-mini" style="background:linear-gradient(135deg, ${f.g[0]}, ${f.g[1]})"></span>${f.name}${k === S.aesthetic ? '<span class="cost">trending</span>' : ''}</button>`).join('')}</div>${c.filter ? `<span class="small muted">${esc(FILTERS[c.filter].desc)}${c.filter === S.aesthetic ? ' · on trend: +12% reach' : ''}</span>` : ''}` : ''}
         <div class="row between"><span class="opt-lbl">Tone ${c.toneMode === 'auto' ? '· read from your words' : '· set by you'}</span>${c.toneMode !== 'auto' ? `<button class="chip" data-act="cTone" data-arg="auto">Back to auto</button>` : ''}</div>
         <div class="scroller">${Object.entries(TONES).map(([id, t]) => `<button class="chip" data-act="cTone" data-arg="${id}" aria-pressed="${o.tone === id}" title="${esc(t.desc)}">${t.name}</button>`).join('')}</div>
         <span class="opt-lbl">About ${c.topicManual ? '· set by you' : '· picked from your hashtags and mentions'}</span>
@@ -713,7 +743,8 @@ function updateComposeLive() {
   const T = TONES[o.tone];
   const useful = o.tags.filter((t) => tagValue(t) > 0).length;
   const live = $('#cLive');
-  if (live) live.innerHTML = `<div class="row small"><span class="pill ${T.rep >= 1 ? 'good' : T.rep < 0 ? 'bad' : ''}">Tone: ${T.name}</span><span class="pill blue">${esc(r.topic.label)}</span>${useful ? `<span class="pill good">${useful} useful tag${useful > 1 ? 's' : ''}</span>` : ''}${o.tags.length > 4 ? '<span class="pill warn">Too many hashtags</span>' : ''}<span class="muted">${280 - c.text.length}</span></div>`;
+  const meets = S.challenge && !S.challenge.done && c.text.trim() && challengeMet(S.challenge.req, o, r, { filter: hasLook(o.format) && o.filter ? o.filter : null, mentions: mentionedNpcs(o.caption) });
+  if (live) live.innerHTML = `<div class="row small"><span class="pill ${r.orig >= 75 ? 'good' : r.orig < 40 ? 'bad' : 'warn'}" title="Your own words, questions, emoji and @mentions raise it. Repeating yourself or using the dice lowers it.">Originality ${r.orig}</span>${meets ? `<span class="pill gold">${ico('sparkle')} Completes today's challenge</span>` : ''}<span class="pill ${T.rep >= 1 ? 'good' : T.rep < 0 ? 'bad' : ''}">Tone: ${T.name}</span><span class="pill blue">${esc(r.topic.label)}</span>${useful ? `<span class="pill good">${useful} useful tag${useful > 1 ? 's' : ''}</span>` : ''}${o.tags.length > 4 ? '<span class="pill warn">Too many hashtags</span>' : ''}<span class="muted">${280 - c.text.length}</span></div>`;
   const fc = $('#cForecast');
   if (fc) fc.innerHTML = `<span><b>~${fmt(r.views)}</b> views</span><span><b class="${r.gain - r.loss >= 0 ? 'good' : 'bad'}">${signed(r.gain - r.loss)}</b> followers</span><span><b class="gold">+${r.refund}</b> energy back</span><span><b>${(r.viralP * 100).toFixed(1)}%</b> viral</span><span>Rep <b class="${r.rep >= 1 ? 'good' : r.rep <= -1 ? 'bad' : ''}">${r.rep >= 1 ? 'up' : r.rep <= -1 ? 'down' : 'flat'}</b></span><span>Heat <b class="${r.heat > 8 ? 'bad' : r.heat > 0 ? 'warn' : 'good'}">${r.heat > 8 ? 'spicy' : r.heat > 0 ? 'warm' : 'safe'}</b></span>${S.shadowbanUntil >= S.day ? '<span class="bad">Shadowbanned</span>' : ''}`;
   const pb = $('#cPost');
@@ -797,6 +828,12 @@ const ACT = {
   },
   unlock: (a) => { unlockPlatform(a); if (ui.c && !$('#composeWrap').hidden) { ui.c.platform = a; ui.c.format = null; renderCompose(false); } },
   stream: (a) => { closeCompose(); startStream(a); },
+  cLook: (a) => { ui.c.filter = a || null; renderCompose(false); return 'norender'; },
+  clashSide: (a) => { const [id, side] = a.split(':'); const c = S.clashes.find((x) => x.id === +id); if (!c || c.done || c.side || !needEnergy(5)) return 'norender'; clashSide(c, side); checkAll(); processQueue(); },
+  clashPeace: (a) => { const c = S.clashes.find((x) => x.id === +a); if (!c || c.done || c.side || !needEnergy(15)) return 'norender'; if (!clashPeace(c)) toast(`Nobody asked you, said both of them.`, 'bad'); else toast('You got them to hug it out!', 'gold'); checkAll(); },
+  clashStir: (a) => { const c = S.clashes.find((x) => x.id === +a); if (!c || c.done || !needEnergy(5)) return 'norender'; clashStir(c); checkAll(); processQueue(); },
+  clashMeme: (a) => { const c = S.clashes.find((x) => x.id === +a); if (!c) return 'norender'; openCompose({ topic: 'clash:' + c.id, topicManual: true, text: `@${NPCS[c.a].handle} vs @${NPCS[c.b].handle} ` }); return 'norender'; },
+  battle: (a) => { if (!needEnergy(20)) return 'norender'; startBattle(a); processQueue(); },
   like: (a) => {
     const f = S.feed.find((x) => x.id === +a); if (!f || f.liked || !needEnergy(1)) return 'norender';
     f.liked = true; f.likes++; changeRel(f.npc, 1.5);
@@ -1009,7 +1046,7 @@ const ACT = {
 };
 
 const NO_FLASH = new Set(['go', 'back', 'open', 'openDm', 'endDay', 'dmSend', 'noop']);
-const SHEET_ONLY = new Set(['compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);
+const SHEET_ONLY = new Set(['cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);
 function ACT_RUN(act, arg = '') {
   if (!S || !ACT[act]) return;
   const before = statSnap();
@@ -1047,6 +1084,7 @@ function showStart() {
     const top = Object.entries(NPCS).sort((a, b) => b[1].followers - a[1].followers).slice(0, 3);
     body = `<div><h1 class="logo">Clout<br><em>Chaser</em></h1><p class="muted" style="font-size:18px;margin-top:14px;max-width:44ch">Sims, but social media. Create a persona, post whatever you want, and see if the internet makes you famous or cancels you.</p></div>
       <div class="preview-card">${top.map(([id, n], i) => `<div class="tw" style="cursor:default${i === 2 ? ';border:0' : ''}">${avatar(n.name, n.color)}<div class="tw-main"><div class="tw-head"><b>${esc(n.name)}</b>${vb()}<span class="h">@${n.handle}</span></div><div class="tw-text">${rich(NPC_POSTS[n.niche][i % 3].replace('{trend}', '#MainCharacterWalk'))}</div><div class="small muted">${fmt(n.followers * 0.03)} likes</div></div></div>`).join('')}</div>
+      <p class="small muted">Includes parody celebrities with tweaked names. They are satire: everything they say and do in the game is invented.</p>
       ${saved ? `<button class="btn primary big" data-act="onbContinue">Continue as @${esc(saved.handle)} · Day ${saved.day}</button><button class="btn big" data-act="onbNext">Create a new persona</button>` : '<button class="btn primary big" data-act="onbNext">Create your persona</button>'}`;
   } else if (o.step === 1) {
     body = `${steps}<div><h2 style="font-size:28px">Who are you online?</h2><p class="muted">This is how you'll show up on everyone's timeline.</p></div>
