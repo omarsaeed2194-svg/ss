@@ -126,18 +126,26 @@ const tier = (t) => TIERS[tierIndex(t)];
 const diffM = () => ({ chill: 1.35, normal: 1, brutal: 0.75 }[S.diff] || 1);
 const sev = () => ({ chill: 0.7, normal: 1, brutal: 1.4 }[S.diff] || 1);
 const skillLvl = (k) => S.skills[k].lvl;
+/* Team levels: Junior → Legend. tm(k) is 0 if not hired, 1 at Junior, up to 2 at Legend. */
+const TEAM_LEVELS = ['Junior', 'Pro', 'Senior', 'Elite', 'Legend'];
+const teamLvl = (k) => (S.team[k] ? (S.teamLvl && S.teamLvl[k]) || 1 : 0);
+const tm = (k) => (S.team[k] ? 1 + (teamLvl(k) - 1) * 0.25 : 0);
+const teamPay = (k) => Math.round(TEAM[k].pay * (1 + ((S.teamLvl && S.teamLvl[k]) || 1) * 0.4 - 0.4));
+const teamUpCost = (k) => Math.round(TEAM[k].pay * 4 * teamLvl(k) / 10) * 10;
+const teamSize = () => Object.keys(S.team).filter((k) => S.team[k]).length;
 const stamina = () => Math.min(150, Math.floor((((S && S.day) || 1) - 1) / 5) * 5); // +5 max energy every 5 days, up to +150
-function maxEnergy() { const m = 100 + stamina() + (S.bonusMaxE || 0) + (S.team.assistant ? 20 : 0) + (S.owned.mansion ? 10 : 0) + (S.owned.island ? 10 : 0); return S.injuredUntil && S.injuredUntil >= S.day ? Math.round(m * 0.6) : m; }
+function maxEnergy() { const m = 100 + stamina() + (S.bonusMaxE || 0) + Math.round(20 * tm('assistant')) + (S.owned.mansion ? 10 : 0) + (S.owned.island ? 10 : 0); return S.injuredUntil && S.injuredUntil >= S.day ? Math.round(m * 0.6) : m; }
 const energyCap = () => maxEnergy() + 60; // rewards can overcharge you past your normal max
 function gearQ(pid) {
   let q = 0;
   for (const it of SHOP) if (S.owned[it.id] && it.q && (!it.plats || it.plats.includes(pid))) q += it.q;
   if (S.owned.drone && S.niche === 'travel' && (pid === 'tube' || pid === 'clipz')) q += 0.1;
-  if (S.team.editor && (pid === 'clipz' || pid === 'tube' || pid === 'pix')) q += 0.1;
-  if (S.team.stylist && pid !== 'chirp') q += 0.06;
-  return Math.min(q, 0.45); // gear helps, but talent still matters
+  q = Math.min(q, 0.45); // gear helps, but talent still matters
+  if (pid === 'clipz' || pid === 'tube' || pid === 'pix') q += 0.1 * tm('editor');
+  if (pid !== 'chirp') q += 0.06 * tm('stylist');
+  return q;
 }
-function reachBonus() { let r = S.team.analyst ? 0.08 : 0; for (const it of SHOP) if (S.owned[it.id] && it.reach) r += it.reach; return r; }
+function reachBonus() { let r = 0.08 * tm('analyst') + Math.min(0.1, Math.max(0, teamSize() - 3) * 0.01); /* dream-team synergy */ for (const it of SHOP) if (S.owned[it.id] && it.reach) r += it.reach; return r; }
 function repLabel(r = S.rep) { return r >= 85 ? 'Beloved' : r >= 68 ? 'Respected' : r >= 50 ? 'Liked' : r >= 35 ? 'Mixed' : r >= 20 ? 'Sketchy' : 'Toxic'; }
 function repClass(r = S.rep) { return r >= 60 ? 'good' : r >= 35 ? 'warn' : 'bad'; }
 function heatLabel(h = S.heat) { return h >= 85 ? 'Imploding' : h >= 60 ? 'Scorching' : h >= 35 ? 'Heated' : h >= 12 ? 'Buzzing' : 'Calm'; }
@@ -196,17 +204,17 @@ function applyFx(e = {}) {
   if (df) out.push(['Followers', signed(df), df > 0]);
   if (e.rep) {
     let d = e.rep;
-    if (d < 0) { d *= sev(); if (S.team.pr) d *= 0.6; }
+    if (d < 0) { d *= sev(); if (S.team.pr) d *= Math.max(0.25, 1 - 0.4 * tm('pr')); }
     const r0 = S.rep; changeRep(d); const dd = S.rep - r0;
     if (Math.abs(dd) >= 0.05) out.push(['Reputation', signed1(dd), dd > 0]);
   }
   if (e.heat) {
-    let d = e.heat; if (d > 0 && S.team.pr) d *= 0.7;
+    let d = e.heat; if (d > 0 && S.team.pr) d *= Math.max(0.35, 1 - 0.3 * tm('pr'));
     const h0 = S.heat; S.heat = clamp(S.heat + d, 0, 100); const dd = S.heat - h0;
     if (Math.abs(dd) >= 0.5) out.push(['Heat', signed1(dd), dd < 0]);
   }
   if (e.money) {
-    let d = e.money; if (d < 0 && e.legal && S.team.lawyer) d *= 0.5;
+    let d = e.money; if (d < 0 && e.legal && S.team.lawyer) d *= Math.max(0.1, 1 - 0.5 * tm('lawyer'));
     S.money += d; if (d > 0) S.stats.earned += d;
     out.push(['Money', signedMoney(d), d > 0]);
   }
@@ -309,8 +317,8 @@ function computePost(o, det = false) {
   const topic = topics.find((x) => x.id === o.topic) || topics[0];
   const FL = hasLook(o.format) && o.filter && FILTERS[o.filter] ? FILTERS[o.filter] : null;
   const lookMatch = !!FL && o.filter === S.aesthetic;
-  const energy = Math.max(2, Math.round(F.e * E.e * (S.team.editor && F.video ? 0.8 : 1)) + (FL && FL.e ? FL.e : 0));
-  const orig = Math.min(100, originality(o.caption) + (o.img ? 8 : 0) + (S.team.ghostwriter && (o.caption || '').trim() ? 12 : 0)); // your own photo counts as original
+  const energy = Math.max(2, Math.round(F.e * E.e * (F.video ? Math.max(0.5, 1 - 0.2 * tm('editor')) : 1)) + (FL && FL.e ? FL.e : 0));
+  const orig = Math.min(100, originality(o.caption) + (o.img ? 8 : 0) + ((o.caption || '').trim() ? Math.round(12 * tm('ghostwriter')) : 0)); // your own photo counts as original
   let q = E.q * (1 + 0.07 * (skillLvl(F.skill) - 1)) * (1 + gearQ(o.platform));
   if (T.skill) q *= 1 + 0.03 * (skillLvl(T.skill) - 1);
   if (S.stress > 70) q *= 0.85;
@@ -715,7 +723,7 @@ function challengeMet(q, o, r, post) {
 /* ---------- deals ---------- */
 function dealPay(b) {
   const t = Math.max(totalFollowers(), 300);
-  let pay = b.base * Math.pow(t / 1000, 0.85) * clamp(engRate() / 5, 0.4, 2.2) * (S.team.manager ? 1.25 : 1) * (1 + 0.04 * (skillLvl('business') - 1));
+  let pay = b.base * Math.pow(t / 1000, 0.85) * clamp(engRate() / 5, 0.4, 2.2) * (1 + 0.25 * tm('manager')) * (1 + 0.04 * (skillLvl('business') - 1));
   if (b.shady) pay *= 1.6;
   return Math.max(25, Math.round(pay / 5) * 5);
 }
@@ -793,12 +801,12 @@ function endDay() {
   let salaries = 0; S.teamDue = S.teamDue || {};
   for (const k of Object.keys(S.team)) if (S.team[k]) {
     if (!S.teamDue[k]) S.teamDue[k] = S.day + 30;
-    if (S.day >= S.teamDue[k]) { salaries += TEAM[k].pay; S.teamDue[k] += 30; }
+    if (S.day >= S.teamDue[k]) { salaries += teamPay(k); S.teamDue[k] += 30; }
   }
   let upkeep = 0; for (const it of SHOP) if (S.owned[it.id] && it.upkeep) upkeep += it.upkeep;
   if (salaries) { S.money -= salaries; lines.push(['Team payday (monthly salaries)', -salaries]); }
   if (upkeep) { S.money -= upkeep; lines.push(['Lifestyle upkeep', -upkeep]); }
-  const fameTax = Math.round([0, 10, 45, 160, 550, 1600, 6500, 26000][tierIndex()] * (S.team.accountant ? 0.5 : 1));
+  const fameTax = Math.round([0, 10, 45, 160, 550, 1600, 6500, 26000][tierIndex()] * (S.team.accountant ? Math.max(0.1, 1 - 0.5 * tm('accountant')) : 1));
   if (fameTax) { S.money -= fameTax; lines.push(['Cost of fame (rent, stylist, security)', -fameTax]); }
   // Passive businesses
   const t = totalFollowers(); const repF = clamp(S.rep / 60, 0.2, 1.6);
@@ -814,7 +822,7 @@ function endDay() {
     S.product.hype = Math.max(1, (S.product.hype || 1) * 0.9); S.product.sold += units;
     S.money += profit; S.stats.earned += profit; if (profit) lines.push([`${S.product.name} sales`, profit]);
   }
-  if (S.savings > 0) { const i = Math.round(S.savings * 0.0006 * (S.team.accountant ? 2 : 1)); S.savings += i; if (i) lines.push(['Savings interest', i]); }
+  if (S.savings > 0) { const i = Math.round(S.savings * 0.0006 * (1 + tm('accountant'))); S.savings += i; if (i) lines.push(['Savings interest', i]); }
   // Tube passive ad revenue from the back catalog
   const tube = S.platforms.tube;
   if (tube.unlocked && tube.followers >= 1000) { const ad = Math.round(tube.followers * 0.02 * PLATFORMS.tube.cpm / 10 * realRatio()); if (ad) { S.money += ad; S.stats.earned += ad; lines.push(['ViewTube back-catalog ads', ad]); } }
@@ -828,7 +836,7 @@ function endDay() {
     const p = S.platforms[id];
     let g = ((S.rep - 40) / 100) * 0.02 * diffM();
     if (idle > 2) g -= Math.min(0.05, (idle - 2) * 0.008);
-    if (S.team.smm) { g += 0.002; p.eng = clamp(p.eng + 0.08, 0.5, 30); }
+    if (S.team.smm) { g += 0.002 * tm('smm'); p.eng = clamp(p.eng + 0.08, 0.5, 30); }
     p.followers = Math.max(0, p.followers * (1 + g));
     p.eng += (PLATFORMS[id].baseEng - p.eng) * 0.05; // drift back to platform norm
   }
@@ -836,8 +844,8 @@ function endDay() {
   // Fake follower purges
   if (S.fake > 0) { const purge = S.fake * 0.015; S.fake -= purge; S.platforms.pix.followers = Math.max(0, S.platforms.pix.followers - purge); }
   // Heat & stress
-  S.heat = clamp(S.heat - (S.team.pr ? 14 : 6), 0, 100);
-  S.stress = clamp(S.stress - 12 - (S.team.therapist ? 12 : 0) - (S.owned.mansion ? 5 : 0) + S.heat / 25, 0, 100);
+  S.heat = clamp(S.heat - (6 + 8 * tm('pr')), 0, 100);
+  S.stress = clamp(S.stress - 12 - 12 * tm('therapist') - (S.owned.mansion ? 5 : 0) + S.heat / 25, 0, 100);
   if (S.money < 0) {
     S.stats.debtDays++; S.stress = clamp(S.stress + 8, 0, 100);
     lines.push(['You are in debt', 0]);
@@ -872,7 +880,7 @@ function endDay() {
     const best = postIds().sort((a, b) => (S.algo[b] || 1) - (S.algo[a] || 1))[0], tr = S.trends.find((x) => x.niches.includes(S.niche)) || S.trends[0];
     if (best) notify('system', null, `Analyst: ${PLATFORMS[best].name} is hottest today (×${(S.algo[best] || 1).toFixed(2)}). Ride ${tr ? tr.tag : 'a trend'} before it peaks.`);
   }
-  if (S.team.stylist) changeRep(0.15);
+  if (S.team.stylist) changeRep(0.15 * tm('stylist'));
   S.energy = Math.round(maxEnergy() * (S.stress >= 80 ? 0.7 : 1)) + streakBonus;
   generateInbox();
   // Burnout
@@ -927,7 +935,7 @@ function generateInbox() {
     else mail({ type: 'fan', from: '@' + fanHandle(), subject: pick(['thank you', 'hi!!', 'you helped me', 'big fan']), body: pick(['Your posts got me through a really hard week. Thank you.', 'I tried your recipe/tip/routine and it actually worked!', 'Can you say hi to my sister in your next post? She is obsessed.', 'Been here since you had like 200 followers. So proud.', 'You inspired me to start my own account!']) });
   }
   // brand offers
-  let p = 0.15 + ti * 0.08 + (S.team.manager ? 0.15 : 0) - (S.rep < 30 ? 0.15 : 0);
+  let p = 0.15 + ti * 0.08 + 0.15 * tm('manager') - (S.rep < 30 ? 0.15 : 0);
   if (S.heat > 70) p *= 0.4;
   if (t >= 400 && chance(clamp(p, 0.05, 0.85))) makeOffer();
   if (t >= 20000 && chance(p * 0.4)) makeOffer();

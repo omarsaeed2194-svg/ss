@@ -43,13 +43,13 @@ function investigationLabel(v = S.investigation || 0) { return v >= 70 ? ['Under
 function stuntOdds(id) {
   const st = STUNTS[id];
   let r = st.risk * (1 + Math.max(0, S.stress - 50) / 100) * (injured() ? 1.3 : 1);
-  if (st.harm === 'injury' && S.team.bodyguard) r *= 0.7;
-  if (st.harm === 'arrest' && S.team.lawyer) r *= 0.75;
+  if (st.harm === 'injury' && S.team.bodyguard) r *= Math.max(0.3, 1 - 0.3 * tm('bodyguard'));
+  if (st.harm === 'arrest' && S.team.lawyer) r *= Math.max(0.35, 1 - 0.25 * tm('lawyer'));
   r *= 1 + stuntsToday() * 0.15; // tired daredevils slip
   return clamp(r, 0.05, 0.9);
 }
 function schemeOdds(id) {
-  let r = SCHEMES[id].risk * (0.5 + (S.investigation || 0) / 100) * (S.team.pr ? 0.8 : 1) * (S.team.lawyer ? 0.85 : 1);
+  let r = SCHEMES[id].risk * (0.5 + (S.investigation || 0) / 100) * (S.team.pr ? Math.max(0.5, 1 - 0.2 * tm('pr')) : 1) * (S.team.lawyer ? Math.max(0.5, 1 - 0.15 * tm('lawyer')) : 1);
   return clamp(r, 0.05, 0.95);
 }
 

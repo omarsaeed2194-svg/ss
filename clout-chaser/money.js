@@ -59,7 +59,7 @@ const MARKET_NEWS = [
 ];
 const TIPSTERS = ['@WallStBets_Wendy', '@ChartWizard', '@DiamondHandsDan', '@Finfluencer_Fiona', '@InsiderIvy', '@TheCandleGuy'];
 /* Tomorrow's whisper: a tip about a big move. Reliability grows with business skill and a talent manager. */
-const tipAccuracy = () => clamp(0.6 + skillLvl('business') * 0.03 + (S.team.manager ? 0.08 : 0) + (S.team.investor ? 0.1 : 0), 0.6, 0.95);
+const tipAccuracy = () => clamp(0.6 + skillLvl('business') * 0.03 + 0.08 * tm('manager') + 0.1 * tm('investor'), 0.6, 0.97);
 function newTip() {
   const k = pick(Object.keys(ASSETS)), up = chance(0.6);
   S.market.tip = { k, up, who: pick(TIPSTERS), size: k === 'clt' ? rnd(0.25, 0.6) : rnd(0.07, 0.18) };
@@ -132,7 +132,7 @@ function makeGig(kind, extra = {}) {
     license:    { subject: 'License your viral clip', body: 'A media company wants to license your viral clip for a compilation.', pay: Math.max(200, extra.views ? extra.views * 0.0006 : t * 0.01), e: 0 },
     cameo:      { subject: 'Movie cameo', body: 'A director wants you for a 10-second cameo as "influencer #2".', pay: Math.max(5000, t * 0.05), e: 35, stress: 10, rep: 1, fp: 0.02 },
   }[kind];
-  mail({ type: 'gig', kind, from: kind === 'license' ? 'ClipVault Media' : kind === 'cameo' ? 'Paramountain Pictures' : kind === 'keynote' ? 'GrowthCon' : kind === 'appearance' ? 'Club Neon' : '@' + fanHandle(), subject: G.subject, body: G.body, pay: Math.round(G.pay * (S.team.agent ? 1.3 : 1) / 5) * 5, e: G.e, stress: G.stress || 0, rep: G.rep || 0, fp: G.fp || 0 });
+  mail({ type: 'gig', kind, from: kind === 'license' ? 'ClipVault Media' : kind === 'cameo' ? 'Paramountain Pictures' : kind === 'keynote' ? 'GrowthCon' : kind === 'appearance' ? 'Club Neon' : '@' + fanHandle(), subject: G.subject, body: G.body, pay: Math.round(G.pay * (1 + 0.3 * tm('agent')) / 5) * 5, e: G.e, stress: G.stress || 0, rep: G.rep || 0, fp: G.fp || 0 });
 }
 function acceptGig(m) {
   if (S.energy < m.e) { toast(`You need ${m.e} energy for this gig.`, 'bad'); return false; }
@@ -163,7 +163,7 @@ function moneyTick(lines) {
   if (h && Object.values(S.market.q).some((q) => q > 0)) lines.push([`Markets: ${h}`, 0]);
   // gigs
   const t = totalFollowers(), ti = tierIndex();
-  const gx = S.team.agent ? 1.6 : 1;
+  const gx = 1 + 0.6 * tm('agent');
   if (t >= 800 && chance((0.25 + ti * 0.05) * gx)) makeGig('shoutout');
   if (t >= 10000 && chance((0.12 + ti * 0.03) * gx)) makeGig('appearance');
   if (t >= 100000 && chance(0.08 * gx)) makeGig('keynote');
@@ -277,7 +277,7 @@ function mgrTick(lines) {
   for (let i = 0; i < n; i++) { const p = mgrPost(); if (p) { views += p.views; gain += p.gain; cash += p.cash; if (p.viral) viral++; } }
   const rep = replyToComments(6);
   // small paid promos the manager books for you
-  const promo = Math.round(Math.max(170, totalFollowers() * realRatio() * 0.005 * clamp(S.rep / 60, 0.3, 1.4)) * (1 + skillLvl('business') * 0.05));
+  const promo = Math.round(Math.max(170, totalFollowers() * realRatio() * 0.005 * clamp(S.rep / 60, 0.3, 1.4)) * (1 + skillLvl('business') * 0.05) * tm('socialmgr'));
   S.money += promo; S.stats.earned += promo; m.earned += promo + cash;
   m.last = [S.day, n, Math.round(views), Math.round(gain), Math.round(cash + promo), rep.n, viral];
   lines.push([`Your manager posted ${n}× (${fmt(views)} views, ${signed(Math.round(gain))} followers${viral ? `, ${viral} viral!` : ''}) and replied to ${rep.n} fans`, 0]);

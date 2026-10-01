@@ -696,13 +696,13 @@ function vShop() {
 }
 function vTeam() {
   const t = totalFollowers();
-  let payroll = 0; Object.keys(S.team).forEach((k) => { if (S.team[k]) payroll += TEAM[k].pay; });
+  let payroll = 0; Object.keys(S.team).forEach((k) => { if (S.team[k]) payroll += teamPay(k); });
   const due = (k) => Math.max(0, ((S.teamDue || {})[k] || S.day + 30) - S.day);
   return `<div class="col-head">${head('Your team', `Payroll ${money(payroll)}/month`)}</div>
-    <div class="sect"><div class="hint">Salaries are monthly. Hiring pays the first month up front; after that each person is paid every 30 days. Three days in debt and everyone quits.</div><div class="cards">${Object.entries(TEAM).map(([k, m]) => {
+    <div class="sect"><div class="hint">Salaries are monthly. Hiring pays the first month up front; after that each person is paid every 30 days. Upgrade people from Junior to Legend to double what they do. Hire 4+ people for a dream-team reach bonus (+1% per extra hire, up to +10%; now +${Math.round(Math.min(0.1, Math.max(0, teamSize() - 3) * 0.01) * 100)}%). Three days in debt and everyone quits.</div><div class="cards">${Object.entries(TEAM).map(([k, m]) => {
       const hired = !!S.team[k], locked = t < m.req;
-      return `<div class="card ${hired ? 'owned' : ''}"><div class="t"><span>${m.name}</span><span class="num">${money(m.pay)}/mo</span></div><span class="small muted">${m.desc}</span>
-        ${hired ? `<div class="row"><span class="pill good">On the team</span><span class="small muted">Next payday in ${due(k)} day${due(k) === 1 ? '' : 's'}</span>${btn('Let go', 'fire', k, 'sm danger')}</div>${k === 'socialmgr' ? mgrPanel() : k === 'investor' ? invPanel() : ''}` : locked ? `<span class="small muted row">${ico('lock')} Needs ${fmt(m.req)} followers</span>` : btn(`Hire · ${money(m.pay)} first month`, 'hire', k, 'sm primary', S.money < m.pay)}</div>`;
+      return `<div class="card ${hired ? 'owned' : ''}"><div class="t"><span>${m.name}</span><span class="num">${money(hired ? teamPay(k) : m.pay)}/mo</span></div><span class="small muted">${m.desc}</span>
+        ${hired ? `<div class="row"><span class="pill good">${TEAM_LEVELS[teamLvl(k) - 1]} · Lv ${teamLvl(k)}</span><span class="small muted">Effect ×${tm(k).toFixed(2)} · next payday in ${due(k)} day${due(k) === 1 ? '' : 's'}</span>${teamLvl(k) < 5 ? btn(`Upgrade to ${TEAM_LEVELS[teamLvl(k)]} · ${money(teamUpCost(k))}`, 'teamUp', k, 'sm primary', S.money < teamUpCost(k), `Effect ×${(tm(k) + 0.25).toFixed(2)}, salary ${money(Math.round(m.pay * (1 + teamLvl(k) * 0.4)))}/mo`) : '<span class="pill gold">Max level</span>'}${btn('Let go', 'fire', k, 'sm danger')}</div>${k === 'socialmgr' ? mgrPanel() : k === 'investor' ? invPanel() : ''}` : locked ? `<span class="small muted row">${ico('lock')} Needs ${fmt(m.req)} followers</span>` : btn(`Hire · ${money(m.pay)} first month`, 'hire', k, 'sm primary', S.money < m.pay)}</div>`;
     }).join('')}</div></div>`;
 }
 function productName() { return `${S.handle} ${{ beauty: 'Cosmetics', gaming: 'Gear', fitness: 'Protein', comedy: 'Hot Sauce', tech: 'Audio', food: 'Snacks', music: 'Headphones', fashion: 'Studio', travel: 'Luggage', lifestyle: 'Home' }[S.niche]}`; }
@@ -932,7 +932,7 @@ function renderCompose(focus) {
         <div class="scroller">${Object.values(groups).flat().map((t) => `<button class="chip" data-act="cTopic" data-arg="${esc(t.id)}" aria-pressed="${c.topic === t.id}">${t.group && t.group !== 'Trend' ? `<span class="cost">${t.group}</span>` : ''}${esc(t.label)}</button>`).join('')}</div>
         ${cur && cur.deal ? `<label class="row small"><input type="checkbox" data-act="cDisclose" ${c.disclose ? 'checked' : ''}> Add #ad disclosure <span class="muted">(skipping it boosts engagement, risks a fine)</span></label>` : ''}
         <button class="chip" data-act="cOpts" style="align-self:flex-start">${c.opts ? 'Hide' : 'More'} post settings</button>
-        ${c.opts ? `<span class="opt-lbl">Format</span><div class="scroller">${Object.entries(FORMATS).filter(([, f]) => f.p === c.platform).map(([id, f]) => chip(f.name, 'cFmt', id, c.format === id, false, `<span class="cost">${Math.round(f.e * EFFORT[c.effort].e * (S.team.editor && f.video ? 0.8 : 1))}</span>`)).join('')}</div>
+        ${c.opts ? `<span class="opt-lbl">Format</span><div class="scroller">${Object.entries(FORMATS).filter(([, f]) => f.p === c.platform).map(([id, f]) => chip(f.name, 'cFmt', id, c.format === id, false, `<span class="cost">${Math.round(f.e * EFFORT[c.effort].e * (f.video ? Math.max(0.5, 1 - 0.2 * tm('editor')) : 1))}</span>`)).join('')}</div>
           <span class="opt-lbl">Effort</span><div class="scroller">${Object.entries(EFFORT).map(([id, e]) => chip(e.name, 'cEffort', id, c.effort === id)).join('')}</div>
           <span class="opt-lbl">Post time</span><div class="scroller">${Object.entries(TIMES).map(([id, e]) => chip(e.name, 'cTime', id, c.time === id)).join('')}</div>` : `<span class="small muted">${FORMATS[c.format].name} · ${EFFORT[c.effort].name} effort · ${TIMES[c.time].name}</span>`}
       </div>`;
@@ -1254,7 +1254,7 @@ const ACT = {
       case 'accept': { const d = { id: uid(), brand: m.brand, pay: m.pay, req: m.req, done: 0, day: S.day, deadline: S.day + m.days, status: 'active' }; S.deals.push(d); fin(`Signed. ${m.req} post${m.req > 1 ? 's' : ''} due by day ${d.deadline}.`); toast(`Deal signed with ${BRANDS[m.brand].name}`, 'gold'); break; }
       case 'negotiate': {
         if (m.negotiated) { toast("They won't go higher.", 'bad'); return 'norender'; }
-        if (chance(0.45 + skillLvl('business') * 0.05 + (S.team.manager ? 0.15 : 0))) { m.pay = Math.round(m.pay * 1.3); m.negotiated = true; toast(`${BRANDS[m.brand].name} agreed to ${money(m.pay)}.`, 'gold'); addXp('business', 15); break; }
+        if (chance(0.45 + skillLvl('business') * 0.05 + 0.15 * tm('manager'))) { m.pay = Math.round(m.pay * 1.3); m.negotiated = true; toast(`${BRANDS[m.brand].name} agreed to ${money(m.pay)}.`, 'gold'); addXp('business', 15); break; }
         fin('They walked away.'); toast('Negotiation failed. Offer withdrawn.', 'bad'); addXp('business', 8); break;
       }
       case 'decline': fin('Declined'); break;
@@ -1299,7 +1299,8 @@ const ACT = {
   },
   course: (a) => { const l = skillLvl(a); const price = Math.round(COURSES[a].base * Math.pow(l, 1.6)); if (l >= 10) return 'norender'; if (!spend(price)) { toast('Not enough money.', 'bad'); return 'norender'; } S.skills[a].lvl++; S.skills[a].xp = 0; toast(`${a[0].toUpperCase() + a.slice(1)} is now level ${l + 1}`, 'gold'); log(`Finished ${COURSES[a].name}.`, 'good'); checkAll(); },
   hire: (a) => { const m = TEAM[a]; if (!spend(m.pay)) { toast('Not enough money.', 'bad'); return 'norender'; } S.team[a] = true; S.teamDue = S.teamDue || {}; S.teamDue[a] = S.day + 30; if (a === 'assistant') S.energy += 20; log(`Hired a ${m.name.toLowerCase()}.`, 'good'); toast(`${m.name} hired`); checkAll(); },
-  fire: (a) => { S.team[a] = false; if (S.teamDue) delete S.teamDue[a]; log(`Let your ${TEAM[a].name.toLowerCase()} go.`); },
+  teamUp: (a) => { const c = teamUpCost(a); if (teamLvl(a) >= 5) { toast('Already at Legend level.'); return 'norender'; } if (!spend(c)) { toast('Not enough money.', 'bad'); return 'norender'; } S.teamLvl = S.teamLvl || {}; S.teamLvl[a] = teamLvl(a) + 1; toast(`${TEAM[a].name} is now ${TEAM_LEVELS[S.teamLvl[a] - 1]}`, 'gold'); log(`Upgraded your ${TEAM[a].name.toLowerCase()} to ${TEAM_LEVELS[S.teamLvl[a] - 1]}.`, 'good'); sound('cash'); if (S.teamLvl[a] === 5 && typeof celebrate === 'function') celebrate('gold'); },
+  fire: (a) => { S.team[a] = false; if (S.teamDue) delete S.teamDue[a]; if (S.teamLvl) delete S.teamLvl[a]; log(`Let your ${TEAM[a].name.toLowerCase()} go.`); },
   merchLaunch: () => { if (!spend(3000)) return 'norender'; S.merch = { lvl: 1, sold: 0, boost: 2 }; log('Merch line launched.', 'gold'); news(`@${S.handle} drops a merch line`, true); toast('Merch is live. Sales arrive overnight.', 'gold'); checkAll(); },
   merchUp: () => { const c = 5000 * S.merch.lvl ** 2; if (!spend(c)) return 'norender'; S.merch.lvl++; toast(`Merch quality level ${S.merch.lvl}`); },
   merchDrop: () => { if (!needEnergy(20)) return 'norender'; S.merch.boost += 3; applyFx({ fp: 0.005 }); toast('New collection dropped. Expect a sales spike tonight.', 'gold'); log('Dropped a merch collection.'); },

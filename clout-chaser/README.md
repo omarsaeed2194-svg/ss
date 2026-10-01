@@ -108,6 +108,7 @@ A sixth platform, unlocked at 1K followers. Fans pay monthly for exclusive drops
 ## More team and spicy moves
 
 - New hires: **Data analyst** (+8% reach, a daily tip on the hottest platform and trend), **Ghostwriter** (+12 originality), **Money manager** (auto-invests part of your spare cash every night, follows tips, sells ahead of predicted drops, tips +10% reliable), **Stylist** (+6% photo/video quality, small daily reputation boost), **Booking agent** (60% more gigs, 30% more pay), **Accountant** (half the cost of fame, double savings interest).
+- **Team levels**: upgrade anyone from Junior → Pro → Senior → Elite → Legend. Each level adds +25% to what they do (Legend = double) and raises their salary. Hiring 4+ people gives a dream-team reach bonus (+1% per extra hire, up to +10%).
 - **Spicy moves** in the Danger Zone: fake a showmance with a star, troll rivals with a burner account, drop a diss track, stage a public breakup, crash an award show stage, join the Love Villa reality dating show, or get paid to start a fake feud. Each has odds, a payoff and a messy way to fail.
 
 ## Danger Zone
