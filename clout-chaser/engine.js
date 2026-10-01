@@ -126,7 +126,8 @@ const tier = (t) => TIERS[tierIndex(t)];
 const diffM = () => ({ chill: 1.35, normal: 1, brutal: 0.75 }[S.diff] || 1);
 const sev = () => ({ chill: 0.7, normal: 1, brutal: 1.4 }[S.diff] || 1);
 const skillLvl = (k) => S.skills[k].lvl;
-function maxEnergy() { const m = 100 + (S.bonusMaxE || 0) + (S.team.assistant ? 20 : 0) + (S.owned.mansion ? 10 : 0) + (S.owned.island ? 10 : 0); return S.injuredUntil && S.injuredUntil >= S.day ? Math.round(m * 0.6) : m; }
+const stamina = () => Math.min(150, Math.floor((((S && S.day) || 1) - 1) / 5) * 5); // +5 max energy every 5 days, up to +150
+function maxEnergy() { const m = 100 + stamina() + (S.bonusMaxE || 0) + (S.team.assistant ? 20 : 0) + (S.owned.mansion ? 10 : 0) + (S.owned.island ? 10 : 0); return S.injuredUntil && S.injuredUntil >= S.day ? Math.round(m * 0.6) : m; }
 const energyCap = () => maxEnergy() + 60; // rewards can overcharge you past your normal max
 function gearQ(pid) {
   let q = 0;
@@ -866,6 +867,7 @@ function endDay() {
   S.trends = S.trends.filter((tr) => S.day - tr.born < tr.life);
   while (S.trends.length < 5) addTrend();
   rollAlgo();
+  if ((S.day - 1) % 5 === 0 && S.day - 1 <= 150) { notify('system', null, `Day ${S.day}: your stamina grew. Max energy +5 (now ${maxEnergy()}).`); lines.push([`Stamina up: max energy +5 (now ${maxEnergy()})`, 0]); }
   if (S.team.analyst) {
     const best = postIds().sort((a, b) => (S.algo[b] || 1) - (S.algo[a] || 1))[0], tr = S.trends.find((x) => x.niches.includes(S.niche)) || S.trends[0];
     if (best) notify('system', null, `Analyst: ${PLATFORMS[best].name} is hottest today (×${(S.algo[best] || 1).toFixed(2)}). Ride ${tr ? tr.tag : 'a trend'} before it peaks.`);
