@@ -904,7 +904,7 @@ function renderCompose(focus) {
   let body;
   if (c.platform === 'vault') body = vaultBody();
   else if (c.platform === 'live') {
-    body = `<div class="opts" style="border-top:0"><b style="font-size:20px">Go live on Streamly</b><span class="muted">Chat throws surprises at you mid-stream: raids, celebrity drop-ins, sponsor moments. Earn donations and Streamly followers.</span>
+    body = `<div class="opts" style="border-top:0"><b style="font-size:20px">Go live on Streamly</b><span class="muted">Chat throws surprises at you mid-stream: raids, celebrity drop-ins, sponsor moments. Earn donations, virtual gifts (🌹 to 🪐 Universe at $10K), PR packages and Streamly followers.</span>
       <div class="cards">${Object.entries(STREAMS).map(([id, s]) => `<div class="card"><div class="t"><span>${s.name}</span><span class="pill blue">${s.e} energy</span></div><span class="small muted">${s.chats} chat moment${s.chats > 1 ? 's' : ''}${s.stress ? ' · extra stress' : ''}</span>${btn(`${ico('live')} Go live`, 'stream', id, 'blue sm', S.energy < s.e)}</div>`).join('')}</div>
       <span class="small muted">Expected viewers: ~${fmt((S.platforms.live.followers * 0.06 + totalFollowers() * 0.002 + 5) * (S.algo.live || 1))}</span></div>`;
   } else {

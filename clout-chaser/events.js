@@ -481,7 +481,10 @@ const EVENTS = {
       const L = STREAMS[c.len];
       const ch = 1 + (skillLvl('charisma') - 1) * 0.06;
       c.don = Math.round(c.don + c.viewers * L.hours * rnd(0.03, 0.08) * ch);
-      c.gain = Math.round(c.viewers * L.hours * rnd(0.04, 0.09) * ch * diffM() / (1 + Math.log10(Math.max(1, S.platforms.live.followers) / 100 + 1) * 0.6));
+      c.gain = Math.round(c.viewers * L.hours * rnd(0.05, 0.11) * ch * diffM() / (1 + Math.log10(Math.max(1, S.platforms.live.followers) / 100 + 1) * 0.6));
+      const gifts = rollGifts(c);
+      S.money += gifts; S.stats.earned += gifts; S.stats.giftsEarned = (S.stats.giftsEarned || 0) + gifts;
+      if (chance(L.hours >= 12 ? 0.8 : L.hours >= 3 ? 0.45 : 0.25)) { const pk = pick(PR_PACKAGES); const note = pk.fx(); c.pkg = pk.text + (typeof note === 'string' ? `. ${note}` : ''); }
       S.platforms.live.followers += c.gain;
       for (const id of unlockedIds()) if (id !== 'live' && id !== 'vault') S.platforms[id].followers += c.gain * 0.1;
       S.money += c.don; S.stats.earned += c.don; S.stats.streams++;
@@ -490,12 +493,16 @@ const EVENTS = {
       S.platforms.live.eng = clamp(S.platforms.live.eng * 0.8 + 14 * 0.2, 0.5, 30);
       addXp('charisma', 10 * L.hours);
       if (c.viewers > (S.stats.peakViewers || 0)) S.stats.peakViewers = c.viewers;
-      log(`Streamed ${L.hours}h: peak ${fmt(c.viewers)} viewers, ${money(c.don)} in donations.`, 'good');
+      log(`Streamed ${L.hours}h: peak ${fmt(c.viewers)} viewers, ${money(c.don)} in donations, ${money(c.giftTotal)} in gifts.`, 'good');
+      if (c.giftTotal >= 1000 && typeof celebrate === 'function') celebrate('gold');
       S.lastPostDay = S.day;
       sound('cash');
       checkAll();
     },
-    text: (c) => `<div class="summary-lines"><div><span>Peak viewers</span><span class="num">${fmt(c.viewers)}</span></div><div><span>Donations & subs</span><span class="num good">${money(c.don)}</span></div><div><span>New Streamly followers</span><span class="num good">${signed(c.gain)}</span></div></div>`,
+    text: (c) => `<div class="summary-lines"><div><span>Peak viewers</span><span class="num">${fmt(c.viewers)}</span></div><div><span>Donations & subs</span><span class="num good">${money(c.don)}</span></div><div><span>Gifts</span><span class="num gold">${money(c.giftTotal || 0)}</span></div><div><span>New Streamly followers</span><span class="num good">${signed(c.gain)}</span></div></div>
+      ${(c.gifts || []).length ? `<div class="gifts">${c.gifts.map((g) => `<span class="gift" title="${g.name} · $${g.v} each"><b>${g.icon}</b>×${fmt(g.n)}</span>`).join('')}</div>` : ''}
+      ${c.topGifter ? `<div class="small muted">Top gifter: <b style="color:var(--ink)">@${esc(c.topGifter.who)}</b> ${c.topGifter.gift.icon}</div>` : ''}
+      ${c.pkg ? `<div class="hint">📦 PR package arrived: ${esc(c.pkg)}</div>` : ''}`,
     choices: () => [{ label: 'Close stream', fn: () => null }],
   },
 };
@@ -507,7 +514,50 @@ function awardCat() {
 }
 
 /* Livestream chat moments. Each mutates the stream context c. */
+/* Virtual gifts viewers send during a stream, and the PR packages that show up after */
+const LIVE_GIFTS = [
+  { id: 'rose', name: 'Rose', icon: '🌹', v: 1, share: 0.14 },
+  { id: 'heart', name: 'Heart', icon: '💖', v: 5, share: 0.18 },
+  { id: 'crown', name: 'Crown', icon: '👑', v: 25, share: 0.18 },
+  { id: 'rocket', name: 'Rocket', icon: '🚀', v: 100, share: 0.2 },
+  { id: 'lion', name: 'Lion', icon: '🦁', v: 500, share: 0.15 },
+  { id: 'galaxy', name: 'Galaxy', icon: '🌌', v: 2000, share: 0.1 },
+  { id: 'universe', name: 'Universe', icon: '🪐', v: 10000, share: 0.05 },
+];
+function rollGifts(c) {
+  const L = STREAMS[c.len];
+  const ch = 1 + (skillLvl('charisma') - 1) * 0.08;
+  const budget = c.viewers * Math.pow(L.hours, 0.85) * rnd(0.25, 0.5) * ch * clamp(S.rep / 55, 0.4, 1.6) * (c.giftX || 1) * (S.team.smm ? 1.15 : 1) + 8;
+  const out = [];
+  for (const g of LIVE_GIFTS) {
+    const exp = (budget * g.share) / g.v * rnd(0.6, 1.4);
+    const n = exp >= 1 ? Math.round(exp) : chance(exp) ? 1 : 0;
+    if (n) out.push({ ...g, n });
+  }
+  if (!out.length) out.push({ ...LIVE_GIFTS[0], n: ri(3, 12) });
+  const top = out[out.length - 1];
+  c.gifts = out; c.giftTotal = out.reduce((a, g) => a + g.n * g.v, 0);
+  c.topGifter = { who: fanHandle(), gift: top };
+  return c.giftTotal;
+}
+const PR_PACKAGES = [
+  { text: 'A crate of FizzBolt energy drinks', fx: () => gainEnergy(25, 'PR package: energy drinks') },
+  { text: 'A designer hoodie from an up-and-coming brand', fx: () => { changeRep(1); addFollowersPct(0.004); } },
+  { text: 'A hand-painted portrait from a fan', fx: () => { S.stress = clamp(S.stress - 12, 0, 100); } },
+  { text: 'A mystery tech box', fx: () => { const it = SHOP.find((x) => x.cat === 'Gear' && !S.owned[x.id] && x.price <= 2000); if (it) { S.owned[it.id] = true; return `It was a ${it.name}! (+gear)`; } S.money += 500; return 'Already had everything inside, so you resold it for $500.'; } },
+  { text: 'A gift card from a sponsor who wants in', fx: () => { const v = Math.round(Math.max(300, T() * 0.004) / 10) * 10; S.money += v; S.stats.earned += v; return `Worth ${money(v)}.`; } },
+];
+
 const CHAT = {
+  giftwar: { title: () => 'Gift battle in chat!', text: () => `<b>${fanHandle()}</b> and <b>${fanHandle()}</b> are fighting to be your top gifter. 🚀🦁🚀`,
+    choices: (c) => [
+      { label: 'Hype the battle', sub: 'Gifts ×1.8, +stress', fn: () => { c.giftX = (c.giftX || 1) * 1.8; return R('Chat went feral. Rockets everywhere.', { stress: 6 }); } },
+      { label: 'Set a gift goal', sub: '"At $500 I eat a ghost pepper"', fn: () => { c.giftX = (c.giftX || 1) * 1.5; c.viewers = Math.round(c.viewers * 1.2); return chance(0.6) ? R('Goal smashed. You ate the pepper. Clip of the week.', { heat: 4, stress: 8 }) : R('Goal hit in 4 minutes. Your mouth is still on fire.', { stress: 12 }); } },
+      { label: 'Thank both of them warmly', fn: () => { c.giftX = (c.giftX || 1) * 1.2; return R('Wholesome. They both gifted more.', { rep: 1 }); } }] },
+  whalegift: { title: () => 'A Galaxy just landed 🌌', text: () => `<b>${fanHandle()}</b> sent a Galaxy ($2,000) and wants a shoutout.`,
+    choices: (c) => [
+      { label: 'Give them a huge shoutout', fn: () => { c.don += 2000; c.giftX = (c.giftX || 1) * 1.3; return R('Everyone wants a shoutout now. More gifts poured in.'); } },
+      { label: 'Read their name in a funny voice', sub: `Charisma ${skillLvl('charisma')}`, fn: () => { c.don += 2000; return chance(0.4 + skillLvl('charisma') * 0.05) ? (c.viewers = Math.round(c.viewers * 1.4), R('Chat lost it. The clip is everywhere.', { fp: 0.005 })) : R('They found it a bit weird but laughed.'); } }] },
   unhinged: { title: () => 'Big donation', text: () => '<b>xXgremlinXx</b> donated $50: "say something unhinged"',
     choices: (c) => [
       { label: 'Say it', fn: () => { c.viewers = Math.round(c.viewers * 1.3); c.don += 50; return R('Clip farmers are thrilled.', { heat: 8 }); } },
