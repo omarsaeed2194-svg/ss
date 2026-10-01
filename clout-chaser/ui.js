@@ -303,6 +303,12 @@ function animateFresh() {
 }
 
 /* ---------- post cards ---------- */
+const subReply = (to) => (x) => `<div class="subreply">${x.npc ? npcAv(x.npc, 'xs') : x.co ? coAv(x.co, 'xs') : x.me ? meAv('xs') : avatar(x.who, '#44505E', 'xs')}<div><b>${x.npc ? esc(NPCS[x.npc].name) : x.co ? esc(COMPANIES[x.co].name) : x.me ? esc(S.name) : '@' + esc(x.who)}</b> ${x.npc ? npcBadge(x.npc) : x.co ? vb(true) : ''} <span class="muted">replying to @${esc(to)}</span><div>${esc(x.text)}</div></div></div>`;
+function pollHtml(p) {
+  if (!p.poll) return '';
+  const tot = p.poll.votes.reduce((a, b) => a + b, 0) || 1, max = Math.max(...p.poll.votes);
+  return `<div class="poll">${p.poll.opts.map((o, i) => { const pc = Math.round((p.poll.votes[i] / tot) * 100); return `<div class="poll-row ${p.poll.votes[i] === max ? 'win' : ''}"><i style="width:${pc}%"></i><span>${esc(o)}</span><b>${pc}%</b></div>`; }).join('')}<span class="small muted">${fmt(tot)} votes · final results</span></div>`;
+}
 function media(format, label, color, seed, look, x = {}) {
   const F = FORMATS[format]; if (!F) return '';
   if (format === 'take' || format === 'thread') return '';
@@ -326,7 +332,7 @@ function myPostCard(p) {
   const extra = p.tags.filter((t) => !p.caption.includes(t));
   return `<article class="tw ${p.fresh ? 'fresh' : ''}" data-act="open" data-arg="post:${p.id}">${ctx}${meAv()}<div class="tw-main">
     <div class="tw-head"><b>${esc(S.name)}</b>${meBadge()}<span class="h">@${esc(S.handle)} · ${ago(p.day)}</span><span class="pl">${pdot(p.platform)}${P.name}</span></div>
-    <div class="tw-text">${rich(p.caption)}${extra.length ? ' ' + rich(extra.join(' ')) : ''}</div>
+    <div class="tw-text">${rich(p.caption)}${extra.length ? ' ' + rich(extra.join(' ')) : ''}</div>${pollHtml(p)}${(() => { const sib = S.posts.filter((x) => x.crossOf === p.id); return sib.length ? `<div class="row small"><span class="pill blue">Also on ${sib.map((x) => PLATFORMS[x.platform].name).join(', ')}</span><span class="muted">+${fmt(sib.reduce((a, x) => a + x.views, 0))} views there</span></div>` : ''; })()}
     ${media(p.format, p.topic, P.color, p.id, p.filter, { caption: p.caption, img: p.img })}
     ${actions({ replyAct: 'open', arg: 'post:' + p.id, replies: p.comments, reposts: p.shares, likes: p.likes, views: p.views, fresh: p.fresh })}
     ${p.beef || p.pitch || p.deal ? `<div class="row small">${p.deal ? `<span class="pill gold">${esc(p.deal)}</span>` : ''}${p.pitch ? `<span class="pill blue">${esc(p.pitch)}</span>` : ''}${p.beef ? `<span class="pill bad">${esc(p.beef)}</span>` : ''}</div>` : ''}
@@ -371,6 +377,10 @@ function clashCard(c) {
     ${!c.done ? `<div class="row">${!c.side ? btn(`Team ${esc(firstName(c.a))} · 5`, 'clashSide', c.id + ':a', 'sm') + btn(`Team ${esc(firstName(c.b))} · 5`, 'clashSide', c.id + ':b', 'sm') + btn('Make peace · 15', 'clashPeace', c.id, 'sm') + btn('Stir the pot · 5', 'clashStir', c.id, 'sm danger') : ''}${btn(`${ico('feather')} Post about it`, 'clashMeme', c.id, 'sm blue')}</div>` : ''}
   </div>`;
 }
+function spinCard() {
+  const done = S.flags.spinDay === S.day;
+  return `<div class="spin-card"><div class="wheel" id="wheel" aria-hidden="true">${SPIN_PRIZES.map((p, i) => `<i style="transform:rotate(${i * 45}deg)"></i>`).join('')}<b>${ico('star')}</b></div><div style="flex:1;min-width:0"><div class="small muted">Daily spin</div><b>${done ? `You won: ${esc(S.flags.spinPrize || 'something')}` : 'Spin for energy, cash, followers, tea or chaos'}</b></div>${done ? '<span class="pill">Back tomorrow</span>' : btn('Spin', 'spin', '', 'sm primary')}</div>`;
+}
 function challengeCard() {
   const ch = S.challenge; if (!ch) return '';
   return `<div class="challenge ${ch.done ? 'done' : ''}">${ico(ch.done ? 'star' : 'sparkle', 'ico-lg')}<div style="flex:1;min-width:0"><div class="small muted">Daily creative challenge · +20 energy, +2% followers</div><b>${esc(ch.text)}</b></div>${ch.done ? '<span class="pill good">Done</span>' : btn('Start', 'compose', '', 'sm blue')}</div>`;
@@ -379,10 +389,11 @@ function challengeCard() {
 /* ---------- Home ---------- */
 function vHome() {
   let items;
-  if (ui.feedTab === 'mine') items = S.posts.map((p) => ({ k: 'me', d: p.day, id: p.id, p }));
+  const heads = S.posts.filter((p) => !p.crossOf);
+  if (ui.feedTab === 'mine') items = heads.map((p) => ({ k: 'me', d: p.day, id: p.id, p }));
   else {
     const feed = ui.feedTab === 'following' ? S.feed.filter((f) => f.npc && S.npcs[f.npc].following) : S.feed;
-    items = [...S.posts.map((p) => ({ k: 'me', d: p.day, id: p.id, p })), ...feed.map((f) => ({ k: 'npc', d: f.day, id: f.id, f }))];
+    items = [...heads.map((p) => ({ k: 'me', d: p.day, id: p.id, p })), ...feed.map((f) => ({ k: 'npc', d: f.day, id: f.id, f }))];
   }
   items.sort((a, b) => b.d - a.d || b.id - a.id);
   const prompt = `<div class="reply-box" data-act="compose" style="cursor:text">${meAv()}<div><div class="muted" style="font-size:20px;padding:8px 0">What's happening?</div><div class="row between"><span class="small muted">${S.trends[0] ? `Trending: <span class="blue">${esc(S.trends[0].tag)}</span>` : ''}</span><span class="btn primary sm">Post</span></div></div></div>`;
@@ -390,7 +401,7 @@ function vHome() {
     : `<div class="empty"><h3>Nothing yet</h3><p>Your posts show up here. Write your first one.</p>${btn('Post', 'compose', '', 'blue')}</div>`;
   return `<div class="col-head">${head('Home', `Day ${S.day} · ${weekday()} · ${tier().name} creator${S.streak ? ` · <span class="gold">${S.streak}-day streak</span>` : ''}`, false, `<button class="btn sm" data-act="endDay" title="Sleep to end the day">${ico('moon')} Sleep</button>`)}
     ${tabsBar([['foryou', 'For you'], ['following', 'Following'], ['mine', 'Your posts']], ui.feedTab, 'feedTab')}</div>
-    ${statusStrip()}${prompt}${ui.feedTab !== 'mine' ? challengeCard() + activeClashes().map(clashCard).join('') : ''}
+    ${statusStrip()}${prompt}${ui.feedTab !== 'mine' ? spinCard() + challengeCard() + activeClashes().map(clashCard).join('') : ''}
     ${items.length ? items.slice(0, 50).map((it) => it.k === 'me' ? myPostCard(it.p) : npcPostCard(it.f)).join('') : empty}`;
 }
 
@@ -401,22 +412,34 @@ function vThread(id, isNpc) {
     const N = NPCS[f.npc];
     const r = srand(f.id * 7);
     const fans = Array.from({ length: 4 }, () => ({ who: HANDLE_A[Math.floor(r() * HANDLE_A.length)] + '.' + HANDLE_B[Math.floor(r() * HANDLE_B.length)], text: COMMENTS[r() < 0.7 ? 'pos' : 'fun'][Math.floor(r() * 7)], likes: Math.round(f.likes * r() * 0.01) }));
+    for (let i = fans.length - 1; i > 0; i--) if (fans.slice(0, i).some((x) => x.text === fans[i].text)) fans.splice(i, 1);
+    const fw = (f.text.match(/[A-Za-z]{5,}/g) || ['this'])[0].toLowerCase();
+    const clash = f.clash && (S.clashes || []).find((c) => c.id === f.clash);
+    const starIds = [];
+    if (clash) starIds.push(clash.a === f.npc ? clash.b : clash.a);
+    const pool = Object.keys(NPCS).filter((x) => x !== f.npc && !starIds.includes(x));
+    for (let i = 0; i < 1 + Math.floor(r() * 2); i++) starIds.push(pool[Math.floor(r() * pool.length)]);
+    const starReplies = starIds.map((id, i) => ({ npc: id, text: clash && i === 0 ? CLASH_LINES.defend[Math.floor(r() * CLASH_LINES.defend.length)].replace('{a}', N.handle) : (NPCS[id].lines && r() < 0.3 ? NPCS[id].lines[Math.floor(r() * NPCS[id].lines.length)] : STAR_VOICE[archetype(id)][Math.floor(r() * 5)].replace(/\{w\}/g, fw).replace(/\{f\}/g, fmt(S.npcs[f.npc].followers)).replace(/\{n\}/g, NICHES[N.niche].name.toLowerCase())) }));
+    const coIds = Object.keys(COMPANIES); const coR = r() < 0.5 ? { co: coIds[Math.floor(r() * coIds.length)] } : null;
+    if (coR) coR.text = COMPANIES[coR.co].replies[Math.floor(r() * COMPANIES[coR.co].replies.length)];
     return `<div class="col-head">${head('Post', '', true)}</div><div class="thread-main">
       <div class="row" style="flex-wrap:nowrap;cursor:pointer" data-act="open" data-arg="star:${f.npc}">${npcAv(f.npc)}<div style="min-width:0"><b style="display:flex;gap:4px;align-items:center">${esc(N.name)} ${npcBadge(f.npc)}</b><span class="muted">@${N.handle}</span></div></div>
       <div class="tw-text">${rich(f.text)}</div>
       <div class="thread-meta">Day ${f.day} · <b style="color:var(--ink)">${fmt(f.views || f.likes * 25)}</b> Views</div>
-      <div class="thread-counts"><span><b>${fmt(f.reposts || 0)}</b> Reposts</span><span><b>${fmt(f.likes)}</b> Likes</span><span><b>${fmt(f.comments)}</b> Replies</span></div>
+      <div class="thread-counts"><span><b>${fmt(f.reposts || 0)}</b> Reposts</span><span><b>${fmt(f.likes)}</b> Likes</span><span><b>${fmt(f.comments)}</b> Replies</span>${btn(`${ico('live')} Duet this`, 'duet', String(f.id), 'sm', false, 'Remix their post on your own feed')}</div>
       ${actions({ replyAct: 'noop', arg: String(f.id), id: String(f.id), replies: f.comments, reposts: f.reposts || 0, likes: f.likes, views: f.views || 0, liked: f.liked, reposted: f.reposted, likeAct: f.liked ? 'noop' : 'like', repostAct: f.reposted ? 'noop' : 'repost' })}</div>
-      ${f.commented ? `<article class="tw" style="cursor:default">${meAv()}<div class="tw-main"><div class="tw-head"><b>${esc(S.name)}</b>${meBadge()}<span class="h">@${esc(S.handle)} · ${ago(f.day)}</span></div><div class="small muted">Replying to <span class="blue">@${N.handle}</span></div><div class="tw-text">${rich(f.myReply || '')}</div>${f.replyResult ? `<div class="row"><span class="pill ${f.replyResult.good ? 'good' : 'bad'}">${esc(f.replyResult.text)}</span></div>` : ''}</div></article>`
+      ${f.commented ? `<article class="tw" style="cursor:default">${meAv()}<div class="tw-main"><div class="tw-head"><b>${esc(S.name)}</b>${meBadge()}<span class="h">@${esc(S.handle)} · ${ago(f.day)}</span></div><div class="small muted">Replying to <span class="blue">@${N.handle}</span></div><div class="tw-text">${rich(f.myReply || '')}</div>${f.replyResult ? `<div class="row"><span class="pill ${f.replyResult.good ? 'good' : 'bad'}">${esc(f.replyResult.text)}</span></div>` : ''}${f.replyBack ? subReply(S.handle)({ npc: f.npc, text: f.replyBack }) : ''}${f.chime ? subReply(S.handle)(f.chime) : ''}</div></article>`
         : `<div class="reply-box">${meAv()}<div><div class="small muted">Replying to <span class="blue">@${N.handle}</span></div><textarea id="replyText" maxlength="200" placeholder="Post your reply" aria-label="Your reply"></textarea>
           <div class="row between"><span class="small muted">Compliments build friendships. Jokes can go big. Insults start fires.</span>${btn('Reply · 3', 'npcReply', String(f.id), 'blue sm')}</div></div></div>`}
+      ${starReplies.map((x) => `<article class="tw" style="cursor:default"><span data-act="open" data-arg="star:${x.npc}" style="cursor:pointer">${npcAv(x.npc)}</span><div class="tw-main"><div class="tw-head"><b>${esc(NPCS[x.npc].name)}</b>${npcBadge(x.npc)}<span class="h">@${NPCS[x.npc].handle}</span></div><div class="small muted">Replying to <span class="blue">@${N.handle}</span></div><div class="tw-text">${rich(x.text)}</div></div></article>`).join('')}
+      ${coR ? `<article class="tw" style="cursor:default">${coAv(coR.co)}<div class="tw-main"><div class="tw-head"><b>${esc(COMPANIES[coR.co].name)}</b>${vb(true)}<span class="h">@${COMPANIES[coR.co].handle}</span></div><div class="tw-text">${esc(coR.text)}</div></div></article>` : ''}
       ${fans.map((c) => `<article class="tw" style="cursor:default">${avatar(c.who, '#44505E')}<div class="tw-main"><div class="tw-head"><b>${esc(c.who)}</b><span class="h">@${esc(c.who)}</span></div><div class="tw-text">${esc(c.text)}</div></div></article>`).join('')}`;
   }
   const p = S.posts.find((x) => x.id === id); if (!p) return head('Post', '', true) + '<div class="empty">This post is gone.</div>';
   const P = PLATFORMS[p.platform];
   return `<div class="col-head">${head('Post', P.name, true)}</div><div class="thread-main">
     <div class="row" style="flex-wrap:nowrap">${meAv()}<div style="min-width:0"><b style="display:flex;gap:4px;align-items:center">${esc(S.name)} ${meBadge()}</b><span class="muted">@${esc(S.handle)}</span></div></div>
-    <div class="tw-text">${rich(p.caption)}</div>
+    <div class="tw-text">${rich(p.caption)}</div>${pollHtml(p)}
     ${media(p.format, p.topic, P.color, p.id, p.filter, { caption: p.caption, img: p.img })}
     <div class="thread-meta">Day ${p.day} · ${P.name} · ${FORMATS[p.format].name} · ${TONES[p.tone].name}${p.orig !== undefined ? ` · Originality ${p.orig}` : ''}${p.filter ? ` · ${FILTERS[p.filter].name} look${p.lookMatch ? ' (on trend)' : ''}` : ''} · <b style="color:var(--ink)">${fmt(p.views)}</b> Views</div>
     <div class="thread-counts"><span><b>${fmt(p.shares)}</b> Reposts</span><span><b>${fmt(p.likes)}</b> Likes</span><span><b>${fmt(p.comments)}</b> Replies</span><span class="${p.gain >= 0 ? 'good' : 'bad'}"><b style="color:inherit">${signed(p.gain)}</b> Followers</span><span class="${p.rep >= 0 ? 'good' : 'bad'}"><b style="color:inherit">${signed1(p.rep)}</b> Rep</span>${p.cash > 0.5 ? `<span><b>${money(p.cash)}</b> Ad revenue</span>` : ''}</div></div>
@@ -425,13 +448,13 @@ function vThread(id, isNpc) {
       const who = c.npc ? NPCS[c.npc] : c.co ? COMPANIES[c.co] : null;
       const av = c.npc ? `<span data-act="open" data-arg="star:${c.npc}" style="cursor:pointer">${npcAv(c.npc)}</span>` : c.co ? coAv(c.co) : avatar(c.who, c.neg ? '#7A2E2E' : '#44505E');
       return `<article class="tw" style="cursor:default">${av}<div class="tw-main">
-        <div class="tw-head"><b>${esc(who ? who.name : c.who)}</b>${c.npc ? npcBadge(c.npc) : c.co ? vb(true) : ''}${c.cc ? flag(c.cc) : ''}<span class="h">@${esc(c.who)}</span></div>
+        <div class="tw-head"><b>${esc(who ? who.name : c.who)}</b>${c.npc ? npcBadge(c.npc) : c.co ? vb(true) : ''}${c.cc ? flag(c.cc) : ''}${c.sf ? `<span class="pill gold">${SUPERFAN_KINDS[c.sf].label}</span>` : ''}<span class="h">@${esc(c.who)}</span></div>
         <div class="small muted">Replying to <span class="blue">@${esc(S.handle)}</span></div>
         <div class="tw-text">${esc(c.text)}</div>
-        ${c.mine ? (c.mine === '♥' ? `<div class="small" style="color:var(--like)">${ico('heart')} You liked this</div>` : `<div class="tw-text" style="margin-top:6px;padding-left:10px;border-left:2px solid var(--accent)"><b>You:</b> ${esc(c.mine)}</div>`)
+        ${c.mine ? (c.mine === '♥' ? `<div class="small" style="color:var(--like)">${ico('heart')} You liked this</div>` : `<div class="tw-text" style="margin-top:6px;padding-left:10px;border-left:2px solid var(--accent)"><b>You:</b> ${esc(c.mine)}</div>${c.back ? `<div class="subreply">${c.npc ? npcAv(c.npc, 'xs') : coAv(c.co, 'xs')}<div><b>${esc(c.npc ? NPCS[c.npc].name : COMPANIES[c.co].name)}</b> <span class="muted">replying to you</span><div>${esc(c.back)}</div></div></div>` : ''}`)
           : `<div class="row" style="margin-top:6px">${c.neg ? btn('Clap back', 'engage', `${p.id}:${i}:clap`, 'sm danger') + btn('Kill with kindness', 'engage', `${p.id}:${i}:kind`, 'sm') : btn('Thank them', 'engage', `${p.id}:${i}:thanks`, 'sm') + btn(`${ico('heart')} Like`, 'engage', `${p.id}:${i}:heart`, 'sm')}</div>`}
         <div class="small muted">${fmt(c.likes || 0)} likes</div>
-        ${(c.sub || []).map((x) => `<div class="subreply">${avatar(x.who, '#44505E', 'xs')}<div><b>@${esc(x.who)}</b> <span class="muted">replying to @${esc(c.who)}</span><div>${esc(x.text)}</div></div></div>`).join('')}</div></article>`;
+        ${(c.sub || []).map(subReply(c.who)).join('')}</div></article>`;
     }).join('')}`;
 }
 
@@ -575,13 +598,14 @@ function vDm(k) {
 function vProfile() {
   const t = totalFollowers();
   const following = Object.values(S.npcs).filter((n) => n.following).length;
-  const body = ui.profTab === 'analytics' ? statsBody() : ui.profTab === 'trophies' ? trophiesBody() : (S.posts.length ? S.posts.slice(0, 30).map(myPostCard).join('') : `<div class="empty"><h3>No posts yet</h3>${btn('Write your first post', 'compose', '', 'blue')}</div>`);
+  const body = ui.profTab === 'analytics' ? statsBody() : ui.profTab === 'trophies' ? trophiesBody() : (S.posts.length ? S.posts.filter((p) => !p.crossOf).slice(0, 30).map(myPostCard).join('') : `<div class="empty"><h3>No posts yet</h3>${btn('Write your first post', 'compose', '', 'blue')}</div>`);
   return `<div class="col-head">${head(`${esc(S.name)} ${meBadge()}`, `${S.stats.posts} posts`)}</div>
     <div class="banner" style="background:linear-gradient(120deg, ${S.color}, #111)"></div>
     <div class="prof">${meAv('xl')}<div class="prof-actions">${btn(ui.editBio ? 'Done' : 'Edit profile', 'editBio', '', '')}</div>
       <h2>${esc(S.name)} ${meBadge()}</h2><div class="handle">@${esc(S.handle)}</div>
       ${ui.editBio ? `<textarea class="input" id="bioEdit" maxlength="160" rows="2" style="margin-top:12px" aria-label="Bio">${esc(S.bio)}</textarea>` : `<div class="bio">${esc(S.bio)}</div>`}
       <div class="meta"><span>${flag(S.country)} ${COUNTRIES[S.country].name}</span><span>${NICHES[S.niche].name} creator</span><span>${tier().name} tier</span><span>Joined day 1</span><span>${{ chill: 'Chill', normal: 'Normal', brutal: 'Unhinged' }[S.diff]} internet</span></div>
+      ${(S.superfans || []).length ? `<div class="topfans"><span class="small muted">Top fans</span>${S.superfans.map((f) => `<span class="row" style="gap:6px;flex-wrap:nowrap">${avatar(f.handle, '#44505E', 'xs')}<span class="small"><b>@${esc(f.handle)}</b> <span class="muted">${SUPERFAN_KINDS[f.kind].label} · ${f.count} comments</span></span></span>`).join('')}</div>` : ''}
       <div class="counts"><span><b>${following}</b> Following</span><span><b>${fmt(t)}</b> Followers</span>${S.partner ? `<span style="color:var(--like)">Dating ${esc(npcName(S.partner))}</span>` : ''}</div>
     </div>
     <div style="margin:0 16px 12px;border-radius:16px;overflow:hidden">${statGrid()}</div>
@@ -769,6 +793,17 @@ function openCompose(preset = {}) {
   renderCompose(true);
 }
 function closeCompose() { $('#composeWrap').hidden = true; }
+/* Same content on every unlocked platform, each in its best format */
+function crossPlan(o) {
+  const plats = [o.platform, ...unlockedIds().filter((p) => p !== 'live' && p !== o.platform)];
+  return plats.map((pid, i) => {
+    if (i === 0) return o;
+    const format = CROSS_FORMAT[pid](o.format);
+    const special = /^(deal:|collab|tea:|diss:|duet:)/.test(o.topic);
+    return { ...o, platform: pid, format, topic: special ? 'niche' : o.topic, intents: {}, img: hasLook(format) ? o.img : null, poll: format === 'poll' ? o.poll : null };
+  });
+}
+const CROSS_DISCOUNT = 0.65;
 function composeMentions() {
   const t = (ui.c && ui.c.text) || '';
   return [...mentionedNpcs(t).slice(0, 2).map((id) => ({ kind: 'npc', id })), ...mentionedCompanies(t).slice(0, 2).map((id) => ({ kind: 'co', id }))];
@@ -805,7 +840,7 @@ function composeInput() {
     else c.topic = 'niche';
   }
   const tone = c.toneMode === 'auto' ? detectTone(c.text) : c.toneMode;
-  return { platform: c.platform, format: c.format, topic: c.topic, tone, effort: c.effort, time: c.time, tags, caption: c.text, disclose: c.disclose, filter: c.filter, img: hasLook(c.format) ? c.img || null : null, intents: currentIntents() };
+  return { platform: c.platform, format: c.format, topic: c.topic, tone, effort: c.effort, time: c.time, tags, caption: c.text, disclose: c.disclose, filter: c.filter, img: hasLook(c.format) ? c.img || null : null, intents: currentIntents(), poll: c.format === 'poll' ? (c.poll || []).map((x) => x.trim()).filter(Boolean).slice(0, 4) : null };
 }
 function renderCompose(focus) {
   const c = ui.c; if (!c) return;
@@ -834,6 +869,7 @@ function renderCompose(focus) {
         <div class="scroller" style="margin-bottom:8px">${tagSug.map((t) => `<button class="chip" data-act="cTag" data-arg="${esc(t)}" style="color:var(--accent)">${esc(t)}</button>`).join('')}</div>
         ${c.img ? `<div class="thumb"><img src="${c.img}" alt="Your photo" style="filter:${c.filter ? LOOK_CSS[c.filter] : 'none'}"><button class="icon-btn" data-act="cImgRemove" aria-label="Remove photo">${ico('x')}</button></div>` : ''}
         <div class="row" style="margin-bottom:6px"><label class="chip" style="color:var(--accent)">${ico('image')} ${c.img ? 'Change photo' : 'Add your photo'}<input type="file" id="cFile" accept="image/*" hidden></label><span class="small muted">Your own photo: +8 originality, +8% quality</span></div>
+        ${c.format === 'poll' ? `<div class="poll-edit">${[0, 1, 2, 3].map((i) => `<input class="input" id="pollOpt${i}" data-i="${i}" maxlength="28" placeholder="Option ${i + 1}${i > 1 ? ' (optional)' : ''}" value="${esc((c.poll || [])[i] || '')}">`).join('')}<span class="small muted">Polls get the most replies on Chirp. Fans vote and argue.</span></div>` : ''}
         <div id="cLive"></div>
         <div id="cMentions">${mentionPanel()}</div>
       </div></div>
@@ -851,9 +887,10 @@ function renderCompose(focus) {
       </div>`;
   }
   $('#compose').innerHTML = `<div class="sheet-head"><button class="icon-btn" data-act="closeCompose" aria-label="Close">${ico('x')}</button><span class="small muted">Day ${S.day} · ${Math.round(S.energy)} energy left</span>${c.platform === 'live' ? '<span style="width:36px"></span>' : `<button class="icon-btn" data-act="cSuggest" title="Write one for me" aria-label="Suggest a post">${ico('dice')}</button>`}</div>
-    <div class="opts" style="border-top:0;padding-top:0"><span class="opt-lbl">Post to</span><div class="scroller">${plats}</div></div>
+    <div class="opts" style="border-top:0;padding-top:0"><span class="opt-lbl">Post to</span><div class="scroller">${c.platform !== 'live' && unlockedIds().filter((x) => x !== 'live').length > 1 ? `<button class="chip allchip" data-act="cCross" aria-pressed="${!!c.cross}">${ico('repost')} All platforms</button>` : ''}${plats}</div>${c.cross && c.platform !== 'live' ? `<span class="small muted">Cross-posting: ${crossPlan({ platform: c.platform, format: c.format, topic: c.topic }).map((x) => `${PLATFORMS[x.platform].name} (${FORMATS[x.format].name})`).join(' · ')}. 35% energy discount. The platform you pick first gets your mentions, deals and special topics.</span>` : ''}</div>
     ${body}
     ${c.platform === 'live' ? '' : `<div class="compose-foot"><div class="forecast" id="cForecast"></div><button class="btn primary big" id="cPost" data-act="cPost">Post</button></div>`}`;
+  $$('.poll-edit input').forEach((inp) => inp.addEventListener('input', () => { c.poll = c.poll || []; c.poll[+inp.dataset.i] = inp.value; updateComposeLive(); }));
   const fileIn = $('#cFile');
   if (fileIn) fileIn.addEventListener('change', async () => { const f = fileIn.files && fileIn.files[0]; if (!f) return; try { c.img = await resizeImage(f); if (!hasLook(c.format)) c.format = Object.keys(FORMATS).find((k) => FORMATS[k].p === c.platform && hasLook(k)); renderCompose(false); } catch (e) { toast('That file could not be read as an image.', 'bad'); } });
   const ta = $('#cText');
@@ -876,8 +913,15 @@ function updateComposeLive() {
   if (live) live.innerHTML = `<div class="row small"><span class="pill ${r.orig >= 75 ? 'good' : r.orig < 40 ? 'bad' : 'warn'}" title="Your own words, questions, emoji and @mentions raise it. Repeating yourself or using the dice lowers it.">Originality ${r.orig}</span>${meets ? `<span class="pill gold">${ico('sparkle')} Completes today's challenge</span>` : ''}<span class="pill ${T.rep >= 1 ? 'good' : T.rep < 0 ? 'bad' : ''}">Tone: ${T.name}</span><span class="pill blue">${esc(r.topic.label)}</span>${useful ? `<span class="pill good">${useful} useful tag${useful > 1 ? 's' : ''}</span>` : ''}${o.tags.length > 4 ? '<span class="pill warn">Too many hashtags</span>' : ''}<span class="muted">${280 - c.text.length}</span></div>`;
   const fc = $('#cForecast');
   if (fc) fc.innerHTML = `<span><b>~${fmt(r.views)}</b> views</span><span><b class="${r.gain - r.loss >= 0 ? 'good' : 'bad'}">${signed(r.gain - r.loss)}</b> followers</span><span><b class="gold">+${r.refund}</b> energy back</span><span><b>${(r.viralP * 100).toFixed(1)}%</b> viral</span><span>Rep <b class="${r.rep >= 1 ? 'good' : r.rep <= -1 ? 'bad' : ''}">${r.rep >= 1 ? 'up' : r.rep <= -1 ? 'down' : 'flat'}</b></span><span>Heat <b class="${r.heat > 8 ? 'bad' : r.heat > 0 ? 'warn' : 'good'}">${r.heat > 8 ? 'spicy' : r.heat > 0 ? 'warm' : 'safe'}</b></span>${S.shadowbanUntil >= S.day ? '<span class="bad">Shadowbanned</span>' : ''}`;
+  let need = r.energy;
+  if (c.cross) {
+    const rs = crossPlan(o).map((x) => computePost(x, true));
+    need = Math.round(rs.reduce((a, x) => a + x.energy, 0) * CROSS_DISCOUNT);
+    if (fc) fc.innerHTML = `<span><b>${rs.length}</b> platforms</span><span><b>~${fmt(rs.reduce((a, x) => a + x.views, 0))}</b> views</span><span><b class="good">${signed(rs.reduce((a, x) => a + x.gain - x.loss, 0))}</b> followers</span><span><b class="gold">+${rs.reduce((a, x) => a + x.refund, 0)}</b> energy back</span><span>Heat <b class="${r.heat > 8 ? 'bad' : r.heat > 0 ? 'warn' : 'good'}">${r.heat > 8 ? 'spicy' : r.heat > 0 ? 'warm' : 'safe'}</b></span>`;
+  }
+  if (o.format === 'poll' && (!o.poll || o.poll.length < 2) && fc) fc.innerHTML += '<span class="warn">Add at least 2 poll options</span>';
   const pb = $('#cPost');
-  if (pb) { pb.textContent = `Post · ${r.energy}`; pb.disabled = S.energy < r.energy || S.hackedUntil >= S.day; pb.title = S.energy < r.energy ? 'Not enough energy. Sleep to recharge.' : ''; }
+  if (pb) { pb.textContent = `Post${c.cross ? ' everywhere' : ''} · ${need}`; pb.disabled = S.energy < need || S.hackedUntil >= S.day || (o.format === 'poll' && (!o.poll || o.poll.length < 2)); pb.title = S.energy < r.energy ? 'Not enough energy. Sleep to recharge.' : ''; }
   $$('[data-act="cTopic"]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.arg === c.topic));
   $$('[data-act="cTone"]').forEach((b) => { if (b.dataset.arg !== 'auto') b.setAttribute('aria-pressed', b.dataset.arg === o.tone); });
 }
@@ -960,15 +1004,55 @@ const ACT = {
     const c = ui.c; if (!c) return 'norender';
     if (!c.text.trim()) { toast('Write something first, or tap the dice for an idea.', 'bad'); return 'norender'; }
     const o = composeInput();
-    const p = doPost(o);
+    let p;
+    if (c.cross && c.platform !== 'live') {
+      const plan = crossPlan(o);
+      const full = plan.reduce((a, x) => a + computePost(x, true).energy, 0), disc = Math.round(full * CROSS_DISCOUNT);
+      if (S.energy < disc) { toast(`Cross-posting needs ${disc} energy.`, 'bad'); return 'norender'; }
+      S.energy += full - disc;
+      p = doPost(plan[0]);
+      if (!p) { S.energy -= full - disc; return 'norender'; }
+      for (const x of plan.slice(1)) doPost({ ...x, crossOf: p.id });
+      log(`Cross-posted to ${plan.length} platforms.`, 'good');
+    } else p = doPost(o);
     if (!p) return 'norender';
-    closeCompose(); c.text = ''; c.img = null; c.intents = {}; c.toneMode = 'auto'; c.topicManual = false; c.topic = 'niche';
+    closeCompose(); c.text = ''; c.img = null; c.intents = {}; c.poll = []; c.toneMode = 'auto'; c.topicManual = false; c.topic = 'niche';
     tab = 'home'; ui.view = null; ui.hist = []; if (ui.feedTab === 'following') ui.feedTab = 'foryou';
     window.scrollTo({ top: 0 });
     processQueue();
   },
   unlock: (a) => { unlockPlatform(a); if (ui.c && !$('#composeWrap').hidden) { ui.c.platform = a; ui.c.format = null; renderCompose(false); } },
   stream: (a) => { closeCompose(); startStream(a); },
+  cCross: () => { ui.c.cross = !ui.c.cross; renderCompose(false); return 'norender'; },
+  duet: (a) => {
+    const f = S.feed.find((x) => x.id === +a); if (!f || !f.npc) return 'norender';
+    S.duetTarget = f.id;
+    const vid = S.platforms.clipz.unlocked ? ['clipz', 'short'] : ['pix', 'reel'];
+    openCompose({ platform: vid[0], format: vid[1], topic: 'duet:' + f.id, topicManual: true, cross: false, text: `duet with @${NPCS[f.npc].handle} ` });
+    return 'norender';
+  },
+  spin: () => {
+    if (S.flags.spinDay === S.day) return 'norender';
+    S.flags.spinDay = S.day;
+    const w = $('#wheel'); if (w) w.classList.add('spinning');
+    const tot = SPIN_PRIZES.reduce((a, x) => a + x.w, 0); let x = Math.random() * tot; let prize = SPIN_PRIZES[0];
+    for (const pz of SPIN_PRIZES) { x -= pz.w; if (x <= 0) { prize = pz; break; } }
+    setTimeout(() => {
+      const s0 = statSnap();
+      const t = totalFollowers();
+      if (prize.k === 'energy') gainEnergy(35, 'Daily spin');
+      if (prize.k === 'money') applyFx({ money: Math.round(Math.max(150, t * 0.02) / 10) * 10 });
+      if (prize.k === 'followers') applyFx({ fp: 0.03 });
+      if (prize.k === 'boost') { const pid = pick(unlockedIds()); S.algo[pid] = +(S.algo[pid] * 1.5).toFixed(2); toast(`${PLATFORMS[pid].name} algorithm is hot for you today`, 'gold'); }
+      if (prize.k === 'stress') applyFx({ stress: -25 });
+      if (prize.k === 'tea') gainTea(pick(Object.keys(NPCS)), 'from a mysterious source');
+      if (prize.k === 'mystery') { const pool = Object.entries(EVENTS).filter(([, e]) => e.random && (!e.when || e.when()) && !e.once); const [id, e] = pick(pool); S.queue.push({ ev: id, ctx: e.ctx ? e.ctx() : {} }); }
+      if (prize.k === 'nothing') toast('The wheel says: touch grass.');
+      S.flags.spinPrize = prize.label;
+      checkAll(); save(); flashDelta(s0, statSnap()); renderAll(); processQueue();
+    }, 1300);
+    return 'norender';
+  },
   cIntent: (a) => { const [key, it] = a.split('|'); ui.c.intents = { ...(ui.c.intents || {}), [key]: it }; if (INTENT_TONE[it] && (ui.c.toneMode === 'auto' || Object.values(INTENT_TONE).includes(ui.c.toneMode))) ui.c.toneMode = INTENT_TONE[it]; if (it === 'tag') ui.c.toneMode = 'auto'; renderCompose(false); return 'norender'; },
   dmChip: (a) => { const [id, kind] = a.split(':'); const inp = $('#dmInput'); if (inp) { inp.value = dmTemplate(id, kind); inp.focus(); } return 'norender'; },
   cImgRemove: () => { ui.c.img = null; renderCompose(false); return 'norender'; },
@@ -997,6 +1081,9 @@ const ACT = {
     f.commented = true; f.myReply = text;
     const kind = classifyReply(text), n = S.npcs[f.npc], N = NPCS[f.npc];
     const vis = Math.min(n.followers * 0.00002 * rnd(0.5, 2), Math.max(totalFollowers() * 0.2, 150));
+    remember('npc', f.npc, kind === 'troll' ? 'troll' : kind === 'nice' ? 'praise' : 'dm', kind === 'troll' ? -0.3 : kind === 'nice' ? 0.12 : 0.03);
+    if (chance(kind === 'troll' ? 0.7 : 0.6)) f.replyBack = pick(STAR_BACK[kind][archetype(f.npc)]);
+    if (chance(0.3)) { const others = Object.keys(S.npcs).filter((x) => x !== f.npc && (S.npcs[x].rel >= 30 || S.npcs[x].feud)); if (others.length) { const o2 = pick(others); f.chime = { npc: o2, text: S.npcs[o2].feud ? pick(['of course they showed up here', 'nobody asked you', 'ratio']) : pick(['facts', 'this reply is everything', 'LMAO']) }; } }
     if (kind === 'nice') { changeRel(f.npc, 3); addFollowers(vis * 0.2); f.replyResult = { good: true, text: `${N.name.split(' ')[0]} liked your reply` }; gainEnergy(2, `${N.name.split(' ')[0]} liked your reply`); }
     if (kind === 'funny') {
       if (chance(0.3 + skillLvl('charisma') * 0.05)) { changeRel(f.npc, 4); addFollowers(vis * diffM()); addXp('charisma', 6); f.replyResult = { good: true, text: 'Top reply! Their fans found you.' }; gainEnergy(8, 'Your reply took off'); log(`Top reply on ${N.name}'s post.`, 'good'); notify('like', f.npc, 'liked your reply', { npc: true }); }
@@ -1014,6 +1101,9 @@ const ACT = {
     if (kind === 'thanks') { c.mine = pick(['thank you!! means a lot', 'love you for this', 'you are the best']); changeRep(0.3); gainEnergy(3, 'Fan love'); unlockedIds().forEach((id) => { S.platforms[id].eng = clamp(S.platforms[id].eng + 0.06, 0.5, 30); }); if (c.npc) changeRel(c.npc, 3); }
     if (kind === 'clap') { c.mine = pick(['and yet here you are', 'ratio + you fell off', 'imagine being this pressed']); changeRep(-0.8 * sev()); S.heat = clamp(S.heat + 4, 0, 100); addFollowers(Math.max(3, totalFollowers() * 0.002)); if (c.npc) changeRel(c.npc, -8); }
     if (kind === 'kind') { c.mine = pick(['sorry you feel that way, hope your day gets better', 'appreciate the feedback anyway!', 'sending love regardless']); changeRep(0.8); if (chance(0.3)) toast('They deleted their reply and followed you.'); }
+    if (c.npc && chance(0.8)) { const k = kind === 'clap' ? 'troll' : 'nice'; c.back = pick(STAR_BACK[k][archetype(c.npc)]); remember('npc', c.npc, k === 'troll' ? 'troll' : 'praise', k === 'troll' ? -0.2 : 0.1); if (k === 'troll' && ['hothead', 'wildcard'].includes(archetype(c.npc)) && chance(0.3)) S.queue.push({ ev: 'npc_callout', ctx: { npc: c.npc } }); }
+    if (c.co && chance(0.85)) { c.back = kind === 'clap' ? (COMPANIES[c.co].roast ? pick(['you replied to a brand account to lose an argument?', 'we have a team of 12 for this. you have you.', 'cute. anyway, buy our stuff']) : 'We hear you and appreciate your feedback.') : pick(['🫶', 'love this energy', 'you\'re one of the good ones', 'DM us 👀']); if (kind !== 'clap' && chance(0.12)) pitchBrand(c.co); }
+    processQueue();
     checkAll();
   },
   follow: (a) => {
@@ -1209,7 +1299,7 @@ const ACT = {
 };
 
 const NO_FLASH = new Set(['go', 'back', 'open', 'openDm', 'endDay', 'dmSend', 'noop']);
-const SHEET_ONLY = new Set(['cIntent', 'dmChip', 'postAbout', 'cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);
+const SHEET_ONLY = new Set(['cCross', 'duet', 'spin', 'cIntent', 'dmChip', 'postAbout', 'cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);
 function ACT_RUN(act, arg = '') {
   if (!S || !ACT[act]) return;
   const before = statSnap();

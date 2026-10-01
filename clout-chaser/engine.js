@@ -60,6 +60,7 @@ function newGame(o) {
   mail({ type: 'fan', from: '@' + fanHandle(), subject: 'first!!', body: "I don't know you yet but your vibe is immaculate. Following." });
   S.notifs = []; S.bio = `${NICHES[o.niche].name} creator. Posting my way to the top.`;
   S.clashes = []; S.aesthetic = pick(Object.keys(FILTERS)); S.pending = []; S.cos = {};
+  S.superfans = makeSuperfans();
   S.country = o.country || 'us'; S.faceSeed = o.faceSeed || o.name; S.tea = []; S.visited = [S.country];
   S.geo = { [S.country]: 0.62 };
   shuffle(['us', 'in', 'br', 'gb', 'mx', 'ph', 'id', 'ca', 'ng', 'de', 'fr', 'es', 'tr', 'sa', 'ae', 'eg', 'jp', 'kr', 'au', 'it', 'ar', 'co'].filter((c) => c !== S.country)).slice(0, 6).forEach((c, i) => { S.geo[c] = [0.12, 0.08, 0.06, 0.05, 0.04, 0.03][i]; });
@@ -92,6 +93,7 @@ function migrate(s) {
   for (const [id, n] of Object.entries(NPCS)) if (!s.npcs[id]) s.npcs[id] = { followers: n.followers, rel: 0, following: false, followsYou: false, feud: false, rep: n.rep };
   s.clashes = s.clashes || [];
   s.pending = s.pending || []; s.cos = s.cos || {};
+  if (!s.superfans) s.superfans = makeSuperfans();
   s.country = s.country || 'us'; s.faceSeed = s.faceSeed || s.name; s.tea = s.tea || []; s.visited = s.visited || [s.country];
   if (!s.geo) { s.geo = { [s.country]: 0.7, us: 0.1, br: 0.08, in: 0.07, gb: 0.05 }; }
   s.aesthetic = s.aesthetic || 'neon';
@@ -239,6 +241,7 @@ function topicsFor() {
   t.push({ id: 'hot', label: 'Controversial take', reach: 1.8, eng: 1.35, rep: -3, heat: 14, viral: 0.05, phrase: pick(HOT_TAKES) });
   if (S.owned.wardrobe || S.owned.car || S.owned.mansion || S.owned.jet) t.push({ id: 'flex', label: 'Luxury flex', reach: 1.4, eng: 0.9, rep: -1.5, heat: 4, viral: 0.02, phrase: S.owned.jet ? 'the jet' : S.owned.mansion ? 'the new house' : S.owned.car ? 'the new ride' : 'the new fits' });
   if (S.travelUntil >= S.day) { const tc = COUNTRIES[S.travelCountry || 'id']; t.push({ id: 'travel', label: `Trip to ${tc.name}`, reach: 1.35, eng: 1.2, rep: 0.3, heat: 1, viral: 0.03, phrase: `${tc.flag} ${tc.name} photo dump` }); }
+  if (S.duetTarget) { const f = S.feed.find((x) => x.id === S.duetTarget); if (f && f.npc) t.push({ id: 'duet:' + f.id, label: `Duet ${NPCS[f.npc].name.split(' ')[0]}`, group: 'Duet', reach: 1.45 + Math.min(0.7, Math.max(0, Math.log10(S.npcs[f.npc].followers / Math.max(100, totalFollowers()))) / 6), eng: 1.3, rep: 0.3, heat: 0, viral: 0.05, duet: f.id, phrase: `a duet with @${NPCS[f.npc].handle}` }); }
   for (const x of (S.tea || [])) t.push({ id: 'tea:' + x.id, label: `Spill ${NPCS[x.npc].name.split(' ')[0]}'s tea`, group: 'Tea', reach: 2.4, eng: 1.5, rep: -3, heat: 20, viral: 0.1, tea: x.id, phrase: `${NPCS[x.npc].name} ${x.text}` });
   if (S.merch) t.push({ id: 'merch', label: 'Plug your merch', reach: 0.8, eng: 0.85, rep: -0.3, heat: 0, viral: 0, phrase: 'the new merch drop', merch: true });
   for (const d of S.deals.filter((x) => x.status === 'active')) {
@@ -378,6 +381,48 @@ function geoPick(excludeHome) {
   for (const [c, v] of e) { x -= v; if (x <= 0) return c; }
   return e[0][0];
 }
+function makeSuperfans() {
+  return Object.entries(SUPERFAN_KINDS).map(([k, K]) => ({ kind: k, handle: `${pick(K.name)}.${pick(HANDLE_B)}${ri(1, 99)}`, count: 0, since: S ? S.day : 1 }));
+}
+/* A star's reply in their own voice */
+function starLine(id, w) {
+  const N = NPCS[id];
+  if (N.lines && chance(0.3)) return pick(N.lines);
+  return pick(STAR_VOICE[archetype(id)]).replace(/\{w\}/g, w || 'this').replace(/\{f\}/g, fmt(totalFollowers())).replace(/\{n\}/g, NICHES[S.niche].name.toLowerCase());
+}
+/* Comments that react to what you actually wrote */
+function contextComments(o, r, w) {
+  const out = [], cap = o.caption || '', L = () => Math.round(r.likes * rnd(0.004, 0.05));
+  const hits = KEYWORD_BANK.filter(([re]) => re.test(cap));
+  shuffle(hits).slice(0, 2).forEach(([, lines]) => out.push({ who: fanHandle(), text: pick(lines), likes: L() }));
+  if (cap.includes('?')) {
+    const low = cap.toLowerCase();
+    const k = /which|or\b/.test(low) ? 'which' : /should|would you/.test(low) ? 'should' : /\bwho\b/.test(low) ? 'who' : /\bwhat\b/.test(low) ? 'what' : 'any';
+    for (let i = 0; i < ri(1, 2); i++) out.push({ who: fanHandle(), text: pick(QUESTION_ANSWERS[k]), likes: L() });
+  }
+  if (o.format === 'meme') out.push({ who: fanHandle(), text: pick(['the bottom text 💀', 'saving this meme for emotional support', 'this template will never die']), likes: L() });
+  if (FORMATS[o.format] && FORMATS[o.format].video && chance(0.5)) out.push({ who: fanHandle(), text: pick(['the transition at 0:07?? genius', 'watched this 9 times', 'the audio choice is elite', 'who edited this, give them a raise']), likes: L() });
+  if (o.filter && chance(0.5)) out.push({ who: fanHandle(), text: `the ${FILTERS[o.filter].name.toLowerCase()} edit is doing heavy lifting`, likes: L() });
+  if (o.img && chance(0.6)) out.push({ who: fanHandle(), text: pick(['wait is this a real photo?? 😍', 'the photo quality!!', 'unedited? no way']), likes: L() });
+  const ints = o.intents || {};
+  for (const [key, it] of Object.entries(ints)) {
+    const [kind, id] = key.split(':'); const E = kind === 'co' ? COMPANIES[id] : NPCS[id]; if (!E) continue;
+    if (it === 'beef') { out.push({ who: fanHandle(), text: `team @${S.handle} 🔥`, likes: L() }); out.push({ who: fanHandle(), text: `@${E.handle} would never say this to your face`, likes: L(), neg: true }); out.push({ who: fanHandle(), text: pick(['grabbing popcorn 🍿', 'the drama I signed up for', 'oh it\'s ON']), likes: L() }); }
+    if (it === 'collab') out.push({ who: fanHandle(), text: pick([`@${E.handle} PLEASE say yes`, `this collab would break the internet`, `@${E.handle} we're waiting 👀`]), likes: L() });
+    if (it === 'shout') out.push({ who: fanHandle(), text: pick([`@${E.handle} you have to see this`, 'wholesome internet is back', 'love when creators support each other']), likes: L() });
+  }
+  if (o.poll && o.poll.length) { const opt = pick(o.poll); out.push({ who: fanHandle(), text: pick([`voted "${opt}" obviously`, `how is "${opt}" losing??`, `"${opt}" gang where you at`]), likes: L() }); }
+  if (r.topic.trend && chance(0.5)) out.push({ who: fanHandle(), text: pick([`best ${r.topic.trend} take I've seen`, `${r.topic.trend} was made for you`, `the ${r.topic.trend} algorithm sent me here`]), likes: L() });
+  // superfans keep showing up, and they remember
+  const prev = S.posts[0];
+  for (const sf of S.superfans || []) {
+    if (!chance(sf.kind === 'stan' ? 0.75 : 0.45)) continue;
+    sf.count++;
+    const t = pick(SUPERFAN_KINDS[sf.kind].lines).replace('{n}', sf.count).replace('{prev}', prev ? (prev.topic || 'last').toLowerCase() : 'last').replace('{w}', w || 'this').replace('{f}', fmt(Math.max(100, totalFollowers() * 0.05)));
+    out.push({ who: sf.handle, sf: sf.kind, text: t, likes: Math.round(r.likes * rnd(0.02, 0.08)), neg: sf.kind === 'critic' && chance(0.3) });
+  }
+  return out;
+}
 /* Comments read your caption, your niche and the room. Companies and international fans show up too. */
 function genComments(o, r) {
   const out = [], n = Math.min(9, 2 + Math.floor(Math.log10(r.comments + 1) * 1.3));
@@ -397,6 +442,7 @@ function genComments(o, r) {
     else text = w && chance(0.6) ? tpl('pos') : pick(COMMENTS.pos);
     out.push({ who: fanHandle(), text, likes: L(r), neg: isNeg });
   }
+  out.push(...contextComments(o, r, w));
   // international fans
   if (chance(0.25)) { const c = geoPick(true); out.push({ who: fanHandle(), cc: c, text: pick(COUNTRY_FAN).replace('{f}', COUNTRIES[c].flag).replace('{c}', COUNTRIES[c].name), likes: L(r) }); }
   // reply chains under the top comments
@@ -409,15 +455,28 @@ function genComments(o, r) {
     const id = (spicy || r.flop) && chance(0.6) ? pick(roasters) : pick(Object.keys(COMPANIES));
     out.unshift({ who: COMPANIES[id].handle, co: id, text: r.flop && COMPANIES[id].roast ? 'we would roast this but it already roasted itself' : pick(COMPANIES[id].replies), likes: Math.round(r.likes * rnd(0.03, 0.12)) });
   }
-  // a celebrity friend might chime in
-  const friends = Object.entries(S.npcs).filter(([, n]) => n.rel >= 35 && !n.feud);
-  if (friends.length && chance(0.35)) {
-    const [id] = pick(friends);
-    out.unshift({ who: NPCS[id].handle, npc: id, text: pick(['we need to collab fr', 'this is so good', 'proud of you', 'ok you ate', 'how are you this talented', 'the vision!!', w ? `"${w}" is going in my next caption, sorry` : 'stealing this idea']), likes: Math.round(r.likes * rnd(0.05, 0.2)) });
+  // stars reply in their own voice: friends, rivals, same-niche peers, and big names on viral posts
+  const voices = [];
+  const friends = Object.keys(S.npcs).filter((id) => S.npcs[id].rel >= 35 && !S.npcs[id].feud);
+  if (friends.length && chance(0.45)) voices.push(pick(friends));
+  const peers = Object.keys(S.npcs).filter((id) => NPCS[id].niche === S.niche && !voices.includes(id));
+  if (peers.length && chance(0.18)) voices.push(pick(peers));
+  if (r.viral) shuffle(Object.keys(NPCS)).slice(0, ri(1, 2)).forEach((id) => { if (!voices.includes(id)) voices.push(id); });
+  for (const id of voices) out.unshift({ who: NPCS[id].handle, npc: id, text: starLine(id, w), likes: Math.round(r.likes * rnd(0.05, 0.25)) });
+  const haters = Object.keys(S.npcs).filter((id) => S.npcs[id].feud && chance(0.35));
+  for (const id of haters) {
+    const c = { who: NPCS[id].handle, npc: id, text: pick(['lol who is this', 'desperate much?', 'still irrelevant I see', 'ratio', w ? `"${w}"? be serious` : 'be serious']), likes: Math.round(r.likes * rnd(0.05, 0.2)), neg: true };
+    const defender = friends.find((f) => f !== id);
+    if (defender && chance(0.55)) c.sub = [{ who: NPCS[defender].handle, npc: defender, text: pick([`@${NPCS[id].handle} leave them alone`, `@${NPCS[id].handle} not you being jealous in public`, 'ignore them, this is great']) }];
+    out.unshift(c);
   }
-  for (const [id, n] of Object.entries(S.npcs)) if (n.feud && chance(0.25)) out.unshift({ who: NPCS[id].handle, npc: id, text: pick(['lol who is this', 'desperate much?', 'still irrelevant I see', 'ratio', w ? `"${w}"? be serious` : 'be serious']), likes: Math.round(r.likes * rnd(0.05, 0.2)), neg: true });
-  const top = out.filter((c) => c.npc || c.co), rest = out.filter((c) => !c.npc && !c.co).sort((a, b) => b.likes - a.likes);
-  return [...top, ...rest].slice(0, 10);
+  // brand accounts banter with each other on big posts
+  if ((r.viral || chance(0.06)) && chance(0.6)) {
+    const [a1, b1, t1, t2] = pick(BRAND_BANTER);
+    out.unshift({ who: COMPANIES[a1].handle, co: a1, text: t1, likes: Math.round(r.likes * rnd(0.05, 0.15)), sub: [{ who: COMPANIES[b1].handle, co: b1, text: t2 }] });
+  }
+  const top = out.filter((c) => c.npc || c.co), sfs = out.filter((c) => c.sf), rest = out.filter((c) => !c.npc && !c.co && !c.sf).sort((a, b) => b.likes - a.likes);
+  return [...top, ...sfs, ...rest].slice(0, 14);
 }
 
 /* ---------- companies, countries, tea ---------- */
@@ -474,12 +533,18 @@ function doPost(o) {
     caption: (o.caption || '').trim().slice(0, 220) || genCaption(o, r.topic), tags: o.tags.slice(0, 6),
     views: r.views, likes: r.likes, comments: r.comments, shares: r.shares, gain: r.gain - r.loss, rep: r.rep, cash: r.cash,
     viral: r.viral, flop: r.flop, sponsored: !!r.topic.deal, q: r.q, comms: genComments(o, r),
-    filter: hasLook(o.format) && o.filter ? o.filter : null, orig: r.orig, lookMatch: r.lookMatch, img: o.img || null,
+    filter: hasLook(o.format) && o.filter ? o.filter : null, orig: r.orig, lookMatch: r.lookMatch, img: o.img || null, crossOf: o.crossOf || null,
   };
+  if (o.format === 'poll' && o.poll && o.poll.length >= 2) { const wts = o.poll.map(() => rnd(0.4, 1.6)); const tot = Math.round(r.likes * rnd(1.5, 3)) + 3; const sum = wts.reduce((a, b) => a + b, 0); post.poll = { opts: o.poll.slice(0, 4), votes: wts.map((x) => Math.round((x / sum) * tot)) }; }
   S.posts.unshift(post); if (S.posts.length > 80) S.posts.length = 80;
   S.posts.filter((p) => p.img).slice(10).forEach((p) => { p.img = null; }); // keep saves small
   post.fresh = true;
-  applyMentionIntents(post, o, r); // stars and brands react with their own personalities
+  if (o.crossOf) { post.mentions = mentionedNpcs(o.caption).slice(0, 2); post.intents = {}; } else applyMentionIntents(post, o, r); // stars and brands react with their own personalities
+  if (r.topic.duet) {
+    const f = S.feed.find((x) => x.id === r.topic.duet);
+    if (f && f.npc) { const id = f.npc; const hostile = TONES[o.tone].heat >= 10; changeRel(id, hostile ? -6 : 2); remember('npc', id, hostile ? 'troll' : 'praise', hostile ? -0.25 : 0.15); addFollowers(Math.min(S.npcs[id].followers * 0.00002, Math.max(totalFollowers() * 0.3, 200)) * diffM()); if (chance(0.45)) post.comms.unshift({ who: NPCS[id].handle, npc: id, text: hostile ? pick(['duetting me to hate? bold', 'ratio incoming']) : pick(['the duet is better than the original 😭', 'ok I love this', 'you ate this duet']), likes: Math.round(r.likes * rnd(0.1, 0.3)), neg: hostile }); }
+    S.duetTarget = null;
+  }
   for (const [cc, C] of Object.entries(COUNTRIES)) if ((o.caption || '').includes(C.flag) || (o.caption || '').toLowerCase().includes(C.name.toLowerCase())) geoAdd(cc, 0.01);
   if (r.topic.tea) {
     const t = S.tea.find((x) => x.id === r.topic.tea);

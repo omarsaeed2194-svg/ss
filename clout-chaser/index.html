@@ -385,6 +385,21 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100
 .mp-row { display: flex; gap: 10px; align-items: flex-start; }
 .chip.beefchip[aria-pressed="true"] { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); border-color: var(--bad); }
 .persona { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; padding: 10px 12px; background: var(--surface); border-radius: 12px; }
+.poll { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.poll-row { position: relative; display: flex; justify-content: space-between; gap: 8px; padding: 7px 12px; border-radius: 8px; overflow: hidden; font-size: 14px; border: 1px solid var(--line); }
+.poll-row i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--surface-2); z-index: 0; }
+.poll-row.win i { background: var(--accent-soft); }
+.poll-row span, .poll-row b { position: relative; z-index: 1; }
+.poll-edit { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.poll-edit .input { padding: 8px 12px; }
+.chip.allchip[aria-pressed="true"] { background: color-mix(in srgb, var(--repost) 16%, transparent); color: var(--repost); border-color: var(--repost); }
+.spin-card { margin: 12px 16px 0; display: flex; gap: 12px; align-items: center; border: 1px solid var(--line); border-radius: 16px; padding: 10px 14px; }
+.wheel { width: 44px; height: 44px; border-radius: 50%; position: relative; flex: none; background: conic-gradient(var(--like) 0 45deg, var(--accent) 45deg 90deg, var(--gold) 90deg 135deg, var(--repost) 135deg 180deg, var(--like) 180deg 225deg, var(--accent) 225deg 270deg, var(--gold) 270deg 315deg, var(--repost) 315deg 360deg); display: grid; place-items: center; }
+.wheel b { width: 18px; height: 18px; border-radius: 50%; background: var(--bg); display: grid; place-items: center; color: var(--gold); }
+.wheel b .ico { width: 12px; height: 12px; }
+.wheel.spinning { animation: wheelspin 1.3s cubic-bezier(.2,.8,.3,1); }
+@keyframes wheelspin { to { transform: rotate(1440deg); } }
+.topfans { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
 @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
 @keyframes rise { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes slidein { from { background: var(--accent-soft); } to { background: transparent; } }

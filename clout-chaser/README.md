@@ -67,6 +67,16 @@ The game looks and plays like a social app (inspired by the Status social-media 
 - **DM quick starters**: pitch a collab, compliment, ask for a shoutout, apologize, talk trash, or ask on a date. Each fills in a message written for that star.
 - **Profile shortcuts**: pitch a collab, shout them out, or diss them in a post straight from a star's profile.
 
+## Living comments and new features
+
+- **Fans read your post**: replies react to what you wrote (food, gym, money, love, 3 AM, pets, travel, sadness, wins, gaming, beauty, tech, fashion, music). They answer your questions, vote in your polls, take sides in your beefs, beg for your collabs to happen, and notice your format, look and photos.
+- **Superfans**: three recurring fans (a Superfan, a Top critic and a Class clown) comment on most posts, keep count, and compare each post with your last one. They're listed on your profile as Top fans.
+- **Stars and brands reply on their own**: friends, same-niche peers and big names on viral posts comment in their own voice. Feuding stars show up to hate, and friends defend you in the replies. Brand accounts banter with each other. Reply to a star or brand in your thread and they answer back. Reply to a star's post and they (and sometimes another star) reply under it. Star posts have threads full of star and brand replies, including clash comebacks.
+- **Post everywhere**: the "All platforms" toggle cross-posts to every unlocked platform in each platform's best format (photo or reel, hot take, short, vlog) at a 35% energy discount, with a combined forecast. Special topics and mention intents apply only to the first platform.
+- **Polls**: a Chirp format with up to four options. Fans vote, and the results show as bars.
+- **Duets**: remix any star's post from its thread. You borrow some of their audience, and they react to how you treated them.
+- **Daily spin**: once a day, win energy, cash, followers, an algorithm boost, fresh tea, a spa day, a mystery event, or nothing.
+
 ## Creativity
 
 - **Originality score** (0–100) for every post: your own words, a wide vocabulary, questions, emoji and @mentions raise it. Repeating yourself or using the dice's canned captions lowers it. Higher originality means more reach and viral chance, and 85+ gives a small energy bonus.

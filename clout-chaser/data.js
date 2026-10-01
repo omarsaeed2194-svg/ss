@@ -410,3 +410,62 @@ const COUNTRY_FAN = ['{f} {c} loves you!!', 'come to {c} please 🙏 {f}', 'gree
 
 /* Big emoji motifs for generated post art */
 const NICHE_EMOJI = { beauty: ['💄', '✨', '🪞'], gaming: ['🎮', '🕹️', '🏆'], fitness: ['🏋️', '💪', '🥇'], comedy: ['😂', '🎭', '🤡'], tech: ['📱', '💻', '🤖'], food: ['🍜', '🍕', '🧁'], music: ['🎤', '🎧', '🎸'], fashion: ['👗', '🕶️', '👠'], travel: ['✈️', '🏝️', '🗺️'], lifestyle: ['☕', '🌿', '🛋️'] };
+
+/* ---------- Fans that actually read your post ---------- */
+const KEYWORD_BANK = [
+  [/\b(food|pizza|pasta|burger|cook|recipe|eat|ate|dinner|lunch|breakfast|snack)/i, ['ok but where is the recipe', 'I just got hungry at 2am because of you', 'rating: 10/10 would eat through my screen', 'not me licking my phone']],
+  [/\b(gym|workout|lift|leg day|abs|run|cardio|protein)/i, ['skipping leg day after reading this, sorry', 'my rest day is offended', 'the motivation I needed to stay in bed', 'protein shake in hand, reading this']],
+  [/\b(money|rich|broke|rent|salary|paid|budget|bank)/i, ['my bank account felt this', 'teach me your ways, I have $4', 'rent is due and so is this energy', 'financially and emotionally invested']],
+  [/\b(love|crush|ex|breakup|date|dating|single|heart)/i, ['who hurt you (I want names)', 'sending this to my ex with no context', 'single and thriving after this post', 'this is a cry for help and I hear you']],
+  [/\b(3am|2am|4am|midnight|sleep|tired|insomnia)/i, ['3am posting is a lifestyle', 'go to sleep (I am also awake)', 'night owls unite 🦉', 'the 3am thoughts are thoughting']],
+  [/\b(cat|dog|pet|puppy|kitten)/i, ['PET TAX. NOW.', 'I came for the pet, stayed for you', 'the pet should have their own account', 'protect this animal at all costs']],
+  [/\b(travel|trip|flight|airport|beach|island|vacation)/i, ['take me with you, I fit in a suitcase', 'my passport is crying', 'the view? unreal. me at my desk? also unreal', 'adding this to the list I will never do']],
+  [/\b(sad|cry|crying|depressed|lonely|tired of)/i, ['sending you the biggest hug 🤍', 'it gets better, we got you', 'you are not alone in this', 'logging on just to say we love you']],
+  [/\b(win|won|winning|champion|first|record|goal)/i, ['WINNERS ONLY 🏆', 'main character arc unlocked', 'they said it couldn\'t be done (they were wrong)', 'congrats!! you earned this']],
+  [/\b(game|gaming|boss|rank|ranked|clutch|controller)/i, ['gg ez', 'the clutch gene is real', 'my controller just broke in solidarity', 'skill issue (not you, me)']],
+  [/\b(makeup|skincare|glow|lip|lipstick|serum)/i, ['the glow is GLOWING', 'adding to cart, emptying wallet', 'which serum??? asking for my whole face', 'flawless. no notes.']],
+  [/\b(phone|laptop|tech|setup|gadget|app|ai)/i, ['setup goals, my desk is a war crime', 'but does it run games', 'specs or it didn\'t happen', 'the cable management is a love language']],
+  [/\b(outfit|fit|dress|style|fashion|shoes|jacket)/i, ['the fit is FITTING', 'link to the jacket or I riot', 'fashion week who? you week', 'my closet just filed a complaint']],
+  [/\b(music|song|album|sing|beat|playlist|concert)/i, ['adding to my playlist immediately', 'this song lives in my head now', 'concert when???', 'I played this 40 times already']],
+];
+const QUESTION_ANSWERS = {
+  which: ['the first one, no debate', 'both. greed wins', 'option C: chaos', 'the second one and I will not be explaining'],
+  should: ['yes. do it. today.', 'absolutely not 💀', 'the universe says yes', 'I\'m saying yes so you can blame me later'],
+  who: ['me. obviously me.', 'my mom', 'whoever is reading this 🫵', 'not the one you think'],
+  what: ['honestly? pizza', 'chaos', 'the vibes', 'whatever you post next'],
+  any: ['YES', 'no but I respect the question', 'depends who\'s asking 👀', 'asking the real questions'],
+};
+const SUPERFAN_KINDS = {
+  stan:    { label: 'Superfan', name: ['luv', 'stan', 'angel', 'bestie'], lines: ['day {n} of commenting first 🫶', 'better than your {prev} post and that one was PERFECT', 'I\'ve been here since {f} followers and I\'ll be here forever', 'reporting for duty, commenting on post #{n}', 'protect them at all costs, I mean it'] },
+  critic:  { label: 'Top critic', name: ['honest', 'critic', 'real', 'notes'], lines: ['"{w}"? you can do better. 6/10', 'still waiting for the {prev} sequel tbh', 'solid, but your {prev} post was stronger', 'I\'ll allow it. 7/10', 'improvement. last one was a 5, this is a 7'] },
+  clown:   { label: 'Class clown', name: ['lol', 'meme', 'goblin', 'chaos'], lines: ['me after reading "{w}" 🤡', 'putting "{w}" on my tombstone', 'this is my roman empire now, sorry {prev} post', 'they did it again, the absolute clowns (affectionate)', 'I laughed, I cried, I fell off my chair'] },
+};
+const STAR_VOICE = {
+  diva:       ['cute.', 'I did this first but ok', '"{w}"? iconic of me to inspire this', 'not bad for someone with {f} followers', 'my lighting would\'ve fixed this'],
+  hothead:    ['"{w}"?? be serious', 'LET\'S GOOO 🔥', 'this goes hard ngl', 'nah this is crazy 😭', 'who\'s gonna tell them'],
+  sweetheart: ['this is so you 🥹', 'love the "{w}" part so much', 'proud of you!!', 'sending love from my couch 🤍', 'this made my whole day'],
+  strategist: ['solid {n} content. the "{w}" angle works', 'numbers will be good on this', 'smart timing', 'clean execution', 'noted. good post.'],
+  wildcard:   ['"{w}" 😈', 'I\'m screenshotting this for later', 'interesting choice', '👁️👄👁️', 'this is either genius or a cry for help'],
+};
+const STAR_BACK = {
+  nice:  { diva: ['I know. but thank you', 'you have taste'], hothead: ['appreciate you fr 🔥', 'real one'], sweetheart: ['you\'re the sweetest 🥹', 'stop I\'m blushing'], strategist: ['thanks, appreciated', 'good eye'], wildcard: ['who sent you 👀', 'ok bestie'] },
+  funny: { diva: ['…okay that was funny', 'I\'ll allow it'], hothead: ['LMAOOO', 'I\'m crying 😭'], sweetheart: ['hahaha you\'re so funny', '😂😂'], strategist: ['ha. good one', 'fair'], wildcard: ['funnier than my last album', 'I\'m stealing this joke'] },
+  promo: { diva: ['no.', 'do not use my comments for ads'], hothead: ['bro is advertising in MY replies', 'blocked (jk) (not jk)'], sweetheart: ['good luck with your page!', 'aw I\'ll check it out'], strategist: ['not the place', 'nice try'], wildcard: ['lol the audacity', 'I respect the hustle'] },
+  troll: { diva: ['who is this', 'sweetie no'], hothead: ['say that to my face', 'you want smoke?'], sweetheart: ['that\'s not very nice 😔', 'hope your day gets better'], strategist: ['ratio\'d by facts', 'anyway'], wildcard: ['😂 you\'re funny', 'pinning this'] },
+};
+const BRAND_BANTER = [
+  ['windys', 'mcdougals', 'we would have made this post fresher', 'at least our ice cream machine… never mind'],
+  ['starbux', 'cocakola', 'this post pairs well with a latte', 'and an ice-cold Kola'],
+  ['nikey', 'redbully', 'just did it', 'and gave it wings (legally not)'],
+  ['pear', 'tezla', 'shot on Pear', 'and delivered by Tezla eventually'],
+  ['netflux', 'amazin', 'renewing this post for season 2', 'and shipping season 3 by tomorrow'],
+  ['duolinguo', 'windys', 'nice post. now do your Spanish lesson 🦉', 'even the owl is roasting people now?'],
+];
+/* Best format on each platform when you cross-post */
+const CROSS_FORMAT = { pix: (f) => (FORMATS[f] && FORMATS[f].video ? 'reel' : 'photo'), chirp: (f) => (f === 'poll' || f === 'thread' || f === 'take' || f === 'meme' ? f : 'take'), clipz: () => 'short', tube: () => 'vlog' };
+FORMATS.poll = { p: 'chirp', name: 'Poll', e: 7, reach: 1.15, skill: 'creativity', eng: 1.6 };
+const SPIN_PRIZES = [
+  { k: 'energy', label: '+35 energy', w: 3 }, { k: 'money', label: 'Cash drop', w: 3 }, { k: 'followers', label: '+3% followers', w: 2 },
+  { k: 'boost', label: 'Algorithm boost', w: 2 }, { k: 'tea', label: 'Fresh tea', w: 1.5 }, { k: 'stress', label: 'Spa day (−25 stress)', w: 2 },
+  { k: 'mystery', label: 'Mystery event', w: 1 }, { k: 'nothing', label: 'Nothing lol', w: 1 },
+];
