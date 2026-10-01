@@ -1450,6 +1450,46 @@ function enterGame() {
   renderAll(); processQueue();
 }
 
+/* ---------- horizontal scrolling for chip rows: wheel, drag, edge fades ---------- */
+const HSEL = '.scroller, .strip, .table-wrap';
+function scrollHints() {
+  document.querySelectorAll(HSEL).forEach((el) => {
+    const max = el.scrollWidth - el.clientWidth;
+    el.classList.toggle('more-l', max > 2 && el.scrollLeft > 2);
+    el.classList.toggle('more-r', max > 2 && el.scrollLeft < max - 2);
+  });
+}
+let hintQueued = false;
+const queueHints = () => { if (hintQueued) return; hintQueued = true; requestAnimationFrame(() => { hintQueued = false; scrollHints(); }); };
+new MutationObserver(queueHints).observe(document.body, { childList: true, subtree: true });
+document.addEventListener('scroll', (e) => { if (e.target.matches && e.target.matches(HSEL)) queueHints(); }, true);
+window.addEventListener('resize', queueHints);
+document.addEventListener('wheel', (e) => {
+  const el = e.target.closest && e.target.closest(HSEL);
+  if (!el || e.ctrlKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+  const max = el.scrollWidth - el.clientWidth; if (max <= 2) return;
+  const next = el.scrollLeft + e.deltaY;
+  if ((e.deltaY < 0 && el.scrollLeft <= 0) || (e.deltaY > 0 && el.scrollLeft >= max - 1)) return; // at the end: let the page scroll
+  e.preventDefault(); el.scrollLeft = next;
+}, { passive: false });
+let drag = null;
+document.addEventListener('pointerdown', (e) => {
+  if (e.pointerType !== 'mouse' || e.button !== 0) return;
+  const el = e.target.closest && e.target.closest(HSEL);
+  if (!el || el.scrollWidth - el.clientWidth <= 2) return;
+  drag = { el, x: e.clientX, left: el.scrollLeft, moved: false };
+});
+document.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x;
+  if (!drag.moved && Math.abs(dx) < 6) return;
+  drag.moved = true; drag.el.classList.add('dragging');
+  drag.el.scrollLeft = drag.left - dx;
+});
+document.addEventListener('pointerup', () => { if (drag && drag.moved) { const el = drag.el; el.classList.remove('dragging'); el.dataset.dragged = '1'; setTimeout(() => { delete el.dataset.dragged; }, 0); } drag = null; });
+// a drag should not count as a click on the chip under the mouse
+document.addEventListener('click', (e) => { const el = e.target.closest && e.target.closest(HSEL); if (el && el.dataset.dragged) { e.stopPropagation(); e.preventDefault(); } }, true);
+
 /* ======================================================================
    Boot
    ====================================================================== */
