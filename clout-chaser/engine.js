@@ -59,7 +59,7 @@ function newGame(o) {
   mail({ type: 'npc', npc: o.niche === 'gaming' ? 'milo' : 'skye', subject: 'hey neighbor', body: 'Saw you just started posting. The first month is rough, keep going! Maybe we collab once you get a few more followers?' });
   mail({ type: 'fan', from: '@' + fanHandle(), subject: 'first!!', body: "I don't know you yet but your vibe is immaculate. Following." });
   S.notifs = []; S.bio = `${NICHES[o.niche].name} creator. Posting my way to the top.`;
-  S.clashes = []; S.aesthetic = pick(Object.keys(FILTERS));
+  S.clashes = []; S.aesthetic = pick(Object.keys(FILTERS)); S.pending = []; S.cos = {};
   S.country = o.country || 'us'; S.faceSeed = o.faceSeed || o.name; S.tea = []; S.visited = [S.country];
   S.geo = { [S.country]: 0.62 };
   shuffle(['us', 'in', 'br', 'gb', 'mx', 'ph', 'id', 'ca', 'ng', 'de', 'fr', 'es', 'tr', 'sa', 'ae', 'eg', 'jp', 'kr', 'au', 'it', 'ar', 'co'].filter((c) => c !== S.country)).slice(0, 6).forEach((c, i) => { S.geo[c] = [0.12, 0.08, 0.06, 0.05, 0.04, 0.03][i]; });
@@ -91,6 +91,7 @@ function migrate(s) {
   (s.posts || []).forEach((p) => (p.comms || []).forEach((c) => { if (c.likes === undefined) c.likes = 0; }));
   for (const [id, n] of Object.entries(NPCS)) if (!s.npcs[id]) s.npcs[id] = { followers: n.followers, rel: 0, following: false, followsYou: false, feud: false, rep: n.rep };
   s.clashes = s.clashes || [];
+  s.pending = s.pending || []; s.cos = s.cos || {};
   s.country = s.country || 'us'; s.faceSeed = s.faceSeed || s.name; s.tea = s.tea || []; s.visited = s.visited || [s.country];
   if (!s.geo) { s.geo = { [s.country]: 0.7, us: 0.1, br: 0.08, in: 0.07, gb: 0.05 }; }
   s.aesthetic = s.aesthetic || 'neon';
@@ -321,6 +322,9 @@ function computePost(o, det = false) {
   const repeat = recent.slice(0, 3).filter((p) => p.topicId === topic.id && p.platform === o.platform).length;
   mult *= 1 - repeat * 0.12; // audiences tire of the same thing
   mult *= (0.82 + orig / 280) * (1 + (FL && FL.reach ? FL.reach : 0)) * (lookMatch ? 1.12 : 1); // original writing and on-trend looks travel further
+  const ints = Object.values(o.intents || {});
+  if (ints.includes('beef')) mult *= 1.3; // drama travels
+  if (ints.includes('collab')) mult *= 1.08;
   mult = Math.pow(Math.max(mult, 0.01), 0.6); // stacked bonuses have diminishing returns
   const today = S.posts.filter((p) => p.day === S.day);
   mult *= Math.pow(0.72, today.filter((p) => p.platform === o.platform).length) * Math.pow(0.86, today.length); // followers tire of spam
@@ -346,9 +350,9 @@ function computePost(o, det = false) {
   let loss = 0;
   if (spicy && S.rep < 45) loss += ps.followers * R(0.005, 0.02);
   if (sellout) loss += ps.followers * 0.01;
-  let rep = T.rep + topic.rep + (F.rep || 0) + (q > 1.25 ? 0.5 : 0) + (FL && FL.rep ? FL.rep : 0);
+  let rep = T.rep + topic.rep + (F.rep || 0) + (q > 1.25 ? 0.5 : 0) + (FL && FL.rep ? FL.rep : 0) + (ints.includes('beef') ? -2 : 0) + (ints.includes('shout') ? 0.6 : 0);
   if (views > total * 3 && total > 500) rep *= 1.4; // bigger stage, bigger swing
-  const heat = T.heat + topic.heat + (viral && spicy ? 10 : 0) + (FL && FL.heat ? FL.heat : 0);
+  const heat = T.heat + topic.heat + (viral && spicy ? 10 : 0) + (FL && FL.heat ? FL.heat : 0) + (ints.includes('beef') ? 10 : 0);
   let cash = 0;
   if (o.platform === 'tube' && ps.followers >= 1000) cash += (views / 1000) * P.cpm * (1 + 0.05 * skillLvl('business'));
   if (o.platform === 'clipz') cash += (views / 1000) * P.cpm;
@@ -475,24 +479,7 @@ function doPost(o) {
   S.posts.unshift(post); if (S.posts.length > 80) S.posts.length = 80;
   S.posts.filter((p) => p.img).slice(10).forEach((p) => { p.img = null; }); // keep saves small
   post.fresh = true;
-  // @mentions: stars notice, friends might answer
-  post.mentions = mentionedNpcs(o.caption).slice(0, 2);
-  for (const id of post.mentions) {
-    const n = S.npcs[id];
-    if (n.feud) { changeRel(id, -3); continue; }
-    changeRel(id, TONES[o.tone].heat >= 10 ? -4 : 1.5);
-    if (n.rel >= 25 && chance(0.4) && !post.comms.some((c) => c.npc === id)) post.comms.unshift({ who: NPCS[id].handle, npc: id, text: pick(['haha thank you for the mention!', 'this is so real', 'love you for this', 'ok I see you 👀']), likes: Math.round(r.likes * rnd(0.05, 0.2)) });
-  }
-  for (const id of mentionedCompanies(o.caption).slice(0, 2)) {
-    const c = COMPANIES[id];
-    if (chance(0.55)) {
-      const roast = c.roast && (TONES[o.tone].heat >= 3 || chance(0.5));
-      post.comms.unshift({ who: c.handle, co: id, text: roast ? pick(['and yet you still tagged us', 'we have more followers and better fries', 'bold of you to @ us with that caption', 'this is giving "tagged a brand for clout"']) : pick(c.replies), likes: Math.round(r.likes * rnd(0.05, 0.2)), neg: roast });
-      gainEnergy(4, `${c.name} replied to you`);
-      S.stats.coReplies = (S.stats.coReplies || 0) + 1;
-    }
-    if (chance(0.08) && totalFollowers() >= BRANDS[id].min) { const b = BRANDS[id]; const req = 1; mail({ type: 'deal', brand: id, pay: dealPay(b), req, days: ri(3, 6), from: b.name, subject: 'Saw your tag. Want to make it official?', body: `${b.name} noticed your post and wants a paid one.` }); }
-  }
+  applyMentionIntents(post, o, r); // stars and brands react with their own personalities
   for (const [cc, C] of Object.entries(COUNTRIES)) if ((o.caption || '').includes(C.flag) || (o.caption || '').toLowerCase().includes(C.name.toLowerCase())) geoAdd(cc, 0.01);
   if (r.topic.tea) {
     const t = S.tea.find((x) => x.id === r.topic.tea);
@@ -770,6 +757,7 @@ function endDay() {
   // Random events
   rollRandomEvents();
   tickClashes();
+  behaviorTick();
   if (chance(0.6)) companyPost(pick(Object.keys(COMPANIES)));
   if (S.geo) geoAdd(pick(['us', 'in', 'br', 'id', 'ph', 'mx']), 0.003);
   if (chance(0.35)) startClash();

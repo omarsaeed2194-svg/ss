@@ -52,6 +52,21 @@ The game looks and plays like a social app (inspired by the Status social-media 
 - **Creative comments**: replies quote words from your caption and reference your niche and platform, with stans, askers, bots, haters, international fans, company accounts and reply chains.
 - **Spicier, harder game**: cost of fame grows every tier; scandal events hit more often the more famous you are; three weak posts in a row start "did they fall off?" discourse; you collect harmless secrets ("tea") on stars at parties, collabs and in DMs and can spill them for huge reach (they won't forget it). There are new events: leaked DMs, an ex's tell-all, deepfakes, lip-sync scandals, plagiarism accusations, 3 AM posts, star subtweets, company roasts, tax audits, country restrictions, and a hot-seat interview with three spicy questions.
 
+## Behavior and mind games
+
+- **Personalities**: every star is a Diva, Hothead, Sweetheart, Strategist or Wildcard; every brand is Savage, Corporate or Snob. They remember what you did (praise, pitches, disses, gifts, apologies, spilled tea) and have a mood that drifts day to day. Together these give a stance toward you: in your corner, warming up, neutral, wary, or hostile. All of it is shown on their profile.
+- **Asks get real answers**: collabs, shoutouts, apologies and sponsorship pitches go through one decision engine. Possible answers:
+  - yes or no
+  - a counter-offer ("shout me out first", "a gift would help", "apologize publicly", or a lowball brand deal)
+  - "let me think about it" (they answer a day or two later)
+  - ghosting
+  - a Wildcard yes that later flakes
+- **Beef gets a response**: Hothead attacks back or challenges you to a clash battle, Diva says "who?", Strategist posts receipts (unless you hold tea on them) or ignores you, Sweetheart posts that it hurt and their fans turn on you, Wildcard plays mind games. Brands roast back, issue PR statements, send a cease-and-desist, or offer a deal to make you stop.
+- **They act on their own**: friends shout you out unprompted, hostile stars come for you, Wildcards play mind games (3 AM likes on old posts, unfollow-refollow, "wrong chat" DMs, cryptic stories), same-niche rivals steal your trend or poach your brand partners, and happy brands send offers.
+- **Mention intents**: @mention someone in a post and choose Just tag, Shout out, Pitch collab or sponsorship, or Start beef. Each mention shows a hint on how that personality will react. The dice reads your mentions and writes a post about that star or brand that fits the intent.
+- **DM quick starters**: pitch a collab, compliment, ask for a shoutout, apologize, talk trash, or ask on a date. Each fills in a message written for that star.
+- **Profile shortcuts**: pitch a collab, shout them out, or diss them in a post straight from a star's profile.
+
 ## Creativity
 
 - **Originality score** (0–100) for every post: your own words, a wide vocabulary, questions, emoji and @mentions raise it. Repeating yourself or using the dice's canned captions lowers it. Higher originality means more reach and viral chance, and 85+ gives a small energy bonus.
@@ -115,6 +130,7 @@ Doing well gives you a second wind, shown as a gold energy pop-up:
 - `events.js` – random and triggered events, livestream chat, modal queue
 - `clash.js` – celebrity clashes and clash battles
 - `spicy.js` – scandal events, hot seat, tea fallout, world tour
+- `behavior.js` – personalities, memory, mood, decisions, mind games, mention intents
 - `ui.js` – rendering, player actions, start screen
 
 All people, brands and platforms in the game are fictional or clearly marked parody with tweaked names; everything they do in the game is invented.

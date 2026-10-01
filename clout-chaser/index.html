@@ -381,6 +381,10 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100
 .mention-box { position: fixed; z-index: 80; width: 320px; max-width: calc(100vw - 16px); max-height: 390px; overflow-y: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.4); padding: 5px; }
 .mention-item { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 10px; cursor: pointer; }
 .mention-item:hover, .mention-item.on { background: var(--surface-2); }
+.mention-panel { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; padding: 10px; border: 1px solid var(--line); border-radius: 14px; }
+.mp-row { display: flex; gap: 10px; align-items: flex-start; }
+.chip.beefchip[aria-pressed="true"] { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); border-color: var(--bad); }
+.persona { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; padding: 10px 12px; background: var(--surface); border-radius: 12px; }
 @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
 @keyframes rise { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes slidein { from { background: var(--accent-soft); } to { background: transparent; } }
@@ -442,4 +446,5 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100
 <script src="events.js"></script>
 <script src="clash.js"></script>
 <script src="spicy.js"></script>
+<script src="behavior.js"></script>
 <script src="ui.js"></script>

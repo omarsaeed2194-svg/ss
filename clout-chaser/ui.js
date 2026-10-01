@@ -65,7 +65,7 @@ const ago = (d) => (S.day - d <= 0 ? 'today' : `${S.day - d}d`);
 const btn = (label, act, arg = '', cls = '', dis = false, title = '') => `<button class="btn ${cls}" data-act="${act}" data-arg="${esc(arg)}" ${dis ? 'disabled' : ''} ${title ? `title="${esc(title)}"` : ''}>${label}</button>`;
 const chip = (label, act, arg, on, dis = false, extra = '') => `<button class="chip" data-act="${act}" data-arg="${esc(arg)}" aria-pressed="${on ? 'true' : 'false'}" ${dis ? 'disabled' : ''}>${label}${extra}</button>`;
 function rich(t) {
-  return esc(t).replace(/(#[A-Za-z0-9_]+)/g, '<span class="tag">$1</span>').replace(/(@[A-Za-z0-9_.]+)/g, '<span class="at">$1</span>');
+  return esc(t).replace(/(^|[^&\w])(#[A-Za-z][A-Za-z0-9_]*)/g, '$1<span class="tag">$2</span>').replace(/(^|[^\w])(@[A-Za-z0-9_.]+)/g, '$1<span class="at">$2</span>');
 }
 function srand(seed) { let x = Math.abs(Math.round(seed * 9301 + 49297)) % 233280; return () => { x = (x * 9301 + 49297) % 233280; return x / 233280; }; }
 const parseTags = (t) => [...new Set((t.match(/#[A-Za-z0-9_]+/g) || []))].slice(0, 8);
@@ -133,7 +133,7 @@ function renderMentions() {
   b.innerHTML = st.items.map((it, i) => {
     const isCo = it.kind === 'co';
     const name = isCo ? COMPANIES[it.id].name : NPCS[it.id].name;
-    const tag = isCo ? COMPANIES[it.id].cat : S.npcs[it.id].feud ? 'Feuding' : relLabel(S.npcs[it.id].rel);
+    const tag = isCo ? `${CO_STYLES[coStyle(it.id)].name} · ${COMPANIES[it.id].cat}` : `${ARCHETYPES[archetype(it.id)].name} · ${STANCE[stanceOf(it.id)][0]}`;
     return `<div class="mention-item ${i === st.sel ? 'on' : ''}" role="option" data-i="${i}">${isCo ? coAv(it.id, 'sm') : npcAv(it.id, 'sm')}<div style="min-width:0;flex:1"><b style="display:flex;gap:4px;align-items:center">${esc(name)} ${isCo ? vb(true) : npcBadge(it.id)}</b><span class="small muted">@${it.handle}</span></div><span class="pill">${esc(tag)}</span></div>`;
   }).join('');
   b.hidden = false;
@@ -329,6 +329,7 @@ function myPostCard(p) {
     <div class="tw-text">${rich(p.caption)}${extra.length ? ' ' + rich(extra.join(' ')) : ''}</div>
     ${media(p.format, p.topic, P.color, p.id, p.filter, { caption: p.caption, img: p.img })}
     ${actions({ replyAct: 'open', arg: 'post:' + p.id, replies: p.comments, reposts: p.shares, likes: p.likes, views: p.views, fresh: p.fresh })}
+    ${p.beef || p.pitch || p.deal ? `<div class="row small">${p.deal ? `<span class="pill gold">${esc(p.deal)}</span>` : ''}${p.pitch ? `<span class="pill blue">${esc(p.pitch)}</span>` : ''}${p.beef ? `<span class="pill bad">${esc(p.beef)}</span>` : ''}</div>` : ''}
     ${p.fresh ? `<div class="row small">${p.gain ? `<span class="pill ${p.gain > 0 ? 'good' : 'bad'}">${signed(p.gain)} followers</span>` : ''}<span class="pill ${p.rep >= 0 ? 'good' : 'bad'}">${signed1(p.rep)} rep</span>${p.cash > 0.5 ? `<span class="pill gold">${money(p.cash)} ads</span>` : ''}</div>` : ''}
   </div></article>`;
 }
@@ -474,6 +475,7 @@ function vStar(id) {
     if (S.partner === id) more.push(btn('Break up', 'breakup', id, 'sm danger'));
     more.push(btn('Call out · 10', 'feud', id, 'sm danger'));
   } else more.push(btn('Make peace · 10', 'makeup', id, 'sm'));
+  more.push(btn(`${ico('feather')} Pitch collab in a post`, 'postAbout', `npc:${id}:collab`, 'sm'), btn(`${ico('feather')} Shout them out`, 'postAbout', `npc:${id}:shout`, 'sm'), btn(`${ico('feather')} Diss them in a post`, 'postAbout', `npc:${id}:beef`, 'sm danger'));
   more.push(btn(`${ico('fire')} Clash battle · 20`, 'battle', id, 'sm danger', S.energy < 20, 'Three rounds, public vote. Starts a feud.'));
   return `<div class="col-head">${head(esc(N.name) + ' ' + npcBadge(id), `${posts.length} posts`, true)}</div>
     <div class="banner" style="background:linear-gradient(120deg, ${N.color}, #111)"></div>
@@ -486,6 +488,8 @@ function vStar(id) {
       <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"><div class="row between small"><b>${S.partner === id ? 'Dating' : n.feud ? 'Feuding' : relLabel(n.rel)}</b><span class="muted num">${Math.round(n.rel)} / 100</span></div>
         <div class="relbar"><i style="${n.rel >= 0 ? `left:50%;width:${relW}%;background:var(--good)` : `right:50%;width:${relW}%;background:var(--bad)`}"></i></div>
         <span class="small muted">Collab at 15, shoutout at 40, date at 65. Relationships fade without contact. Ego ${Math.round(N.ego * 10)}/10 · Drama ${Math.round(N.drama * 10)}/10</span></div>
+      <div class="persona"><div class="row" style="gap:6px"><span class="pill blue">${ARCHETYPES[archetype(id)].name}</span><span class="pill ${STANCE[stanceOf(id)][1]}">${STANCE[stanceOf(id)][0]}</span><span class="pill">Mood: ${moodLabel(n.mood || 0)}</span>${n.cond && n.cond.until >= S.day ? `<span class="pill gold">Waiting on your ${n.cond.type === 'apology' ? 'public apology' : 'shoutout'} (${n.cond.until - S.day + 1}d)</span>` : ''}</div>
+        <div class="small muted">${esc(ARCHETYPES[archetype(id)].desc)}</div>${memorySummary('npc', id).length ? `<div class="small">Remembers: ${esc(memorySummary('npc', id).join(' · '))}</div>` : ''}</div>
       <div class="row" style="margin-bottom:12px">${more.join('')}</div>
     </div>
     ${activeClashes().filter((c) => c.a === id || c.b === id).map(clashCard).join('')}
@@ -541,6 +545,7 @@ function msgActions(m) {
     case 'hater': return [['Block', 'block'], ['Clap back', 'clap'], ['Kill with kindness', 'kind']];
     case 'deal': return [['Accept', 'accept'], ['Negotiate', 'negotiate'], ['Decline', 'decline']];
     case 'collab': return [['Let\'s do it', 'collabYes'], ['Not now', 'collabNo']];
+    case 'counter': return m.cond === 'gift' ? [[`Send ${money(m.price)} gift`, 'acceptTerms'], ['Decline', 'declineTerms']] : [['Accept terms', 'acceptTerms'], ['Decline', 'declineTerms']];
     case 'scam_verify': return [['Verify my account', 'phish'], ['Report as phishing', 'report']];
     case 'scam_invest': return [['Send $500', 'scamPay'], ['Delete', 'report']];
     default: return [];
@@ -563,7 +568,7 @@ function vDm(k) {
   const relLine = npc ? `<div class="small muted" style="text-align:center;margin-bottom:12px">${S.npcs[npc].feud ? 'Feuding' : relLabel(S.npcs[npc].rel)} · relationship ${Math.round(S.npcs[npc].rel)}</div>` : '';
   return `<div class="col-head">${head(`${esc(w.name)} ${w.badge}`, esc(w.handle), true, npc ? `<button class="icon-btn" data-act="open" data-arg="star:${npc}" aria-label="View profile">${ico('user')}</button>` : '')}</div>
     <div class="chat">${relLine}${bubbles || '<div class="empty">Say hi. Compliments work better than self-promo.</div>'}${ui.typing && ui.typing === npc ? '<div class="typing"><i></i><i></i><i></i></div>' : ''}</div>
-    ${npc ? `<div class="dm-bar"><input id="dmInput" data-npc="${npc}" maxlength="200" placeholder="Start a message" aria-label="Message"><button class="icon-btn" data-act="dmSend" data-arg="${npc}" aria-label="Send" style="color:var(--accent)">${ico('send')}</button></div><div class="small muted" style="padding:0 16px 12px">3 energy per message. Mention "collab" to pitch one, or "date" if you're close.</div>` : ''}`;
+    ${npc ? `<div class="dm-bar"><input id="dmInput" data-npc="${npc}" maxlength="200" placeholder="Start a message" aria-label="Message"><button class="icon-btn" data-act="dmSend" data-arg="${npc}" aria-label="Send" style="color:var(--accent)">${ico('send')}</button></div><div class="scroller" style="padding:0 12px 8px">${[['collab', 'Pitch a collab'], ['compliment', 'Compliment'], ['shout', 'Ask for a shoutout'], ['sorry', 'Apologize'], ['trash', 'Talk trash'], ...(S.npcs[npc].rel >= 65 && !S.partner ? [['date', 'Ask on a date']] : [])].map(([k, l]) => `<button class="chip ${k === 'trash' ? 'beefchip' : ''}" data-act="dmChip" data-arg="${npc}:${k}">${l}</button>`).join('')}</div><div class="small muted" style="padding:0 16px 12px">3 energy per message. ${ARCHETYPES[archetype(npc)].name}: ${esc(ARCHETYPES[archetype(npc)].desc)}</div>` : ''}`;
 }
 
 /* ---------- My profile ---------- */
@@ -759,11 +764,33 @@ function applyTheme() {
 function openCompose(preset = {}) {
   if (!S || modalBusy) return;
   const last = ui.c || {};
-  ui.c = { platform: last.platform && S.platforms[last.platform] && S.platforms[last.platform].unlocked ? last.platform : 'pix', format: null, topic: 'niche', topicManual: false, toneMode: 'auto', effort: last.effort || 'normal', time: last.time || 'prime', text: '', disclose: true, opts: false, filter: last.filter === undefined ? null : last.filter, ...preset };
+  ui.c = { platform: last.platform && S.platforms[last.platform] && S.platforms[last.platform].unlocked ? last.platform : 'pix', format: null, topic: 'niche', topicManual: false, toneMode: 'auto', effort: last.effort || 'normal', time: last.time || 'prime', text: '', disclose: true, opts: false, filter: last.filter === undefined ? null : last.filter, intents: {}, ...preset };
   $('#composeWrap').hidden = false;
   renderCompose(true);
 }
 function closeCompose() { $('#composeWrap').hidden = true; }
+function composeMentions() {
+  const t = (ui.c && ui.c.text) || '';
+  return [...mentionedNpcs(t).slice(0, 2).map((id) => ({ kind: 'npc', id })), ...mentionedCompanies(t).slice(0, 2).map((id) => ({ kind: 'co', id }))];
+}
+function currentIntents() {
+  const out = {}; const c = ui.c; if (!c) return out;
+  for (const m of composeMentions()) out[m.kind + ':' + m.id] = (c.intents || {})[m.kind + ':' + m.id] || 'tag';
+  return out;
+}
+function mentionPanel() {
+  const ms = composeMentions(); if (!ms.length) return '';
+  const ints = currentIntents();
+  return `<div class="mention-panel">${ms.map((m) => {
+    const key = m.kind + ':' + m.id, it = ints[key];
+    const E = m.kind === 'co' ? COMPANIES[m.id] : NPCS[m.id];
+    const label = m.kind === 'co' ? `${CO_STYLES[coStyle(m.id)].name} brand` : `${ARCHETYPES[archetype(m.id)].name} · ${STANCE[stanceOf(m.id)][0]}`;
+    const opts = [['tag', 'Just tag'], ['shout', 'Shout out'], ['collab', m.kind === 'co' ? 'Pitch sponsorship' : 'Pitch collab'], ['beef', m.kind === 'co' ? 'Call them out' : 'Start beef']];
+    return `<div class="mp-row">${m.kind === 'co' ? coAv(m.id, 'sm') : npcAv(m.id, 'sm')}<div style="flex:1;min-width:0"><div class="row" style="gap:6px"><b>${esc(E.name)}</b><span class="pill ${m.kind === 'npc' ? STANCE[stanceOf(m.id)][1] : ''}">${esc(label)}</span></div>
+      <div class="scroller" style="margin-top:6px">${opts.map(([k, l]) => `<button class="chip ${k === 'beef' ? 'beefchip' : ''}" data-act="cIntent" data-arg="${key}|${k}" aria-pressed="${it === k}">${l}</button>`).join('')}</div>
+      <div class="small muted" style="margin-top:4px">${esc(intentHint(m.kind, m.id, it) || '')}</div></div></div>`;
+  }).join('')}</div>`;
+}
 function composeInput() {
   const c = ui.c;
   const tags = parseTags(c.text);
@@ -778,7 +805,7 @@ function composeInput() {
     else c.topic = 'niche';
   }
   const tone = c.toneMode === 'auto' ? detectTone(c.text) : c.toneMode;
-  return { platform: c.platform, format: c.format, topic: c.topic, tone, effort: c.effort, time: c.time, tags, caption: c.text, disclose: c.disclose, filter: c.filter, img: hasLook(c.format) ? c.img || null : null };
+  return { platform: c.platform, format: c.format, topic: c.topic, tone, effort: c.effort, time: c.time, tags, caption: c.text, disclose: c.disclose, filter: c.filter, img: hasLook(c.format) ? c.img || null : null, intents: currentIntents() };
 }
 function renderCompose(focus) {
   const c = ui.c; if (!c) return;
@@ -808,6 +835,7 @@ function renderCompose(focus) {
         ${c.img ? `<div class="thumb"><img src="${c.img}" alt="Your photo" style="filter:${c.filter ? LOOK_CSS[c.filter] : 'none'}"><button class="icon-btn" data-act="cImgRemove" aria-label="Remove photo">${ico('x')}</button></div>` : ''}
         <div class="row" style="margin-bottom:6px"><label class="chip" style="color:var(--accent)">${ico('image')} ${c.img ? 'Change photo' : 'Add your photo'}<input type="file" id="cFile" accept="image/*" hidden></label><span class="small muted">Your own photo: +8 originality, +8% quality</span></div>
         <div id="cLive"></div>
+        <div id="cMentions">${mentionPanel()}</div>
       </div></div>
       <div class="opts">
         ${hasLook(c.format) ? `<span class="opt-lbl">Look · this week everyone is posting <span class="gold">${FILTERS[S.aesthetic].name}</span></span><div class="scroller">${chip('None', 'cLook', '', !c.filter)}${Object.entries(FILTERS).map(([k, f]) => `<button class="chip" data-act="cLook" data-arg="${k}" aria-pressed="${c.filter === k}" title="${esc(f.desc)}"><span class="swatch-mini" style="background:linear-gradient(135deg, ${f.g[0]}, ${f.g[1]})"></span>${f.name}${k === S.aesthetic ? '<span class="cost">trending</span>' : ''}</button>`).join('')}</div>${c.filter ? `<span class="small muted">${esc(FILTERS[c.filter].desc)}${c.filter === S.aesthetic ? ' · on trend: +12% reach' : ''}</span>` : ''}` : ''}
@@ -831,7 +859,7 @@ function renderCompose(focus) {
   const ta = $('#cText');
   if (ta) {
     attachMentions(ta);
-    ta.addEventListener('input', () => { c.text = ta.value; updateComposeLive(); });
+    ta.addEventListener('input', () => { c.text = ta.value; updateComposeLive(); const mp = $('#cMentions'); const sig = composeMentions().map((m) => m.kind + m.id).join(); if (mp && mp.dataset.sig !== sig) { mp.dataset.sig = sig; mp.innerHTML = mentionPanel(); } });
     ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); ACT_RUN('cPost'); } });
     if (focus) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
   }
@@ -908,7 +936,19 @@ const ACT = {
   cDisclose: () => { ui.c.disclose = !ui.c.disclose; renderCompose(false); return 'norender'; },
   cTag: (a) => { const c = ui.c; c.text = (c.text.trimEnd() + ' ' + a + ' ').trimStart(); renderCompose(true); return 'norender'; },
   cSuggest: () => {
-    const c = ui.c; const topic = topicsFor().find((t) => t.id === c.topic) || topicsFor()[0];
+    const c = ui.c;
+    const ms = composeMentions();
+    if (ms.length) {
+      const m = ms[0], key = m.kind + ':' + m.id;
+      let intent = currentIntents()[key];
+      if (intent === 'tag') intent = pick(['tag', 'shout', 'collab']);
+      let txt = genMentionText(m.kind, m.id, intent);
+      for (const extra of ms.slice(1)) txt += ` @${(extra.kind === 'co' ? COMPANIES : NPCS)[extra.id].handle}`;
+      c.text = txt; c.intents = { ...(c.intents || {}), [key]: intent };
+      if (c.toneMode === 'auto' && INTENT_TONE[intent]) c.toneMode = INTENT_TONE[intent];
+      renderCompose(true); return 'norender';
+    }
+    const topic = topicsFor().find((t) => t.id === c.topic) || topicsFor()[0];
     const tone = c.toneMode === 'auto' ? pick(['authentic', 'funny', 'wholesome', 'educational']) : c.toneMode;
     let txt = genCaption({ tone }, topic);
     if (topic.trend && !txt.includes(topic.trend)) txt += ' ' + topic.trend;
@@ -922,13 +962,15 @@ const ACT = {
     const o = composeInput();
     const p = doPost(o);
     if (!p) return 'norender';
-    closeCompose(); c.text = ''; c.img = null; c.toneMode = 'auto'; c.topicManual = false; c.topic = 'niche';
+    closeCompose(); c.text = ''; c.img = null; c.intents = {}; c.toneMode = 'auto'; c.topicManual = false; c.topic = 'niche';
     tab = 'home'; ui.view = null; ui.hist = []; if (ui.feedTab === 'following') ui.feedTab = 'foryou';
     window.scrollTo({ top: 0 });
     processQueue();
   },
   unlock: (a) => { unlockPlatform(a); if (ui.c && !$('#composeWrap').hidden) { ui.c.platform = a; ui.c.format = null; renderCompose(false); } },
   stream: (a) => { closeCompose(); startStream(a); },
+  cIntent: (a) => { const [key, it] = a.split('|'); ui.c.intents = { ...(ui.c.intents || {}), [key]: it }; if (INTENT_TONE[it] && (ui.c.toneMode === 'auto' || Object.values(INTENT_TONE).includes(ui.c.toneMode))) ui.c.toneMode = INTENT_TONE[it]; if (it === 'tag') ui.c.toneMode = 'auto'; renderCompose(false); return 'norender'; },
+  dmChip: (a) => { const [id, kind] = a.split(':'); const inp = $('#dmInput'); if (inp) { inp.value = dmTemplate(id, kind); inp.focus(); } return 'norender'; },
   cImgRemove: () => { ui.c.img = null; renderCompose(false); return 'norender'; },
   composeAt: (a) => { openCompose({ text: '@' + a + ' ' }); return 'norender'; },
   travel: (a) => { if (!needEnergy(25)) return 'norender'; if (!travelTo(a)) { S.energy += 25; return 'norender'; } checkAll(); },
@@ -996,16 +1038,21 @@ const ACT = {
       const kind = classifyReply(text), low = text.toLowerCase();
       let p = clamp(0.15 + n.rel / 150 + ratio(a) * 0.6 - N.ego * 0.25 + (S.rep - 50) / 200, 0.03, 0.95);
       const say = (body) => { const m = mail({ type: 'npc', npc: a, subject: '', body }); m.read = ui.view && ui.view.key === 'npc:' + a; };
-      if (/collab|work together|film something/.test(low) && !n.feud) {
+      remember('npc', a, 'dm', kind === 'nice' ? 0.12 : kind === 'troll' ? -0.3 : 0.03);
+      if (/sorry|apolog|my bad|i was wrong/.test(low) && (n.feud || n.rel < 0)) {
+        const out = askStar(a, 'forgive', 'dm'); toast(out.msg, out.ok ? 'gold' : '');
+      } else if (/collab|work together|film something/.test(low) && !n.feud) {
         n.lastAsk = S.day;
-        const pc = clamp(0.1 + n.rel / 120 + ratio(a) * 0.8 - N.ego * 0.3 + (S.rep - 50) / 150 - (S.heat > 60 ? 0.2 : 0), 0.02, 0.92);
-        if (n.rel >= 15 && !S.collab && chance(pc)) { S.collab = { npc: a, until: S.day + 4 }; changeRel(a, 4); gainEnergy(6, 'Collab locked in'); say(pick(["yes!! let's do it this week", 'down. send me a time', "ok I love this idea, let's film"])); toast(`${N.name} said yes. Post the collab within 4 days.`, 'gold'); log(`${N.name} agreed to collab.`, 'gold'); }
-        else { changeRel(a, -1); say(pick(['my schedule is packed rn, maybe later', "hmm not sure it's a fit right now", "let's get to know each other first lol"])); }
+        const out = askStar(a, 'collab', 'dm'); toast(out.msg, out.ok ? 'gold' : '');
+      } else if (/shout ?out|shout me|mention me/.test(low) && !n.feud) {
+        n.lastShout = S.day;
+        const out = askStar(a, 'shout', 'dm'); toast(out.msg, out.ok ? 'gold' : '');
       } else if (/\bdate\b|dinner|go out with me/.test(low) && n.rel >= 65 && !S.partner) {
         if (chance(clamp(0.3 + n.rel / 300 + ratio(a) * 0.3, 0.1, 0.9))) { S.partner = a; S.stats.dates++; applyFx({ fp: 0.05 }); news(`It's official: @${S.handle} and ${N.name} are dating`, true); say('I was hoping you would ask. Friday?'); toast(`You and ${N.name} are official!`, 'gold'); gainEnergy(20, 'Butterflies'); sound('viral'); }
         else { changeRel(a, -10); say('aw you are sweet but I think we are better as friends'); }
       } else if (kind === 'troll') {
         changeRel(a, -10); S.heat = clamp(S.heat + 3, 0, 100);
+        if (n.rel <= -30 && !n.feud && chance(0.5)) { const res = provoke(a, 'troll'); toast(res.text, 'bad'); }
         if (chance(0.6)) say(pick(['wow ok. blocked.', 'screenshotting this', 'imagine sending this lol']));
         if (chance(N.drama * 0.4)) S.queue.push({ ev: 'npc_callout', ctx: { npc: a } });
       } else {
@@ -1017,34 +1064,30 @@ const ACT = {
       checkAll(); save(); flashDelta(s0, statSnap()); renderAll(); processQueue();
     }, 900 + Math.random() * 700);
   },
-  gift: (a) => { const n = S.npcs[a], cost = giftCost(a); if (!spend(cost)) { toast('Not enough money.', 'bad'); return 'norender'; } n.lastGift = S.day; const d = Math.round(rnd(6, 12) * (1 - NPCS[a].ego * 0.4)); changeRel(a, d); toast(`${NPCS[a].name.split(' ')[0]} loved the gift (+${d} relationship)`); },
+  gift: (a) => { const n = S.npcs[a], cost = giftCost(a); if (!spend(cost)) { toast('Not enough money.', 'bad'); return 'norender'; } n.lastGift = S.day; remember('npc', a, 'gift', archetype(a) === 'diva' ? 0.35 : 0.2); const d = Math.round(rnd(6, 12) * (1 - NPCS[a].ego * 0.4)); changeRel(a, d); toast(`${NPCS[a].name.split(' ')[0]} loved the gift (+${d} relationship)`); },
   collab: (a) => {
-    const n = S.npcs[a], N = NPCS[a]; if (!needEnergy(10)) return 'norender'; n.lastAsk = S.day;
-    const p = clamp(0.1 + n.rel / 120 + ratio(a) * 0.8 - N.ego * 0.3 + (S.rep - 50) / 150 - (S.heat > 60 ? 0.2 : 0), 0.02, 0.92);
-    if (chance(p)) { S.collab = { npc: a, until: S.day + 4 }; changeRel(a, 4); toast(`${N.name} said yes! Post the collab within 4 days.`, 'gold'); log(`${N.name} agreed to collab.`, 'gold'); }
-    else { changeRel(a, -2); toast(`${N.name.split(' ')[0]}'s team: "not a fit right now".`); }
+    const n = S.npcs[a]; if (!needEnergy(10)) return 'norender'; n.lastAsk = S.day;
+    const out = askStar(a, 'collab', 'button'); toast(out.msg, out.ok ? 'gold' : '');
   },
   shout: (a) => {
-    const n = S.npcs[a], N = NPCS[a]; if (!needEnergy(5)) return 'norender'; n.lastShout = S.day;
-    const p = clamp(n.rel / 150 + ratio(a) * 0.5 - N.ego * 0.2 + 0.1, 0.05, 0.8);
-    if (chance(p)) { const g = Math.min(n.followers * 0.0015 * rnd(0.5, 1.5), Math.max(totalFollowers() * 0.6, 2000)) * diffM(); addFollowers(g); changeRel(a, -3); toast(`${N.name} shouted you out!`, 'gold'); log(`${N.name} shouted you out (${signed(g)}).`, 'gold'); notify('repost', a, 'shouted you out to their followers', { npc: true }); gainEnergy(12, 'Shoutout rush'); }
-    else { changeRel(a, -4); toast(`${N.name.split(' ')[0]} politely passed.`); }
+    const n = S.npcs[a]; if (!needEnergy(5)) return 'norender'; n.lastShout = S.day;
+    const out = askStar(a, 'shout', 'button'); toast(out.msg, out.ok ? 'gold' : '');
   },
   feud: (a) => {
-    const n = S.npcs[a], N = NPCS[a]; if (!needEnergy(10)) return 'norender';
-    n.feud = true; S.stats.feuds++;
-    const boost = clamp(Math.log10(n.followers / Math.max(100, totalFollowers())) * 0.03, 0.01, 0.15);
-    applyFx({ fp: boost, rep: -4, heat: 18, rel: { [a]: -40 } });
-    news(`@${S.handle} calls out ${N.name}. The internet grabs popcorn.`, true); log(`You called out ${N.name}.`, 'bad');
+    if (!needEnergy(10)) return 'norender';
+    const N = NPCS[a];
+    applyFx({ fp: clamp(Math.log10(S.npcs[a].followers / Math.max(100, totalFollowers())) * 0.03, 0.01, 0.15), rep: -3, heat: 15 });
+    const res = provoke(a, 'callout');
+    news(`@${S.handle} calls out ${N.name}. ${res.text}`, true); log(`You called out ${N.name}. ${res.text}`, 'bad'); toast(res.text, 'bad');
     if (S.partner === a) S.queue.push({ ev: 'breakup', ctx: {} });
-    if (chance(0.4 + N.drama * 0.4)) S.queue.push({ ev: 'diss_reply', ctx: { npc: a } });
     checkAll(); processQueue();
   },
   makeup: (a) => {
-    const n = S.npcs[a], N = NPCS[a]; if (!needEnergy(10)) return 'norender';
-    if (chance(0.3 + N.kind * 0.4 + n.rel / 200)) { n.feud = false; changeRel(a, 25); changeRep(2); toast(`You and ${N.name.split(' ')[0]} squashed the beef.`, 'gold'); news(`@${S.handle} and ${N.name} end their feud`, true); }
-    else { changeRel(a, -5); S.heat = clamp(S.heat + 3, 0, 100); toast(`${N.name.split(' ')[0]} isn't ready to forgive.`, 'bad'); }
+    if (!needEnergy(10)) return 'norender';
+    const out = askStar(a, 'forgive', 'button'); toast(out.msg, out.ok ? 'gold' : '');
+    if (out.ok) changeRep(2);
   },
+  postAbout: (a) => { const [kind, id, intent] = a.split(':'); const E = kind === 'co' ? COMPANIES[id] : NPCS[id]; openCompose({ text: genMentionText(kind, id, intent) + ' ', intents: { [kind + ':' + id]: intent }, toneMode: INTENT_TONE[intent] || 'auto' }); return 'norender'; },
   date: (a) => {
     const n = S.npcs[a], N = NPCS[a]; if (!needEnergy(10)) return 'norender';
     if (chance(clamp(0.3 + n.rel / 300 + ratio(a) * 0.3, 0.1, 0.9))) { S.partner = a; S.stats.dates++; applyFx({ fp: 0.05 }); news(`It's official: @${S.handle} and ${N.name} are dating`, true); log(`You're dating ${N.name}.`, 'gold'); toast(`You and ${N.name} are official!`, 'gold'); gainEnergy(20, 'Butterflies'); sound('viral'); }
@@ -1070,6 +1113,20 @@ const ACT = {
       case 'decline': fin('Declined'); break;
       case 'collabYes': if (S.collab) { toast('Finish your current collab first.', 'bad'); return 'norender'; } S.collab = { npc: m.npc, until: S.day + 4 }; changeRel(m.npc, 3); fin('Collab on! Mention them or pick the collab topic when you post.'); break;
       case 'collabNo': changeRel(m.npc, -3); fin('Declined'); break;
+      case 'acceptTerms': {
+        const n = S.npcs[m.npc];
+        if (m.cond === 'gift') {
+          if (!spend(m.price)) { toast('Not enough money.', 'bad'); return 'norender'; }
+          remember('npc', m.npc, 'gift', 0.4);
+          const out = resolveAsk(m.npc, m.ask, { res: 'yes', line: 'ok, now we\'re talking 💅' }); fin(out.msg); toast(out.msg, 'gold');
+        } else {
+          n.cond = { type: m.cond, ask: m.ask, until: S.day + 3 };
+          fin(m.cond === 'apology' ? 'Post an apology that @mentions them (pick "Shout out") within 3 days.' : 'Post a shoutout that @mentions them (pick "Shout out") within 3 days.');
+          openCompose({ text: genMentionText('npc', m.npc, 'shout') + ' ', intents: { ['npc:' + m.npc]: 'shout' }, toneMode: 'wholesome' });
+        }
+        break;
+      }
+      case 'declineTerms': remember('npc', m.npc, 'declined', -0.2); changeRel(m.npc, -2); fin('You turned down their terms.'); break;
       case 'phish': fin('You entered your password...'); S.queue.push({ ev: 'hacked_scam', ctx: {} }); processQueue(); break;
       case 'report': fin('Reported. Good catch.'); break;
       case 'scamPay': if (!spend(500)) { toast('Not enough money.', 'bad'); return 'norender'; } fin('The "prince" stopped replying. $500 gone.'); log('Lost $500 to a crypto scam.', 'bad'); break;
@@ -1152,7 +1209,7 @@ const ACT = {
 };
 
 const NO_FLASH = new Set(['go', 'back', 'open', 'openDm', 'endDay', 'dmSend', 'noop']);
-const SHEET_ONLY = new Set(['cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);
+const SHEET_ONLY = new Set(['cIntent', 'dmChip', 'postAbout', 'cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);
 function ACT_RUN(act, arg = '') {
   if (!S || !ACT[act]) return;
   const before = statSnap();
