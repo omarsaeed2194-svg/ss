@@ -121,7 +121,7 @@ const tier = (t) => TIERS[tierIndex(t)];
 const diffM = () => ({ chill: 1.35, normal: 1, brutal: 0.75 }[S.diff] || 1);
 const sev = () => ({ chill: 0.7, normal: 1, brutal: 1.4 }[S.diff] || 1);
 const skillLvl = (k) => S.skills[k].lvl;
-function maxEnergy() { return 100 + (S.bonusMaxE || 0) + (S.team.assistant ? 20 : 0) + (S.owned.mansion ? 10 : 0) + (S.owned.island ? 10 : 0); }
+function maxEnergy() { const m = 100 + (S.bonusMaxE || 0) + (S.team.assistant ? 20 : 0) + (S.owned.mansion ? 10 : 0) + (S.owned.island ? 10 : 0); return S.injuredUntil && S.injuredUntil >= S.day ? Math.round(m * 0.6) : m; }
 const energyCap = () => maxEnergy() + 60; // rewards can overcharge you past your normal max
 function gearQ(pid) {
   let q = 0;
@@ -241,6 +241,8 @@ function topicsFor() {
   t.push({ id: 'hot', label: 'Controversial take', reach: 1.8, eng: 1.35, rep: -3, heat: 14, viral: 0.05, phrase: pick(HOT_TAKES) });
   if (S.owned.wardrobe || S.owned.car || S.owned.mansion || S.owned.jet) t.push({ id: 'flex', label: 'Luxury flex', reach: 1.4, eng: 0.9, rep: -1.5, heat: 4, viral: 0.02, phrase: S.owned.jet ? 'the jet' : S.owned.mansion ? 'the new house' : S.owned.car ? 'the new ride' : 'the new fits' });
   if (S.travelUntil >= S.day) { const tc = COUNTRIES[S.travelCountry || 'id']; t.push({ id: 'travel', label: `Trip to ${tc.name}`, reach: 1.35, eng: 1.2, rep: 0.3, heat: 1, viral: 0.03, phrase: `${tc.flag} ${tc.name} photo dump` }); }
+  if (S.flags.hospital && S.day - S.flags.hospital <= 3) t.push({ id: 'hospital', label: 'Hospital update', group: 'Recovery', reach: 1.6, eng: 1.4, rep: 1, heat: -3, viral: 0.04, phrase: 'my hospital bed selfie' });
+  if (S.flags.mugshot && S.day - S.flags.mugshot <= 3) t.push({ id: 'mugshot', label: 'Own the mugshot', group: 'Recovery', reach: 1.9, eng: 1.4, rep: -0.5, heat: 4, viral: 0.07, phrase: 'my mugshot' });
   if (S.duetTarget) { const f = S.feed.find((x) => x.id === S.duetTarget); if (f && f.npc) t.push({ id: 'duet:' + f.id, label: `Duet ${NPCS[f.npc].name.split(' ')[0]}`, group: 'Duet', reach: 1.45 + Math.min(0.7, Math.max(0, Math.log10(S.npcs[f.npc].followers / Math.max(100, totalFollowers()))) / 6), eng: 1.3, rep: 0.3, heat: 0, viral: 0.05, duet: f.id, phrase: `a duet with @${NPCS[f.npc].handle}` }); }
   for (const x of (S.tea || [])) t.push({ id: 'tea:' + x.id, label: `Spill ${NPCS[x.npc].name.split(' ')[0]}'s tea`, group: 'Tea', reach: 2.4, eng: 1.5, rep: -3, heat: 20, viral: 0.1, tea: x.id, phrase: `${NPCS[x.npc].name} ${x.text}` });
   if (S.merch) t.push({ id: 'merch', label: 'Plug your merch', reach: 0.8, eng: 0.85, rep: -0.3, heat: 0, viral: 0, phrase: 'the new merch drop', merch: true });
@@ -341,6 +343,7 @@ function computePost(o, det = false) {
   let er = P.baseEng * T.eng * topic.eng * (F.eng || 1) * clamp(q, 0.5, 1.6) * realRatio() * R(0.8, 1.2);
   if (topic.deal && !o.disclose) er *= 1.1;
   if (FL && FL.eng) er *= 1 + FL.eng;
+  if (o.poll && o.poll.length >= 2) er *= 1.2; // polls pull people into the replies
   er = clamp(er, 0.3, 40);
   const likes = Math.round((views * er) / 100);
   const refund = viral || flop ? 0 : Math.round(energy * clamp((er / P.baseEng - 0.6) * 0.5, 0, 0.6)); // a warm reception gives energy back
@@ -535,7 +538,7 @@ function doPost(o) {
     viral: r.viral, flop: r.flop, sponsored: !!r.topic.deal, q: r.q, comms: genComments(o, r),
     filter: hasLook(o.format) && o.filter ? o.filter : null, orig: r.orig, lookMatch: r.lookMatch, img: o.img || null, crossOf: o.crossOf || null,
   };
-  if (o.format === 'poll' && o.poll && o.poll.length >= 2) { const wts = o.poll.map(() => rnd(0.4, 1.6)); const tot = Math.round(r.likes * rnd(1.5, 3)) + 3; const sum = wts.reduce((a, b) => a + b, 0); post.poll = { opts: o.poll.slice(0, 4), votes: wts.map((x) => Math.round((x / sum) * tot)) }; }
+  if (o.poll && o.poll.length >= 2) { const wts = o.poll.map(() => rnd(0.4, 1.6)); const tot = Math.round(r.likes * rnd(1.5, 3)) + 3; const sum = wts.reduce((a, b) => a + b, 0); post.poll = { opts: o.poll.slice(0, 4), votes: wts.map((x) => Math.round((x / sum) * tot)) }; }
   S.posts.unshift(post); if (S.posts.length > 80) S.posts.length = 80;
   S.posts.filter((p) => p.img).slice(10).forEach((p) => { p.img = null; }); // keep saves small
   post.fresh = true;
@@ -823,6 +826,7 @@ function endDay() {
   rollRandomEvents();
   tickClashes();
   behaviorTick();
+  dangerTick();
   if (chance(0.6)) companyPost(pick(Object.keys(COMPANIES)));
   if (S.geo) geoAdd(pick(['us', 'in', 'br', 'id', 'ph', 'mx']), 0.003);
   if (chance(0.35)) startClash();
@@ -965,6 +969,10 @@ const ACHIEVEMENTS = [
   ['corp', 'Brand bestie', 'Get 5 replies from company accounts', () => (S.stats.coReplies || 0) >= 5],
   ['globe', 'Globetrotter', 'Visit 5 countries', () => (S.visited || []).length >= 5],
   ['hotseat', 'Hot seat survivor', 'Finish a hot seat interview', () => (S.stats.hotseats || 0) >= 1],
+  ['stunt', 'Daredevil', 'Pull off a Danger Zone stunt', () => (S.stats.stunts || 0) - (S.stats.stuntFails || 0) >= 1],
+  ['hurt', 'Learned the hard way', 'Get hurt or arrested doing a stunt', () => (S.stats.stuntFails || 0) >= 1],
+  ['scheme', 'Shady', 'Run a scheme on your fans', () => (S.stats.schemes || 0) >= 1],
+  ['busted', 'Busted', 'Get exposed for scamming', () => (S.stats.busted || 0) >= 1],
   ['nemesis', 'Arch-nemesis', 'Make a Nemesis', () => Object.values(S.npcs).some((n) => n.rel <= -60)],
   ['top10', 'Top 10', 'Pass 10 stars on the leaderboard', () => Object.values(S.npcs).filter((n) => n.followers < totalFollowers()).length >= 10],
   ['number1', 'Number one', 'Top the leaderboard', () => Object.values(S.npcs).every((n) => n.followers < totalFollowers())],

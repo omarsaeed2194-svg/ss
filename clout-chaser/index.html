@@ -400,6 +400,8 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100
 .wheel.spinning { animation: wheelspin 1.3s cubic-bezier(.2,.8,.3,1); }
 @keyframes wheelspin { to { transform: rotate(1440deg); } }
 .topfans { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.card .t .pill { flex: none; align-self: flex-start; }
+.danger-card { border-color: color-mix(in srgb, var(--bad) 30%, var(--line)); }
 @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
 @keyframes rise { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes slidein { from { background: var(--accent-soft); } to { background: transparent; } }
@@ -462,4 +464,5 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100
 <script src="clash.js"></script>
 <script src="spicy.js"></script>
 <script src="behavior.js"></script>
+<script src="danger.js"></script>
 <script src="ui.js"></script>

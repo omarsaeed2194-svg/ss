@@ -48,7 +48,7 @@ const ui = {
   onb: { step: 0, name: 'Jordan Vale', handle: 'jordanvale', niche: 'lifestyle', diff: 'normal', color: AVATAR_COLORS[0], handleTouched: false },
 };
 const MAIN_TABS = [['home', 'Home', 'home'], ['explore', 'Explore', 'search'], ['notifs', 'Notifications', 'bell'], ['messages', 'Messages', 'mail'], ['profile', 'Profile', 'user']];
-const CAREER = [['deals', 'Brand deals', 'brief'], ['shop', 'Shop', 'bag'], ['team', 'Team', 'team'], ['empire', 'Empire', 'crown'], ['life', 'Life & skills', 'heartp'], ['stats', 'Analytics', 'chart'], ['tea', 'The Tea', 'tea'], ['trophies', 'Trophies', 'trophy'], ['account', 'Settings', 'gear']];
+const CAREER = [['deals', 'Brand deals', 'brief'], ['shop', 'Shop', 'bag'], ['team', 'Team', 'team'], ['empire', 'Empire', 'crown'], ['life', 'Life & skills', 'heartp'], ['stats', 'Analytics', 'chart'], ['tea', 'The Tea', 'tea'], ['trophies', 'Trophies', 'trophy'], ['danger', 'Danger Zone', 'fire'], ['account', 'Settings', 'gear']];
 const NICHE_DESC = { beauty: 'Skincare, makeup, dupes', gaming: 'Clutches, speedruns, rage', fitness: 'Gains, routines, discipline', comedy: 'Skits, bits, chaos', tech: 'Reviews, setups, hot takes', food: 'Recipes, taste tests', music: 'Covers, hooks, studio life', fashion: 'Fits, thrift flips, trends', travel: 'Hidden gems, packing hacks', lifestyle: 'Routines, resets, vibes' };
 
 /* ---------- small helpers ---------- */
@@ -234,7 +234,7 @@ function tabsBar(items, cur, act) { return `<div class="tabs" role="tablist">${i
 function statusStrip() {
   const me = maxEnergy();
   const sp = (l, v) => `<button class="sp" data-act="go" data-arg="profile"><span class="l">${l}</span>${v}</button>`;
-  return `<div class="strip">${sp('Followers', fmt(totalFollowers()))}${sp('Rep', `<span class="${repClass()}">${Math.round(S.rep)}</span>`)}${sp('Heat', `<span class="${S.heat >= 60 ? 'bad' : S.heat >= 30 ? 'warn' : ''}">${Math.round(S.heat)}</span>`)}${sp(`${ico('bolt')} Energy`, `<span class="energy-val ${chargedCls()} ${S.energy > me ? 'gold' : 'blue'}">${Math.round(S.energy)}/${me}</span>`)}${S.streak ? sp(`${ico('fire')} Streak`, `<span class="gold">${S.streak}d</span>`) : ''}${sp('Cash', money(S.money))}${sp('Stress', `<span class="${S.stress >= 70 ? 'bad' : S.stress >= 40 ? 'warn' : 'good'}">${Math.round(S.stress)}</span>`)}${sp('Eng', engRate().toFixed(1) + '%')}</div>`;
+  return `<div class="strip">${sp('Followers', fmt(totalFollowers()))}${sp('Rep', `<span class="${repClass()}">${Math.round(S.rep)}</span>`)}${sp('Heat', `<span class="${S.heat >= 60 ? 'bad' : S.heat >= 30 ? 'warn' : ''}">${Math.round(S.heat)}</span>`)}${sp(`${ico('bolt')} Energy`, `<span class="energy-val ${chargedCls()} ${S.energy > me ? 'gold' : 'blue'}">${Math.round(S.energy)}/${me}</span>`)}${S.streak ? sp(`${ico('fire')} Streak`, `<span class="gold">${S.streak}d</span>`) : ''}${sp('Cash', money(S.money))}${sp('Stress', `<span class="${S.stress >= 70 ? 'bad' : S.stress >= 40 ? 'warn' : 'good'}">${Math.round(S.stress)}</span>`)}${sp('Eng', engRate().toFixed(1) + '%')}${injured() ? sp('Injured', `<span class="bad">until day ${S.injuredUntil}</span>`) : ''}${(S.investigation || 0) >= 15 ? sp('Investigation', `<span class="${investigationLabel()[1]}">${investigationLabel()[0]}</span>`) : ''}</div>`;
 }
 function statGrid() {
   const cell = (k, v, sub, pct, cls) => `<div class="statcell"><div class="k"><span>${k}</span><span>${sub}</span></div><div class="v">${v}</div>${pct !== null ? `<div class="meter ${cls}"><i style="width:${clamp(pct, 0, 100)}%"></i></div>` : ''}</div>`;
@@ -282,7 +282,7 @@ function renderCol() {
   if (v && v.type === 'post') html = vThread(v.id, v.npc);
   else if (v && v.type === 'star') html = vStar(v.id);
   else if (v && v.type === 'dm') html = vDm(v.key);
-  else html = ({ home: vHome, explore: vExplore, notifs: vNotifs, messages: vMessages, profile: vProfile, deals: vDeals, shop: vShop, team: vTeam, empire: vEmpire, life: vLife, stats: vStats, tea: vTea, trophies: vTrophies, account: vAccount }[tab] || vHome)();
+  else html = ({ home: vHome, explore: vExplore, notifs: vNotifs, messages: vMessages, profile: vProfile, danger: vDanger, deals: vDeals, shop: vShop, team: vTeam, empire: vEmpire, life: vLife, stats: vStats, tea: vTea, trophies: vTrophies, account: vAccount }[tab] || vHome)();
   $('#col').innerHTML = html;
   if ((tab === 'stats' || (tab === 'profile' && ui.profTab === 'analytics')) && !v) drawChart();
   animateFresh();
@@ -616,6 +616,17 @@ function vProfile() {
 /* ======================================================================
    Career screens
    ====================================================================== */
+function vDanger() {
+  const [il, ic] = investigationLabel();
+  const odds = (p) => `<span class="pill ${p >= 0.4 ? 'bad' : p >= 0.2 ? 'warn' : 'good'}">${Math.round(p * 100)}% chance it goes wrong</span>`;
+  return `<div class="col-head">${head('Danger Zone', 'High risk, high reward. Every choice here has consequences.')}</div>
+    <div class="sect">${injured() ? `<div class="hint" style="border:1px solid var(--bad)">${ico('heartp')} Injured until day ${S.injuredUntil}: max energy is cut by 40%.</div>` : ''}
+      <div class="row between"><h3>${ico('fire')} Stunts</h3><span class="small muted">Stress raises the odds of failure. A bodyguard and a lawyer lower them.</span></div>
+      <div class="cards">${Object.entries(STUNTS).map(([id, st]) => `<div class="card danger-card"><div class="t"><span>${st.name}</span><span class="pill blue">${st.e} energy</span></div><span class="small muted">${esc(st.desc)}</span><div class="row">${odds(stuntOdds(id))}<span class="pill gold">Up to +${Math.round(st.boost * 200)}% followers</span></div><span class="small">If it fails: ${{ injury: 'injury, hospital bill, low energy for days', crash: 'crash, injury, massive backlash', arrest: 'arrest, fine, lost day', burnout: 'collapse, huge stress', backlash: 'public outrage, possible cancellation' }[st.harm]}</span>${btn('Do it', 'dzStunt', id, 'sm danger', S.energy < st.e || S.hackedUntil >= S.day)}</div>`).join('')}</div></div>
+    <div class="sect"><div class="row between"><h3>${ico('brief')} Shady schemes</h3><span class="pill ${ic}">Investigation: ${il} (${Math.round(S.investigation || 0)})</span></div>
+      <div class="hint">Schemes take money from your own fans. They pay right away, but every one raises the investigation meter, and getting exposed means refunds, fines, suspensions, mass unfollows and possibly getting cancelled. Scammed fans will be in your inbox. ${S.scamTake ? `So far you've taken ${money(S.scamTake)}.` : ''}</div>
+      <div class="cards">${Object.entries(SCHEMES).map(([id, sc]) => `<div class="card danger-card"><div class="t"><span>${sc.name}</span><span class="pill blue">${sc.e} energy</span></div><span class="small muted">${esc(sc.desc)}</span><div class="row">${odds(schemeOdds(id))}<span class="pill gold">~${money(Math.max(40, totalFollowers() * realRatio() * sc.cut * clamp(S.rep / 60, 0.3, 1.4)))}</span></div>${btn('Run it', 'dzScheme', id, 'sm danger', S.energy < sc.e || S.hackedUntil >= S.day)}</div>`).join('')}</div></div>`;
+}
 function giftCost(id) { const f = S.npcs[id].followers; return f < 1e6 ? 100 : f < 1e7 ? 500 : f < 5e7 ? 2000 : 5000; }
 function vDeals() {
   const active = S.deals.filter((d) => d.status === 'active');
@@ -840,7 +851,7 @@ function composeInput() {
     else c.topic = 'niche';
   }
   const tone = c.toneMode === 'auto' ? detectTone(c.text) : c.toneMode;
-  return { platform: c.platform, format: c.format, topic: c.topic, tone, effort: c.effort, time: c.time, tags, caption: c.text, disclose: c.disclose, filter: c.filter, img: hasLook(c.format) ? c.img || null : null, intents: currentIntents(), poll: c.format === 'poll' ? (c.poll || []).map((x) => x.trim()).filter(Boolean).slice(0, 4) : null };
+  return { platform: c.platform, format: c.format, topic: c.topic, tone, effort: c.effort, time: c.time, tags, caption: c.text, disclose: c.disclose, filter: c.filter, img: hasLook(c.format) ? c.img || null : null, intents: currentIntents(), poll: c.format === 'poll' || c.pollOn ? (c.poll || []).map((x) => x.trim()).filter(Boolean).slice(0, 4) : null };
 }
 function renderCompose(focus) {
   const c = ui.c; if (!c) return;
@@ -868,8 +879,8 @@ function renderCompose(focus) {
         <textarea id="cText" maxlength="280" placeholder="What's happening?" aria-label="Post text">${esc(c.text)}</textarea>
         <div class="scroller" style="margin-bottom:8px">${tagSug.map((t) => `<button class="chip" data-act="cTag" data-arg="${esc(t)}" style="color:var(--accent)">${esc(t)}</button>`).join('')}</div>
         ${c.img ? `<div class="thumb"><img src="${c.img}" alt="Your photo" style="filter:${c.filter ? LOOK_CSS[c.filter] : 'none'}"><button class="icon-btn" data-act="cImgRemove" aria-label="Remove photo">${ico('x')}</button></div>` : ''}
-        <div class="row" style="margin-bottom:6px"><label class="chip" style="color:var(--accent)">${ico('image')} ${c.img ? 'Change photo' : 'Add your photo'}<input type="file" id="cFile" accept="image/*" hidden></label><span class="small muted">Your own photo: +8 originality, +8% quality</span></div>
-        ${c.format === 'poll' ? `<div class="poll-edit">${[0, 1, 2, 3].map((i) => `<input class="input" id="pollOpt${i}" data-i="${i}" maxlength="28" placeholder="Option ${i + 1}${i > 1 ? ' (optional)' : ''}" value="${esc((c.poll || [])[i] || '')}">`).join('')}<span class="small muted">Polls get the most replies on Chirp. Fans vote and argue.</span></div>` : ''}
+        <div class="row" style="margin-bottom:6px"><label class="chip" style="color:var(--accent)">${ico('image')} ${c.img ? 'Change photo' : 'Add your photo'}<input type="file" id="cFile" accept="image/*" hidden></label>${c.format !== 'poll' ? `<button class="chip" data-act="cPoll" aria-pressed="${!!c.pollOn}" style="color:var(--accent)">${ico('chart')} ${c.pollOn ? 'Remove poll' : 'Add poll'}</button>` : ''}<span class="small muted">Your own photo: +8 originality, +8% quality</span></div>
+        ${c.format === 'poll' || c.pollOn ? `<div class="poll-edit">${[0, 1, 2, 3].map((i) => `<input class="input" id="pollOpt${i}" data-i="${i}" maxlength="28" placeholder="Option ${i + 1}${i > 1 ? ' (optional)' : ''}" value="${esc((c.poll || [])[i] || '')}">`).join('')}<span class="small muted">Polls get the most replies on Chirp. Fans vote and argue.</span></div>` : ''}
         <div id="cLive"></div>
         <div id="cMentions">${mentionPanel()}</div>
       </div></div>
@@ -919,9 +930,9 @@ function updateComposeLive() {
     need = Math.round(rs.reduce((a, x) => a + x.energy, 0) * CROSS_DISCOUNT);
     if (fc) fc.innerHTML = `<span><b>${rs.length}</b> platforms</span><span><b>~${fmt(rs.reduce((a, x) => a + x.views, 0))}</b> views</span><span><b class="good">${signed(rs.reduce((a, x) => a + x.gain - x.loss, 0))}</b> followers</span><span><b class="gold">+${rs.reduce((a, x) => a + x.refund, 0)}</b> energy back</span><span>Heat <b class="${r.heat > 8 ? 'bad' : r.heat > 0 ? 'warn' : 'good'}">${r.heat > 8 ? 'spicy' : r.heat > 0 ? 'warm' : 'safe'}</b></span>`;
   }
-  if (o.format === 'poll' && (!o.poll || o.poll.length < 2) && fc) fc.innerHTML += '<span class="warn">Add at least 2 poll options</span>';
+  if ((o.format === 'poll' || c.pollOn) && (!o.poll || o.poll.length < 2) && fc) fc.innerHTML += '<span class="warn">Add at least 2 poll options</span>';
   const pb = $('#cPost');
-  if (pb) { pb.textContent = `Post${c.cross ? ' everywhere' : ''} · ${need}`; pb.disabled = S.energy < need || S.hackedUntil >= S.day || (o.format === 'poll' && (!o.poll || o.poll.length < 2)); pb.title = S.energy < r.energy ? 'Not enough energy. Sleep to recharge.' : ''; }
+  if (pb) { pb.textContent = `Post${c.cross ? ' everywhere' : ''} · ${need}`; pb.disabled = S.energy < need || S.hackedUntil >= S.day || ((o.format === 'poll' || c.pollOn) && (!o.poll || o.poll.length < 2)); pb.title = S.energy < r.energy ? 'Not enough energy. Sleep to recharge.' : ''; }
   $$('[data-act="cTopic"]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.arg === c.topic));
   $$('[data-act="cTone"]').forEach((b) => { if (b.dataset.arg !== 'auto') b.setAttribute('aria-pressed', b.dataset.arg === o.tone); });
 }
@@ -1016,13 +1027,16 @@ const ACT = {
       log(`Cross-posted to ${plan.length} platforms.`, 'good');
     } else p = doPost(o);
     if (!p) return 'norender';
-    closeCompose(); c.text = ''; c.img = null; c.intents = {}; c.poll = []; c.toneMode = 'auto'; c.topicManual = false; c.topic = 'niche';
+    closeCompose(); c.text = ''; c.img = null; c.intents = {}; c.poll = []; c.pollOn = false; c.toneMode = 'auto'; c.topicManual = false; c.topic = 'niche';
     tab = 'home'; ui.view = null; ui.hist = []; if (ui.feedTab === 'following') ui.feedTab = 'foryou';
     window.scrollTo({ top: 0 });
     processQueue();
   },
   unlock: (a) => { unlockPlatform(a); if (ui.c && !$('#composeWrap').hidden) { ui.c.platform = a; ui.c.format = null; renderCompose(false); } },
   stream: (a) => { closeCompose(); startStream(a); },
+  dzStunt: (a) => { if (!needEnergy(STUNTS[a].e)) return 'norender'; doStunt(a); checkAll(); processQueue(); },
+  dzScheme: (a) => { if (!needEnergy(SCHEMES[a].e)) return 'norender'; doScheme(a); checkAll(); processQueue(); },
+  cPoll: () => { ui.c.pollOn = !ui.c.pollOn; renderCompose(false); return 'norender'; },
   cCross: () => { ui.c.cross = !ui.c.cross; renderCompose(false); return 'norender'; },
   duet: (a) => {
     const f = S.feed.find((x) => x.id === +a); if (!f || !f.npc) return 'norender';
@@ -1299,7 +1313,7 @@ const ACT = {
 };
 
 const NO_FLASH = new Set(['go', 'back', 'open', 'openDm', 'endDay', 'dmSend', 'noop']);
-const SHEET_ONLY = new Set(['cCross', 'duet', 'spin', 'cIntent', 'dmChip', 'postAbout', 'cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);
+const SHEET_ONLY = new Set(['cPoll', 'cCross', 'duet', 'spin', 'cIntent', 'dmChip', 'postAbout', 'cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);
 function ACT_RUN(act, arg = '') {
   if (!S || !ACT[act]) return;
   const before = statSnap();

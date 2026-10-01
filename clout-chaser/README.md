@@ -77,6 +77,12 @@ The game looks and plays like a social app (inspired by the Status social-media 
 - **Duets**: remix any star's post from its thread. You borrow some of their audience, and they react to how you treated them.
 - **Daily spin**: once a day, win energy, cash, followers, an algorithm boost, fresh tea, a spa day, a mystery event, or nothing.
 
+## Danger Zone
+
+- **Stunts** (rooftop selfie, public prank, world's hottest pepper, filming while speeding, posing with a "tame" tiger, urban exploring, a 48-hour no-sleep stream, faking your own disappearance) can go hugely viral, or go wrong. You can get injured (hospital bill, max energy cut by 40% for days), arrested (fine, a lost day, a mugshot meme), collapse from burnout, or face public outrage. Stress raises the odds of failure; a bodyguard and a lawyer lower them. Afterwards you can post a "hospital update" or "own the mugshot" for sympathy and reach.
+- **Shady schemes** (scam links in replies, a fake giveaway, a pump-and-dump coin, a fake merch preorder, selling fans' emails) pay out right away, fill your inbox with scammed fans, and raise a hidden investigation meter. Getting exposed means a choice between refunds, blaming hackers (suspension if it fails), fleeing the country, or doubling down into a cancellation. Scam bots impersonating you also show up in your replies.
+- **Polls on any post**: tap "Add poll" in the composer (Chirp still has a dedicated poll format). Polls boost engagement.
+
 ## Creativity
 
 - **Originality score** (0–100) for every post: your own words, a wide vocabulary, questions, emoji and @mentions raise it. Repeating yourself or using the dice's canned captions lowers it. Higher originality means more reach and viral chance, and 85+ gives a small energy bonus.
@@ -141,6 +147,7 @@ Doing well gives you a second wind, shown as a gold energy pop-up:
 - `clash.js` – celebrity clashes and clash battles
 - `spicy.js` – scandal events, hot seat, tea fallout, world tour
 - `behavior.js` – personalities, memory, mood, decisions, mind games, mention intents
+- `danger.js` – risky stunts, shady schemes, investigations, injuries
 - `ui.js` – rendering, player actions, start screen
 
 All people, brands and platforms in the game are fictional or clearly marked parody with tweaked names; everything they do in the game is invented.
