@@ -728,7 +728,7 @@ const LIFE = [
   ['gym', 'Hit the gym', 'Endorphins and a little charisma.', 15, '−8 stress, +charisma'],
   ['meditate', 'Meditate', 'Ten quiet minutes.', 5, '−8 stress'],
   ['family', 'Family dinner', 'Your mom made your favorite.', 10, '−15 stress'],
-  ['replies', 'Reply to comments', 'Talk to your community.', 10, '+engagement, +rep'],
+  ['replies', 'Reply to 10 comments', 'Answer up to 10 fan comments on your recent posts at once.', 10, '+engagement, +rep, +followers'],
   ['giveaway', 'Host a giveaway', 'Quick growth. Attracts bots.', 10, 'Costs 1% of followers in $'],
   ['meetup', 'Fan meetup', 'Meet fans in person (10K+).', 30, '$1,000, +rep'],
   ['party', 'Industry party', 'Mingle with stars (50K+).', 20, '$500, a star likes you more'],
@@ -1331,7 +1331,24 @@ const ACT = {
       case 'gym': S.stress = clamp(S.stress - 8, 0, 100); addXp('charisma', 8); msg = 'Pump achieved.'; break;
       case 'meditate': S.stress = clamp(S.stress - 8, 0, 100); msg = 'Ommm.'; break;
       case 'family': S.stress = clamp(S.stress - 15, 0, 100); msg = 'Grandma asked what you do for work again.'; break;
-      case 'replies': unlockedIds().forEach((p) => { S.platforms[p].eng = clamp(S.platforms[p].eng + 0.25, 0.5, 30); }); changeRep(0.4); msg = 'Fans feel seen.'; break;
+      case 'replies': {
+        // answer up to 10 real comments on your recent posts in one go
+        const todo = [];
+        for (const p of S.posts.slice(0, 8)) for (const c of p.comms || []) if (!c.mine && !c.npc && !c.co && todo.length < 10) todo.push({ c, p });
+        const KIND = ['thank you!! means a lot 🥹', 'you get it ❤️', 'love you for this', 'ok you made my day', 'facts 😂', 'saving this comment forever', 'you\'re the reason I post', 'stop you\'re too sweet', 'hahaha exactly', 'more coming soon 👀'];
+        const WITTY = ['noted, ignored 💅', 'and yet you watched till the end', 'thanks for the engagement bestie', 'I\'ll pray for your wifi', 'cute take, wrong though'];
+        let pos = 0, neg = 0;
+        todo.forEach(({ c }, i) => { if (c.neg) { c.mine = pick(WITTY); neg++; } else { c.mine = KIND[i % KIND.length]; pos++; } c.likes = (c.likes || 0) + ri(1, 12); });
+        const n = todo.length;
+        unlockedIds().forEach((p) => { S.platforms[p].eng = clamp(S.platforms[p].eng + 0.1 + n * 0.03, 0.5, 30); });
+        changeRep(0.2 + pos * 0.06 - neg * 0.05);
+        if (neg) S.heat = clamp(S.heat + neg, 0, 100);
+        if (n) addFollowers(Math.max(2, totalFollowers() * 0.0006 * n) * diffM());
+        if (n >= 8) gainEnergy(4, 'Fans loved the replies');
+        if (n && (S.superfans || []).length && chance(0.4)) { const sf = pick(S.superfans); sf.count += 2; notify('reply', sf.handle, 'you replied to me!!! screenshotting this forever'); }
+        msg = n ? `You replied to ${n} comment${n > 1 ? 's' : ''}${neg ? ` (clapped back at ${neg} hater${neg > 1 ? 's' : ''})` : ''}. Fans feel seen.` : 'No new comments to answer. Post something first.';
+        break;
+      }
       case 'giveaway': { const cost = Math.round(Math.max(100, totalFollowers() * 0.01)); S.money -= cost; const g = Math.max(80, totalFollowers() * 0.04) * diffM(); addFollowers(g); S.fake += g * 0.3; S.stats.giveaways++; msg = 'Some of the new followers are clearly bots.'; break; }
       case 'meetup': S.money -= 1000; changeRep(3); addFollowersPct(0.01); S.stats.meetups++; msg = 'Hugs, selfies, and one fan who cried.'; if (!S.team.bodyguard && chance(0.12)) S.queue.push({ ev: 'stalker', ctx: {} }); break;
       case 'party': { S.money -= 500; const id = randomNpc((x) => !S.npcs[x].feud); changeRel(id, 8); S.stress = clamp(S.stress - 10, 0, 100); msg = `You hit it off with ${npcName(id)}.`; if (chance(0.5)) gainTea(randomNpc((x) => x !== id), `from ${npcName(id).split(' ')[0]} at the party`); if (chance(0.15)) S.queue.push({ ev: 'paparazzi', ctx: {} }); break; }
