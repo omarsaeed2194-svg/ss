@@ -77,6 +77,24 @@ The game looks and plays like a social app (inspired by the Status social-media 
 - **Duets**: remix any star's post from its thread. You borrow some of their audience, and they react to how you treated them.
 - **Daily spin**: once a day, win energy, cash, followers, an algorithm boost, fresh tea, a spa day, a mystery event, or nothing.
 
+## Money and the bigger shop
+
+- **Tips** on every post (more with high reputation and loyal superfans).
+- **Affiliate links**: toggle one in the composer to earn on views; engagement and reputation dip a little.
+- **Fan subscriptions** (1K+ followers): pick a price from $2.99 to $19.99, post exclusives or subscribers cancel.
+- **Paid gigs** arrive in Messages: shoutouts, club appearances, keynotes, viral clip licensing, movie cameos.
+- **Markets**: an index, three parody stocks and CloutCoin, with nightly price moves, news shocks and sparkline charts.
+- **Property** that pays rent every night, from a studio apartment to an office tower.
+- **Online course** (50K+ followers) that sells every day and can be promoted.
+- **Money screen** with net worth, yesterday's income by source, subscriptions, markets and course.
+- **Shop additions**: new gear, a pet (unlocks pet content, lowers stress), sneakers, a watch, a penthouse, a superyacht, a sports team; one-day boosts (photographer, lucky charm, trend forecast, crisis PR kit, bot cleanup); avatar frames and profile banners.
+
+## Growth and UI
+
+- Faster growth: posts convert more viewers, small accounts get a discovery push, overnight growth is stronger.
+- Home now opens with a tier progress card, your cash, and quick-action tiles (post, go live, money, DMs, shop, danger).
+- Confetti on viral posts, follower milestones and new tiers; stat pop-ups no longer cover the header.
+
 ## Danger Zone
 
 - **Stunts** (rooftop selfie, public prank, world's hottest pepper, filming while speeding, posing with a "tame" tiger, urban exploring, a 48-hour no-sleep stream, faking your own disappearance) can go hugely viral, or go wrong. You can get injured (hospital bill, max energy cut by 40% for days), arrested (fine, a lost day, a mugshot meme), collapse from burnout, or face public outrage. Stress raises the odds of failure; a bodyguard and a lawyer lower them. Afterwards you can post a "hospital update" or "own the mugshot" for sympathy and reach.
@@ -148,6 +166,7 @@ Doing well gives you a second wind, shown as a gold energy pop-up:
 - `spicy.js` – scandal events, hot seat, tea fallout, world tour
 - `behavior.js` – personalities, memory, mood, decisions, mind games, mention intents
 - `danger.js` – risky stunts, shady schemes, investigations, injuries
+- `money.js` – subscriptions, gigs, markets, property, course, extra shop items, cosmetics, Money screen
 - `ui.js` – rendering, player actions, start screen
 
 All people, brands and platforms in the game are fictional or clearly marked parody with tweaked names; everything they do in the game is invented.

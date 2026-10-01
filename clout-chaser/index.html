@@ -300,7 +300,7 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100
 .drawer { background: var(--bg); width: min(300px, 85vw); min-height: 100%; overflow-y: auto; padding: 16px 12px calc(16px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 2px; animation: slideright .2s ease; }
 
 /* ---------- Floating stat deltas (Status-style feedback) ---------- */
-.deltas { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 14px); left: 50%; transform: translateX(-50%); z-index: 70; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
+.deltas { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 116px); left: 50%; transform: translateX(-50%); z-index: 70; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
 .delta { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; background: var(--surface-2); border: 1px solid var(--line); border-radius: 99px; padding: 6px 8px; box-shadow: 0 10px 30px rgba(0,0,0,.35); animation: floatin 2.6s ease forwards; max-width: calc(100vw - 32px); }
 .delta .pill { font-size: 13px; padding: 3px 9px; }
 .delta.energy { border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); align-items: center; padding: 6px 12px 6px 6px; animation-duration: 3.1s; }
@@ -402,6 +402,38 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100
 .topfans { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
 .card .t .pill { flex: none; align-self: flex-start; }
 .danger-card { border-color: color-mix(in srgb, var(--bad) 30%, var(--line)); }
+/* ---------- Home hero: tier progress + quick actions ---------- */
+.hero { margin: 12px 16px 0; padding: 14px; border-radius: 18px; border: 1px solid var(--line); background: radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 55%), radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--like) 14%, transparent), transparent 60%), var(--surface); display: flex; flex-direction: column; gap: 10px; }
+.hero-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+.hero-n { font-family: var(--f-display); font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hero-n .small { font-family: var(--f-body); letter-spacing: 0; font-weight: 600; }
+.hero-cash { text-align: right; display: flex; flex-direction: column; flex: none; }
+.hero-cash b { font-size: 17px; }
+.tierbar { height: 10px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.tierbar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), var(--like) 70%, var(--gold)); background-size: 200% 100%; animation: shimmer 4s linear infinite; transition: width .8s ease; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+.quick { display: grid; grid-template-columns: repeat(auto-fit, minmax(76px, 1fr)); gap: 8px; }
+.qt { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px 8px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg); font-size: 12px; font-weight: 700; transition: transform .12s, border-color .15s; }
+.qt:hover { border-color: var(--muted); transform: translateY(-1px); }
+.qt:active { transform: scale(.96); }
+.qt.hot { background: var(--accent); border-color: var(--accent); color: #fff; }
+.qt .qb { position: absolute; top: 4px; right: 6px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 99px; background: var(--like); color: #fff; font-size: 11px; font-style: normal; display: grid; place-items: center; }
+/* ---------- Confetti ---------- */
+.confetti { position: fixed; inset: 0; pointer-events: none; z-index: 90; overflow: hidden; }
+.confetti i { position: absolute; top: -12px; width: 8px; height: 12px; border-radius: 2px; animation: fall 2s cubic-bezier(.25,.6,.4,1) forwards; }
+@keyframes fall { to { transform: translate(var(--dx), 105vh) rotate(var(--r)); opacity: .85; } }
+/* ---------- Money ---------- */
+.wallet { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.wallet > div { background: var(--surface); border-radius: 14px; padding: 12px; min-width: 0; }
+.wallet .big { font-family: var(--f-display); font-size: 19px; font-weight: 800; letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.asset { display: grid; grid-template-columns: minmax(0, 1fr) 120px; gap: 6px 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+.asset .row { grid-column: 1 / -1; }
+.spark { display: block; justify-self: end; }
+.card .swatch { width: 52px; height: 30px; border-radius: 8px; border: 0; flex: none; }
+.card .t .row { flex-wrap: nowrap; min-width: 0; }
+.card > .btn, .card > .row:last-child { margin-top: auto; }
+.card > .btn { align-self: flex-start; }
+.card .t > span:first-child { min-width: 0; }
 @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
 @keyframes rise { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes slidein { from { background: var(--accent-soft); } to { background: transparent; } }
@@ -433,7 +465,12 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100
   .prof .av.xl { width: 88px; height: 88px; font-size: 30px; margin-top: -50px; }
   .prof-actions { max-width: 70%; }
   .toasts { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
-  .deltas { top: calc(env(safe-area-inset-top, 0px) + 58px); }
+  .deltas { top: calc(env(safe-area-inset-top, 0px) + 112px); }
+  .wallet { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .wallet > div:last-child { grid-column: 1 / -1; }
+  .asset { grid-template-columns: minmax(0, 1fr) 96px; }
+  .hero-n { font-size: 22px; }
+  .quick { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .bar-row { grid-template-columns: 76px minmax(0, 1fr) 56px; }
   .tw-actions { max-width: none; }
 }
@@ -465,4 +502,5 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100
 <script src="spicy.js"></script>
 <script src="behavior.js"></script>
 <script src="danger.js"></script>
+<script src="money.js"></script>
 <script src="ui.js"></script>

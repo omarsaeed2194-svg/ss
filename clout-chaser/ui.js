@@ -11,6 +11,7 @@ const IC = {
   plus: '<path d="M12 5v14M5 12h14"/>',
   feather: '<path d="M20 4c-8 0-14 6-14 14v2h2c8 0 14-6 14-14V4z"/><path d="M4 20 14 10"/>',
   brief: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>',
+  cash: '<rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.5v5M18 9.5v5"/>',
   bag: '<path d="M5 8h14l-1 13H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
   team: '<circle cx="9" cy="8" r="3.5"/><path d="M2 20a7 7 0 0 1 14 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M22 20a7 7 0 0 0-4-6.3"/>',
   crown: '<path d="m3 8 4.5 4L12 5l4.5 7L21 8l-2 11H5z"/>',
@@ -48,13 +49,13 @@ const ui = {
   onb: { step: 0, name: 'Jordan Vale', handle: 'jordanvale', niche: 'lifestyle', diff: 'normal', color: AVATAR_COLORS[0], handleTouched: false },
 };
 const MAIN_TABS = [['home', 'Home', 'home'], ['explore', 'Explore', 'search'], ['notifs', 'Notifications', 'bell'], ['messages', 'Messages', 'mail'], ['profile', 'Profile', 'user']];
-const CAREER = [['deals', 'Brand deals', 'brief'], ['shop', 'Shop', 'bag'], ['team', 'Team', 'team'], ['empire', 'Empire', 'crown'], ['life', 'Life & skills', 'heartp'], ['stats', 'Analytics', 'chart'], ['tea', 'The Tea', 'tea'], ['trophies', 'Trophies', 'trophy'], ['danger', 'Danger Zone', 'fire'], ['account', 'Settings', 'gear']];
+const CAREER = [['money', 'Money', 'cash'], ['deals', 'Brand deals', 'brief'], ['shop', 'Shop', 'bag'], ['team', 'Team', 'team'], ['empire', 'Empire', 'crown'], ['life', 'Life & skills', 'heartp'], ['stats', 'Analytics', 'chart'], ['tea', 'The Tea', 'tea'], ['trophies', 'Trophies', 'trophy'], ['danger', 'Danger Zone', 'fire'], ['account', 'Settings', 'gear']];
 const NICHE_DESC = { beauty: 'Skincare, makeup, dupes', gaming: 'Clutches, speedruns, rage', fitness: 'Gains, routines, discipline', comedy: 'Skits, bits, chaos', tech: 'Reviews, setups, hot takes', food: 'Recipes, taste tests', music: 'Covers, hooks, studio life', fashion: 'Fits, thrift flips, trends', travel: 'Hidden gems, packing hacks', lifestyle: 'Routines, resets, vibes' };
 
 /* ---------- small helpers ---------- */
 const avatar = (name, color, size = '', seed) => `<span class="av ${size}" style="background:${color}" aria-hidden="true">${faceSvg(seed || name)}</span>`;
 const npcAv = (id, size = '') => avatar(NPCS[id].name, NPCS[id].color, size, 'npc:' + id);
-const meAv = (size = '') => avatar(S.name, S.color, size, S.faceSeed || S.name);
+const meAv = (size = '') => { const F = S.frame && FRAMES[S.frame]; const a = avatar(S.name, S.color, size, S.faceSeed || S.name); return F ? a.replace(`style="background:${S.color}"`, `style="border:${size === 'xl' ? 5 : 2.5}px solid transparent;background:linear-gradient(${S.color}, ${S.color}) padding-box, ${F.css} border-box"`) : a; };
 const coAv = (id, size = '') => `<span class="av co ${size}" aria-hidden="true">${logoSvg(COMPANIES[id].name, COMPANIES[id].color)}</span>`;
 const flag = (cc) => (COUNTRIES[cc] ? `<span class="flag" title="${COUNTRIES[cc].name}">${COUNTRIES[cc].flag}</span>` : '');
 const vb = (gold) => `<span class="badge-v ${gold ? 'gold' : ''}" title="${gold ? 'Paid badge' : 'Verified'}">${VBADGE}</span>`;
@@ -282,7 +283,7 @@ function renderCol() {
   if (v && v.type === 'post') html = vThread(v.id, v.npc);
   else if (v && v.type === 'star') html = vStar(v.id);
   else if (v && v.type === 'dm') html = vDm(v.key);
-  else html = ({ home: vHome, explore: vExplore, notifs: vNotifs, messages: vMessages, profile: vProfile, danger: vDanger, deals: vDeals, shop: vShop, team: vTeam, empire: vEmpire, life: vLife, stats: vStats, tea: vTea, trophies: vTrophies, account: vAccount }[tab] || vHome)();
+  else html = ({ home: vHome, explore: vExplore, notifs: vNotifs, messages: vMessages, profile: vProfile, danger: vDanger, deals: vDeals, shop: vShop, money: vMoney, team: vTeam, empire: vEmpire, life: vLife, stats: vStats, tea: vTea, trophies: vTrophies, account: vAccount }[tab] || vHome)();
   $('#col').innerHTML = html;
   if ((tab === 'stats' || (tab === 'profile' && ui.profTab === 'analytics')) && !v) drawChart();
   animateFresh();
@@ -377,6 +378,31 @@ function clashCard(c) {
     ${!c.done ? `<div class="row">${!c.side ? btn(`Team ${esc(firstName(c.a))} · 5`, 'clashSide', c.id + ':a', 'sm') + btn(`Team ${esc(firstName(c.b))} · 5`, 'clashSide', c.id + ':b', 'sm') + btn('Make peace · 15', 'clashPeace', c.id, 'sm') + btn('Stir the pot · 5', 'clashStir', c.id, 'sm danger') : ''}${btn(`${ico('feather')} Post about it`, 'clashMeme', c.id, 'sm blue')}</div>` : ''}
   </div>`;
 }
+/* Home hero: progress to the next tier plus one-tap shortcuts */
+function heroCard() {
+  const t = totalFollowers(), ti = tierIndex(), cur = TIERS[ti], nx = TIERS[ti + 1];
+  const pct = nx ? clamp((Math.log10(Math.max(t, 1)) - Math.log10(Math.max(cur.min, 1))) / (Math.log10(nx.min) - Math.log10(Math.max(cur.min, 1))) * 100, 0, 100) : 100;
+  const ds = S.dayStart || snap(), df = t - ds.f;
+  const b = badges(), gigs = S.inbox.filter((m) => m.type === 'gig' && !m.done).length;
+  const tile = (icon, label, act, arg, cls = '', badge = '') => `<button class="qt ${cls}" data-act="${act}" data-arg="${arg}">${ico(icon)}<span>${label}</span>${badge ? `<i class="qb">${badge}</i>` : ''}</button>`;
+  return `<div class="hero"><div class="hero-top"><div style="min-width:0"><div class="small muted">${cur.name} creator${nx ? ` · next: <b style="color:var(--ink)">${nx.name}</b>` : ' · top tier'}</div>
+      <div class="hero-n"><span class="num">${fmt(t)}</span>${nx ? `<span class="small muted num"> / ${fmt(nx.min)}</span>` : ''}<span class="small ${df >= 0 ? 'good' : 'bad'} num"> ${signed(df)} today</span></div></div>
+      <div class="hero-cash"><span class="small muted">Cash</span><b class="num gold">${money(S.money)}</b></div></div>
+    <div class="tierbar" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100" aria-label="Progress to next tier"><i style="width:${pct}%"></i></div>
+    <div class="quick">${tile('feather', 'Post', 'compose', '', 'hot')}${S.platforms.live.unlocked ? tile('live', 'Go live', 'compose', 'live') : ''}${tile('cash', 'Money', 'go', 'money', '', gigs || '')}${tile('mail', 'DMs', 'go', 'messages', '', b.messages || '')}${tile('bag', 'Shop', 'go', 'shop')}${tile('fire', 'Danger', 'go', 'danger')}</div></div>`;
+}
+/* Confetti for the big moments */
+function celebrate(kind = 'gold') {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const box = document.createElement('div'); box.className = 'confetti'; box.setAttribute('aria-hidden', 'true');
+  const cols = kind === 'viral' ? ['#F91880', '#1D9BF0', '#FFD400', '#00BA7C'] : ['#FFD400', '#FFAD1F', '#FFF3B0', '#F91880'];
+  for (let i = 0; i < 70; i++) {
+    const p = document.createElement('i');
+    p.style.cssText = `left:${Math.random() * 100}%;background:${pick(cols)};animation-delay:${(Math.random() * 0.4).toFixed(2)}s;animation-duration:${(1.6 + Math.random() * 1.4).toFixed(2)}s;--dx:${Math.round(Math.random() * 160 - 80)}px;--r:${Math.round(Math.random() * 720)}deg;${Math.random() < 0.4 ? 'border-radius:50%;' : ''}`;
+    box.appendChild(p);
+  }
+  document.body.appendChild(box); setTimeout(() => box.remove(), 3400);
+}
 function spinCard() {
   const done = S.flags.spinDay === S.day;
   return `<div class="spin-card"><div class="wheel" id="wheel" aria-hidden="true">${SPIN_PRIZES.map((p, i) => `<i style="transform:rotate(${i * 45}deg)"></i>`).join('')}<b>${ico('star')}</b></div><div style="flex:1;min-width:0"><div class="small muted">Daily spin</div><b>${done ? `You won: ${esc(S.flags.spinPrize || 'something')}` : 'Spin for energy, cash, followers, tea or chaos'}</b></div>${done ? '<span class="pill">Back tomorrow</span>' : btn('Spin', 'spin', '', 'sm primary')}</div>`;
@@ -401,7 +427,7 @@ function vHome() {
     : `<div class="empty"><h3>Nothing yet</h3><p>Your posts show up here. Write your first one.</p>${btn('Post', 'compose', '', 'blue')}</div>`;
   return `<div class="col-head">${head('Home', `Day ${S.day} · ${weekday()} · ${tier().name} creator${S.streak ? ` · <span class="gold">${S.streak}-day streak</span>` : ''}`, false, `<button class="btn sm" data-act="endDay" title="Sleep to end the day">${ico('moon')} Sleep</button>`)}
     ${tabsBar([['foryou', 'For you'], ['following', 'Following'], ['mine', 'Your posts']], ui.feedTab, 'feedTab')}</div>
-    ${statusStrip()}${prompt}${ui.feedTab !== 'mine' ? spinCard() + challengeCard() + activeClashes().map(clashCard).join('') : ''}
+    ${statusStrip()}${ui.feedTab !== 'mine' ? heroCard() : ''}${prompt}${ui.feedTab !== 'mine' ? spinCard() + challengeCard() + activeClashes().map(clashCard).join('') : ''}
     ${items.length ? items.slice(0, 50).map((it) => it.k === 'me' ? myPostCard(it.p) : npcPostCard(it.f)).join('') : empty}`;
 }
 
@@ -570,6 +596,7 @@ function msgActions(m) {
     case 'collab': return [['Let\'s do it', 'collabYes'], ['Not now', 'collabNo']];
     case 'counter': return m.cond === 'gift' ? [[`Send ${money(m.price)} gift`, 'acceptTerms'], ['Decline', 'declineTerms']] : [['Accept terms', 'acceptTerms'], ['Decline', 'declineTerms']];
     case 'scam_verify': return [['Verify my account', 'phish'], ['Report as phishing', 'report']];
+    case 'gig': return [[`Accept · ${money(m.pay)}${m.e ? ` · ${m.e}⚡` : ''}`, 'gigYes'], ['Decline', 'gigNo']];
     case 'scam_invest': return [['Send $500', 'scamPay'], ['Delete', 'report']];
     default: return [];
   }
@@ -600,7 +627,7 @@ function vProfile() {
   const following = Object.values(S.npcs).filter((n) => n.following).length;
   const body = ui.profTab === 'analytics' ? statsBody() : ui.profTab === 'trophies' ? trophiesBody() : (S.posts.length ? S.posts.filter((p) => !p.crossOf).slice(0, 30).map(myPostCard).join('') : `<div class="empty"><h3>No posts yet</h3>${btn('Write your first post', 'compose', '', 'blue')}</div>`);
   return `<div class="col-head">${head(`${esc(S.name)} ${meBadge()}`, `${S.stats.posts} posts`)}</div>
-    <div class="banner" style="background:linear-gradient(120deg, ${S.color}, #111)"></div>
+    <div class="banner" style="background:${S.banner && BANNERS[S.banner] ? BANNERS[S.banner].css : `linear-gradient(120deg, ${S.color}, #111)`}"></div>
     <div class="prof">${meAv('xl')}<div class="prof-actions">${btn(ui.editBio ? 'Done' : 'Edit profile', 'editBio', '', '')}</div>
       <h2>${esc(S.name)} ${meBadge()}</h2><div class="handle">@${esc(S.handle)}</div>
       ${ui.editBio ? `<textarea class="input" id="bioEdit" maxlength="160" rows="2" style="margin-top:12px" aria-label="Bio">${esc(S.bio)}</textarea>` : `<div class="bio">${esc(S.bio)}</div>`}
@@ -649,11 +676,14 @@ function vShop() {
   const cons = CONSUMABLES.map((c) => `<div class="card"><div class="t"><span>${c.name}</span><span class="num">${money(c.price)}</span></div><span class="small muted">${c.desc}</span>${btn('Buy', 'consume', c.id, 'sm', S.money < c.price)}</div>`).join('');
   const growth = GROWTH.map((g) => `<div class="card"><div class="t"><span>${g.name}</span><span class="num">${money(g.price)}</span></div><span class="small muted">${g.desc}</span>${g.special === 'check' && S.flags.paidCheck ? '<span class="pill gold">Active</span>' : btn('Buy', 'growth', g.id, 'sm' + (g.n ? ' danger' : ''), S.money < g.price)}</div>`).join('');
   const courses = Object.entries(COURSES).map(([k, c]) => { const l = skillLvl(k); const price = Math.round(c.base * Math.pow(l, 1.6)); return `<div class="card"><div class="t"><span>${c.name}</span><span class="num">${l >= 10 ? 'Maxed' : money(price)}</span></div><span class="small muted">${k[0].toUpperCase() + k.slice(1)} ${l} → ${Math.min(10, l + 1)}. ${c.desc}</span>${btn('Enroll', 'course', k, 'sm', l >= 10 || S.money < price)}</div>`; }).join('');
+  const style = (kind, k, f, prev) => { const own = (S[kind + 's'] || []).includes(k), on = S[kind] === k; return `<div class="card ${on ? 'owned' : ''}"><div class="t"><span class="row" style="gap:8px">${prev}${f.name}</span><span class="num">${own ? 'Owned' : money(f.price)}</span></div>${btn(on ? 'Take off' : own ? 'Wear it' : 'Buy', kind, k, 'sm' + (own ? '' : ' primary'), !own && S.money < f.price)}</div>`; };
   return `<div class="col-head">${head('Shop', `${money(S.money)} to spend`)}</div>
     <div class="sect"><h3>Gear</h3><div class="cards">${SHOP.filter((i) => i.cat === 'Gear').map(item).join('')}</div></div>
     <div class="sect"><h3>Lifestyle</h3><div class="cards">${SHOP.filter((i) => i.cat === 'Lifestyle').map(item).join('')}</div></div>
+    <div class="sect"><h3>Property <span class="small muted">· pays rent every night</span></h3><div class="cards">${SHOP.filter((i) => i.cat === 'Property').map(item).join('')}</div></div>
+    <div class="sect"><h3>Style <span class="small muted">· avatar frames and profile banners</span></h3><div class="cards">${Object.entries(FRAMES).map(([k, f]) => style('frame', k, f, `<span class="av sm" style="border:3px solid transparent;background:linear-gradient(${S.color}, ${S.color}) padding-box, ${f.css} border-box">${faceSvg(S.faceSeed || S.name)}</span>`)).join('')}${Object.entries(BANNERS).map(([k, b]) => style('banner', k, b, `<span class="swatch" style="background:${b.css}"></span>`)).join('')}</div></div>
     <div class="sect"><h3>Courses</h3><div class="cards">${courses}</div></div>
-    <div class="sect"><h3>Energy & recovery</h3><div class="cards">${cons}</div></div>
+    <div class="sect"><h3>Boosts & recovery</h3><div class="cards">${cons}</div></div>
     <div class="sect"><h3>Growth hacks</h3><div class="cards">${growth}</div></div>`;
 }
 function vTeam() {
@@ -851,7 +881,7 @@ function composeInput() {
     else c.topic = 'niche';
   }
   const tone = c.toneMode === 'auto' ? detectTone(c.text) : c.toneMode;
-  return { platform: c.platform, format: c.format, topic: c.topic, tone, effort: c.effort, time: c.time, tags, caption: c.text, disclose: c.disclose, filter: c.filter, img: hasLook(c.format) ? c.img || null : null, intents: currentIntents(), poll: c.format === 'poll' || c.pollOn ? (c.poll || []).map((x) => x.trim()).filter(Boolean).slice(0, 4) : null };
+  return { platform: c.platform, format: c.format, topic: c.topic, tone, effort: c.effort, time: c.time, tags, caption: c.text, disclose: c.disclose, filter: c.filter, img: hasLook(c.format) ? c.img || null : null, intents: currentIntents(), affiliate: !!c.aff, poll: c.format === 'poll' || c.pollOn ? (c.poll || []).map((x) => x.trim()).filter(Boolean).slice(0, 4) : null };
 }
 function renderCompose(focus) {
   const c = ui.c; if (!c) return;
@@ -879,7 +909,7 @@ function renderCompose(focus) {
         <textarea id="cText" maxlength="280" placeholder="What's happening?" aria-label="Post text">${esc(c.text)}</textarea>
         <div class="scroller" style="margin-bottom:8px">${tagSug.map((t) => `<button class="chip" data-act="cTag" data-arg="${esc(t)}" style="color:var(--accent)">${esc(t)}</button>`).join('')}</div>
         ${c.img ? `<div class="thumb"><img src="${c.img}" alt="Your photo" style="filter:${c.filter ? LOOK_CSS[c.filter] : 'none'}"><button class="icon-btn" data-act="cImgRemove" aria-label="Remove photo">${ico('x')}</button></div>` : ''}
-        <div class="row" style="margin-bottom:6px"><label class="chip" style="color:var(--accent)">${ico('image')} ${c.img ? 'Change photo' : 'Add your photo'}<input type="file" id="cFile" accept="image/*" hidden></label>${c.format !== 'poll' ? `<button class="chip" data-act="cPoll" aria-pressed="${!!c.pollOn}" style="color:var(--accent)">${ico('chart')} ${c.pollOn ? 'Remove poll' : 'Add poll'}</button>` : ''}<span class="small muted">Your own photo: +8 originality, +8% quality</span></div>
+        <div class="row" style="margin-bottom:6px"><label class="chip" style="color:var(--accent)">${ico('image')} ${c.img ? 'Change photo' : 'Add your photo'}<input type="file" id="cFile" accept="image/*" hidden></label>${c.format !== 'poll' ? `<button class="chip" data-act="cPoll" aria-pressed="${!!c.pollOn}" style="color:var(--accent)">${ico('chart')} ${c.pollOn ? 'Remove poll' : 'Add poll'}</button>` : ''}<button class="chip" data-act="cAff" aria-pressed="${!!c.aff}" style="color:var(--gold)" title="Earn a commission on views. Slightly lower engagement and reputation.">${ico('cash')} ${c.aff ? 'Affiliate link on' : 'Affiliate link'}</button><span class="small muted">Your own photo: +8 originality, +8% quality</span></div>
         ${c.format === 'poll' || c.pollOn ? `<div class="poll-edit">${[0, 1, 2, 3].map((i) => `<input class="input" id="pollOpt${i}" data-i="${i}" maxlength="28" placeholder="Option ${i + 1}${i > 1 ? ' (optional)' : ''}" value="${esc((c.poll || [])[i] || '')}">`).join('')}<span class="small muted">Polls get the most replies on Chirp. Fans vote and argue.</span></div>` : ''}
         <div id="cLive"></div>
         <div id="cMentions">${mentionPanel()}</div>
@@ -978,7 +1008,7 @@ const ACT = {
   feedTab: (a) => { ui.feedTab = a; }, notifTab: (a) => { ui.notifTab = a; }, profTab: (a) => { ui.profTab = a; }, metric: (a) => { ui.metric = a; },
   readNotifs: () => { S.notifs.forEach((n) => { n.read = true; }); },
   editBio: () => { ui.editBio = !ui.editBio; },
-  compose: () => { openCompose(); return 'norender'; },
+  compose: (a) => { openCompose(a && S.platforms[a] && S.platforms[a].unlocked ? { platform: a } : {}); return 'norender'; },
   composeTag: (a) => { const tr = S.trends.find((t) => t.tag === a); openCompose({ text: a + ' ', topic: tr ? 'trend:' + tr.tag : 'niche' }); return 'norender'; },
   closeCompose: () => { closeCompose(); return 'norender'; },
   cPlat: (a) => { ui.c.platform = a; ui.c.format = null; renderCompose(false); return 'norender'; },
@@ -1036,6 +1066,7 @@ const ACT = {
   stream: (a) => { closeCompose(); startStream(a); },
   dzStunt: (a) => { if (!needEnergy(STUNTS[a].e)) return 'norender'; doStunt(a); checkAll(); processQueue(); },
   dzScheme: (a) => { if (!needEnergy(SCHEMES[a].e)) return 'norender'; doScheme(a); checkAll(); processQueue(); },
+  cAff: () => { ui.c.aff = !ui.c.aff; renderCompose(false); return 'norender'; },
   cPoll: () => { ui.c.pollOn = !ui.c.pollOn; renderCompose(false); return 'norender'; },
   cCross: () => { ui.c.cross = !ui.c.cross; renderCompose(false); return 'norender'; },
   duet: (a) => {
@@ -1215,6 +1246,8 @@ const ACT = {
         fin('They walked away.'); toast('Negotiation failed. Offer withdrawn.', 'bad'); addXp('business', 8); break;
       }
       case 'decline': fin('Declined'); break;
+      case 'gigYes': if (!acceptGig(m)) return 'norender'; fin(`Done. ${money(m.pay)} paid.`); toast(`Gig paid ${money(m.pay)}`, 'gold'); sound('cash'); break;
+      case 'gigNo': fin('Declined'); break;
       case 'collabYes': if (S.collab) { toast('Finish your current collab first.', 'bad'); return 'norender'; } S.collab = { npc: m.npc, until: S.day + 4 }; changeRel(m.npc, 3); fin('Collab on! Mention them or pick the collab topic when you post.'); break;
       case 'collabNo': changeRel(m.npc, -3); fin('Declined'); break;
       case 'acceptTerms': {
@@ -1241,7 +1274,9 @@ const ACT = {
   consume: (a) => {
     const c = CONSUMABLES.find((x) => x.id === a); if (!spend(c.price)) { toast('Not enough money.', 'bad'); return 'norender'; }
     if (c.special === 'vacation') { S.day += 3; S.stress = 0; S.energy = maxEnergy(); S.travelUntil = S.day + 3; S.lastPostDay = S.day - 1; S.stats.vacations++; addFollowersPct(-0.01); log('Back from Bali. Travel content ready to post.', 'good'); toast('Back from vacation, fully recharged', 'gold'); S.dayStart = snap(); }
+    else if (c.special) consumeSpecial(c.special);
     else applyFx(c.fx);
+    sound('cash');
   },
   growth: (a) => {
     const g = GROWTH.find((x) => x.id === a); if (!spend(g.price)) { toast('Not enough money.', 'bad'); return 'norender'; }
@@ -1311,9 +1346,10 @@ const ACT = {
   },
   restart: (a) => { if (a === 'yes') { wipeSave(); S = null; ui.confirmRestart = false; showStart(); return 'norender'; } ui.confirmRestart = a !== 'no'; },
 };
+Object.assign(ACT, MONEY_ACT);
 
 const NO_FLASH = new Set(['go', 'back', 'open', 'openDm', 'endDay', 'dmSend', 'noop']);
-const SHEET_ONLY = new Set(['cPoll', 'cCross', 'duet', 'spin', 'cIntent', 'dmChip', 'postAbout', 'cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);
+const SHEET_ONLY = new Set(['cAff', 'cPoll', 'cCross', 'duet', 'spin', 'cIntent', 'dmChip', 'postAbout', 'cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);
 function ACT_RUN(act, arg = '') {
   if (!S || !ACT[act]) return;
   const before = statSnap();

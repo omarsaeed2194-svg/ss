@@ -97,6 +97,7 @@ function migrate(s) {
   s.country = s.country || 'us'; s.faceSeed = s.faceSeed || s.name; s.tea = s.tea || []; s.visited = s.visited || [s.country];
   if (!s.geo) { s.geo = { [s.country]: 0.7, us: 0.1, br: 0.08, in: 0.07, gb: 0.05 }; }
   s.aesthetic = s.aesthetic || 'neon';
+  s.frames = s.frames || []; s.banners = s.banners || []; if (s.frame === undefined) s.frame = null; if (s.banner === undefined) s.banner = null;
   if (!s.challenge) { const prev = S; S = s; newChallenge(); S = prev; }
   return s;
 }
@@ -128,7 +129,7 @@ function gearQ(pid) {
   for (const it of SHOP) if (S.owned[it.id] && it.q && (!it.plats || it.plats.includes(pid))) q += it.q;
   if (S.owned.drone && S.niche === 'travel' && (pid === 'tube' || pid === 'clipz')) q += 0.1;
   if (S.team.editor && (pid === 'clipz' || pid === 'tube' || pid === 'pix')) q += 0.1;
-  return Math.min(q, 0.35); // gear helps, but talent still matters
+  return Math.min(q, 0.45); // gear helps, but talent still matters
 }
 function reachBonus() { let r = 0; for (const it of SHOP) if (S.owned[it.id] && it.reach) r += it.reach; return r; }
 function repLabel(r = S.rep) { return r >= 85 ? 'Beloved' : r >= 68 ? 'Respected' : r >= 50 ? 'Liked' : r >= 35 ? 'Mixed' : r >= 20 ? 'Sketchy' : 'Toxic'; }
@@ -236,6 +237,7 @@ function topicsFor() {
     t.push({ id: 'trend:' + tr.tag, label: tr.tag, group: 'Trend', reach: (1.25 + (fit ? 0.35 : 0)) * fresh * tr.hot, eng: fit ? 1.12 : 0.95, rep: tr.edgy ? -1 : 0, heat: tr.edgy ? 6 : 0, viral: 0.025 * fresh, trend: tr.tag, phrase: tr.tag });
   });
   t.push({ id: 'personal', label: 'Storytime', reach: 1.1, eng: 1.25, rep: 0.3, heat: 1, viral: 0.01, phrase: pick(['my worst date ever', 'why I quit my job', 'the night I got locked out in Lisbon', 'my first viral flop']) });
+  if (S.owned.pet) t.push({ id: 'pet', label: 'Pet content', reach: 1.3, eng: 1.45, rep: 1, heat: 0, viral: 0.03, phrase: pick(['my dog judging my outfit', 'my golden retriever meeting a cat', 'pet reacts to my content']) });
   t.push({ id: 'bts', label: 'Behind the scenes', reach: 0.95, eng: 1.2, rep: 0.8, heat: 0, viral: 0, phrase: 'how I actually make content' });
   t.push({ id: 'cause', label: 'Social cause', reach: 0.85, eng: 1.0, rep: 2.5, heat: -2, viral: 0.01, phrase: pick(['mental health', 'ocean cleanups', 'local food banks', 'creator burnout']) });
   t.push({ id: 'hot', label: 'Controversial take', reach: 1.8, eng: 1.35, rep: -3, heat: 14, viral: 0.05, phrase: pick(HOT_TAKES) });
@@ -308,6 +310,7 @@ function computePost(o, det = false) {
   if (S.stress > 70) q *= 0.85;
   if (FL && FL.q) q *= 1 + FL.q;
   if (o.img) q *= 1.08;
+  if (S.flags.photoDay === S.day) q *= 1.3; // hired photographer
   q *= R(0.7, 1.3);
   let tagB = 0;
   for (const tg of o.tags) tagB += tagValue(tg);
@@ -315,7 +318,7 @@ function computePost(o, det = false) {
   const cap = (o.caption || '').toLowerCase();
   if (cap && S.trends.some((t) => cap.includes(t.tag.slice(1).toLowerCase()))) tagB += 0.08;
   const total = totalFollowers();
-  const base = ps.followers * 0.35 + total * 0.02 + 70;
+  const base = ps.followers * 0.4 + total * 0.03 + 160 + Math.max(0, 600 - total) * 0.4; // small accounts get a discovery push
   let mult = F.reach * T.reach * topic.reach * TM.reach * (S.algo[o.platform] || 1) * q * diffM() * (1 + tagB) * (1 + reachBonus()) * (1 + S.heat / 250);
   if (F.trendy && topic.trend) mult *= 1.25;
   if (o.platform === 'chirp' && S.flags.paidCheck) mult *= 1.1;
@@ -333,7 +336,7 @@ function computePost(o, det = false) {
   mult = Math.pow(Math.max(mult, 0.01), 0.6); // stacked bonuses have diminishing returns
   const today = S.posts.filter((p) => p.day === S.day);
   mult *= Math.pow(0.72, today.filter((p) => p.platform === o.platform).length) * Math.pow(0.86, today.length); // followers tire of spam
-  const viralP = clamp(0.01 + clamp(q - 1, 0, 0.4) * 0.04 + (topic.viral || 0) + (F.viral || 0) + (TM.viral || 0) + (T.viral || 0) + orig / 2500 + (FL && FL.viral ? FL.viral : 0) + (lookMatch ? 0.01 : 0), 0, 0.4);
+  const viralP = clamp(0.01 + clamp(q - 1, 0, 0.4) * 0.04 + (topic.viral || 0) + (F.viral || 0) + (TM.viral || 0) + (T.viral || 0) + orig / 2500 + (FL && FL.viral ? FL.viral : 0) + (lookMatch ? 0.01 : 0) + (S.flags.luckyDay === S.day ? 0.04 : 0), 0, 0.4);
   let viral = false, flop = false;
   if (!det) {
     if (chance(viralP)) { viral = true; mult *= rnd(3, 8); }
@@ -344,25 +347,29 @@ function computePost(o, det = false) {
   if (topic.deal && !o.disclose) er *= 1.1;
   if (FL && FL.eng) er *= 1 + FL.eng;
   if (o.poll && o.poll.length >= 2) er *= 1.2; // polls pull people into the replies
+  if (o.affiliate) er *= 0.9; // link-in-bio energy
   er = clamp(er, 0.3, 40);
   const likes = Math.round((views * er) / 100);
   const refund = viral || flop ? 0 : Math.round(energy * clamp((er / P.baseEng - 0.6) * 0.5, 0, 0.6)); // a warm reception gives energy back
   const spicy = T.heat + topic.heat >= 10;
   const comments = Math.round(likes * R(0.03, 0.09) * (spicy ? 2.5 : 1));
   const shares = Math.round(likes * R(0.02, 0.07) * (viral ? 2.5 : 1));
-  const conv = 0.024 / (1 + Math.log10(Math.max(ps.followers, 100) / 100) * 1.25);
+  const conv = 0.045 / (1 + Math.log10(Math.max(ps.followers, 100) / 100) * 1.15);
   const repF = 0.4 + S.rep / 100;
-  const gain = Math.min(views * conv * clamp(q, 0.4, 1.5) * T.follow * repF * (viral ? 1.3 : 1) * (topic.collab ? 1.3 : 1), ps.followers * 0.6 + 400);
+  const gain = Math.min(views * conv * clamp(q, 0.4, 1.5) * T.follow * repF * (viral ? 1.3 : 1) * (topic.collab ? 1.3 : 1), ps.followers * 0.8 + 800);
   let loss = 0;
   if (spicy && S.rep < 45) loss += ps.followers * R(0.005, 0.02);
   if (sellout) loss += ps.followers * 0.01;
-  let rep = T.rep + topic.rep + (F.rep || 0) + (q > 1.25 ? 0.5 : 0) + (FL && FL.rep ? FL.rep : 0) + (ints.includes('beef') ? -2 : 0) + (ints.includes('shout') ? 0.6 : 0);
+  let rep = T.rep + topic.rep + (F.rep || 0) + (q > 1.25 ? 0.5 : 0) + (FL && FL.rep ? FL.rep : 0) + (ints.includes('beef') ? -2 : 0) + (ints.includes('shout') ? 0.6 : 0) + (o.affiliate ? -0.4 : 0);
   if (views > total * 3 && total > 500) rep *= 1.4; // bigger stage, bigger swing
   const heat = T.heat + topic.heat + (viral && spicy ? 10 : 0) + (FL && FL.heat ? FL.heat : 0) + (ints.includes('beef') ? 10 : 0);
   let cash = 0;
   if (o.platform === 'tube' && ps.followers >= 1000) cash += (views / 1000) * P.cpm * (1 + 0.05 * skillLvl('business'));
   if (o.platform === 'clipz') cash += (views / 1000) * P.cpm;
-  return { energy, refund, orig, lookMatch, q, views, er, likes, comments, shares, gain: Math.round(gain), loss: Math.round(loss), rep, heat, cash, viral, flop, topic, viralP, sellout };
+  const tips = likes * 0.0015 * clamp(S.rep / 50, 0.3, 1.6) * (1 + (S.superfans || []).filter((f) => f.count > 2).length * 0.15);
+  const aff = o.affiliate ? views * 0.0012 * (1 + 0.05 * skillLvl('business')) : 0;
+  cash += tips + aff;
+  return { energy, refund, orig, lookMatch, q, views, er, likes, comments, shares, gain: Math.round(gain), loss: Math.round(loss), rep, heat, cash, tips: Math.round(tips), aff: Math.round(aff), viral, flop, topic, viralP, sellout };
 }
 
 function genCaption(o, topic) {
@@ -578,6 +585,8 @@ function doPost(o) {
     log(`Your ${FORMATS[o.format].name.toLowerCase()} went viral: ${fmt(r.views)} views.`, 'gold');
     news(`@${S.handle}'s ${PLATFORMS[o.platform].name} post is everywhere today (${fmt(r.views)} views)`, true);
     sound('viral');
+    if (typeof celebrate === 'function') celebrate('viral');
+    if (typeof makeGig === 'function' && totalFollowers() >= 2000 && chance(0.5)) makeGig('license', { views: r.views });
   } else if (r.flop) { S.stats.flops++; log(`Post flopped on ${PLATFORMS[o.platform].name}.`, 'bad'); sound('bad'); }
   else { log(`Posted on ${PLATFORMS[o.platform].name}: ${fmt(r.views)} views, ${signed(r.gain - r.loss)} followers.`); sound('post'); }
   if (r.sellout) log('Fans are calling you a sellout. Too many ads lately.', 'bad');
@@ -770,11 +779,12 @@ function endDay() {
   // Tube passive ad revenue from the back catalog
   const tube = S.platforms.tube;
   if (tube.unlocked && tube.followers >= 1000) { const ad = Math.round(tube.followers * 0.02 * PLATFORMS.tube.cpm / 10 * realRatio()); if (ad) { S.money += ad; S.stats.earned += ad; lines.push(['ViewTube back-catalog ads', ad]); } }
+  if (typeof moneyTick === 'function') moneyTick(lines);
   // Organic growth / decay
   const idle = S.day - S.lastPostDay;
   for (const id of unlockedIds()) {
     const p = S.platforms[id];
-    let g = ((S.rep - 40) / 100) * 0.012 * diffM();
+    let g = ((S.rep - 40) / 100) * 0.02 * diffM();
     if (idle > 2) g -= Math.min(0.05, (idle - 2) * 0.008);
     if (S.team.smm) { g += 0.002; p.eng = clamp(p.eng + 0.08, 0.5, 30); }
     p.followers = Math.max(0, p.followers * (1 + g));
@@ -991,6 +1001,7 @@ function checkAll() {
     S.bonusMaxE = (S.bonusMaxE || 0) + 2;
     notify('system', null, `You hit ${fmt(m)} followers! Max energy +2.`);
     gainEnergy(15, `${fmt(m)} followers`);
+    if (typeof celebrate === 'function') celebrate('gold');
   }
   if (ti > S.flags.tierMax) {
     S.flags.tierMax = ti;
@@ -1000,6 +1011,7 @@ function checkAll() {
   if (ti > S.flags.tier) {
     S.flags.tier = ti;
     toast(`New tier: ${TIERS[ti].name} creator`, 'gold');
+    if (typeof celebrate === 'function') celebrate('gold');
     log(`You're now a ${TIERS[ti].name} creator.`, 'gold');
     news(`@${S.handle} passes ${fmt(TIERS[ti].min)} followers`, true);
     sound('viral');
