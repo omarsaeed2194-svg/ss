@@ -81,7 +81,7 @@ The game looks and plays like a social app (inspired by the Status social-media 
 
 - **Tips** on every post (more with high reputation and loyal superfans).
 - **Affiliate links**: toggle one in the composer to earn on views; engagement and reputation dip a little.
-- **Fan subscriptions** (1K+ followers): pick a price from $2.99 to $19.99, post exclusives or subscribers cancel.
+- **FanVault**: paid subscriptions, pay-per-view posts, custom videos and DM tips (see below).
 - **Paid gigs** arrive in Messages: shoutouts, club appearances, keynotes, viral clip licensing, movie cameos.
 - **Markets**: an index, three parody stocks and CloutCoin, with nightly price moves, news shocks and sparkline charts.
 - **Property** that pays rent every night, from a studio apartment to an office tower.
@@ -94,6 +94,16 @@ The game looks and plays like a social app (inspired by the Status social-media 
 - Faster growth: posts convert more viewers, small accounts get a discovery push, overnight growth is stronger.
 - Home now opens with a tier progress card, your cash, and quick-action tiles (post, go live, money, DMs, shop, danger).
 - Confetti on viral posts, follower milestones and new tiers; stat pop-ups no longer cover the header.
+
+## FanVault (paid subscriptions)
+
+A sixth platform, unlocked at 1K followers. Fans pay monthly for exclusive drops; the content stays PG-13.
+
+- Set your price ($4.99 to $24.99). Cheaper brings more subscribers, pricier earns more per fan. Raising it makes some fans cancel.
+- Six drops: behind-the-scenes vlog, glam photoshoot, poolside set (subscribers flood in, plus heat and a leak risk), pay-per-view exclusive ($20 unlocks; too many in a row and fans cancel), custom shoutout videos, paid DM hour (tips).
+- "Link in bio" turns free posts into a funnel for subscribers, but costs a little reputation and makes brands nervous.
+- Subscriptions pay every night (you keep 80%, or 92% with your own app). No drop for 3+ days and subscribers start cancelling.
+- Events: leaked sets, whale tippers, brands reviewing your deal, your aunt subscribing, copycat resellers, platform policy panics.
 
 ## Danger Zone
 
@@ -166,7 +176,8 @@ Doing well gives you a second wind, shown as a gold energy pop-up:
 - `spicy.js` – scandal events, hot seat, tea fallout, world tour
 - `behavior.js` – personalities, memory, mood, decisions, mind games, mention intents
 - `danger.js` – risky stunts, shady schemes, investigations, injuries
-- `money.js` – subscriptions, gigs, markets, property, course, extra shop items, cosmetics, Money screen
+- `vault.js` – FanVault paid-subscription platform, drops, events
+- `money.js` – gigs, markets, property, course, extra shop items, cosmetics, Money screen
 - `ui.js` – rendering, player actions, start screen
 
 All people, brands and platforms in the game are fictional or clearly marked parody with tweaked names; everything they do in the game is invented.

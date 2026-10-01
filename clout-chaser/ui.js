@@ -389,7 +389,7 @@ function heroCard() {
       <div class="hero-n"><span class="num">${fmt(t)}</span>${nx ? `<span class="small muted num"> / ${fmt(nx.min)}</span>` : ''}<span class="small ${df >= 0 ? 'good' : 'bad'} num"> ${signed(df)} today</span></div></div>
       <div class="hero-cash"><span class="small muted">Cash</span><b class="num gold">${money(S.money)}</b></div></div>
     <div class="tierbar" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100" aria-label="Progress to next tier"><i style="width:${pct}%"></i></div>
-    <div class="quick">${tile('feather', 'Post', 'compose', '', 'hot')}${S.platforms.live.unlocked ? tile('live', 'Go live', 'compose', 'live') : ''}${tile('cash', 'Money', 'go', 'money', '', gigs || '')}${tile('mail', 'DMs', 'go', 'messages', '', b.messages || '')}${tile('bag', 'Shop', 'go', 'shop')}${tile('fire', 'Danger', 'go', 'danger')}</div></div>`;
+    <div class="quick">${tile('feather', 'Post', 'compose', '', 'hot')}${S.platforms.live.unlocked ? tile('live', 'Go live', 'compose', 'live') : ''}${vaultOn() ? tile('lock', 'FanVault', 'compose', 'vault', 'vaultq') : ''}${tile('cash', 'Money', 'go', 'money', '', gigs || '')}${tile('mail', 'DMs', 'go', 'messages', '', b.messages || '')}${tile('bag', 'Shop', 'go', 'shop')}${tile('fire', 'Danger', 'go', 'danger')}</div></div>`;
 }
 /* Confetti for the big moments */
 function celebrate(kind = 'gold') {
@@ -836,7 +836,7 @@ function openCompose(preset = {}) {
 function closeCompose() { $('#composeWrap').hidden = true; }
 /* Same content on every unlocked platform, each in its best format */
 function crossPlan(o) {
-  const plats = [o.platform, ...unlockedIds().filter((p) => p !== 'live' && p !== o.platform)];
+  const plats = [o.platform, ...unlockedIds().filter((p) => !SPECIAL_PLATS.has(p) && p !== o.platform)];
   return plats.map((pid, i) => {
     if (i === 0) return o;
     const format = CROSS_FORMAT[pid](o.format);
@@ -886,7 +886,7 @@ function composeInput() {
 function renderCompose(focus) {
   const c = ui.c; if (!c) return;
   if (!S.platforms[c.platform].unlocked) c.platform = 'pix';
-  if (c.platform !== 'live' && (!c.format || FORMATS[c.format].p !== c.platform)) c.format = Object.keys(FORMATS).find((f) => FORMATS[f].p === c.platform && (!c.img || hasLook(f))) || Object.keys(FORMATS).find((f) => FORMATS[f].p === c.platform);
+  if (!SPECIAL_PLATS.has(c.platform) && (!c.format || FORMATS[c.format].p !== c.platform)) c.format = Object.keys(FORMATS).find((f) => FORMATS[f].p === c.platform && (!c.img || hasLook(f))) || Object.keys(FORMATS).find((f) => FORMATS[f].p === c.platform);
   const topics = topicsFor();
   if (!topics.some((t) => t.id === c.topic)) c.topic = 'niche';
   const plats = Object.entries(PLATFORMS).map(([id, p]) => {
@@ -895,7 +895,8 @@ function renderCompose(focus) {
     return `<button class="chip" data-act="cPlat" data-arg="${id}" aria-pressed="${c.platform === id}">${pdot(id)} ${p.name} <span class="cost">${fmt(ps.followers)}</span></button>`;
   }).join('');
   let body;
-  if (c.platform === 'live') {
+  if (c.platform === 'vault') body = vaultBody();
+  else if (c.platform === 'live') {
     body = `<div class="opts" style="border-top:0"><b style="font-size:20px">Go live on Streamly</b><span class="muted">Chat throws surprises at you mid-stream: raids, celebrity drop-ins, sponsor moments. Earn donations and Streamly followers.</span>
       <div class="cards">${Object.entries(STREAMS).map(([id, s]) => `<div class="card"><div class="t"><span>${s.name}</span><span class="pill blue">${s.e} energy</span></div><span class="small muted">${s.chats} chat moment${s.chats > 1 ? 's' : ''}${s.stress ? ' · extra stress' : ''}</span>${btn(`${ico('live')} Go live`, 'stream', id, 'blue sm', S.energy < s.e)}</div>`).join('')}</div>
       <span class="small muted">Expected viewers: ~${fmt((S.platforms.live.followers * 0.06 + totalFollowers() * 0.002 + 5) * (S.algo.live || 1))}</span></div>`;
@@ -927,10 +928,10 @@ function renderCompose(focus) {
           <span class="opt-lbl">Post time</span><div class="scroller">${Object.entries(TIMES).map(([id, e]) => chip(e.name, 'cTime', id, c.time === id)).join('')}</div>` : `<span class="small muted">${FORMATS[c.format].name} · ${EFFORT[c.effort].name} effort · ${TIMES[c.time].name}</span>`}
       </div>`;
   }
-  $('#compose').innerHTML = `<div class="sheet-head"><button class="icon-btn" data-act="closeCompose" aria-label="Close">${ico('x')}</button><span class="small muted">Day ${S.day} · ${Math.round(S.energy)} energy left</span>${c.platform === 'live' ? '<span style="width:36px"></span>' : `<button class="icon-btn" data-act="cSuggest" title="Write one for me" aria-label="Suggest a post">${ico('dice')}</button>`}</div>
-    <div class="opts" style="border-top:0;padding-top:0"><span class="opt-lbl">Post to</span><div class="scroller">${c.platform !== 'live' && unlockedIds().filter((x) => x !== 'live').length > 1 ? `<button class="chip allchip" data-act="cCross" aria-pressed="${!!c.cross}">${ico('repost')} All platforms</button>` : ''}${plats}</div>${c.cross && c.platform !== 'live' ? `<span class="small muted">Cross-posting: ${crossPlan({ platform: c.platform, format: c.format, topic: c.topic }).map((x) => `${PLATFORMS[x.platform].name} (${FORMATS[x.format].name})`).join(' · ')}. 35% energy discount. The platform you pick first gets your mentions, deals and special topics.</span>` : ''}</div>
+  $('#compose').innerHTML = `<div class="sheet-head"><button class="icon-btn" data-act="closeCompose" aria-label="Close">${ico('x')}</button><span class="small muted">Day ${S.day} · ${Math.round(S.energy)} energy left</span>${SPECIAL_PLATS.has(c.platform) ? '<span style="width:36px"></span>' : `<button class="icon-btn" data-act="cSuggest" title="Write one for me" aria-label="Suggest a post">${ico('dice')}</button>`}</div>
+    <div class="opts" style="border-top:0;padding-top:0"><span class="opt-lbl">Post to</span><div class="scroller">${!SPECIAL_PLATS.has(c.platform) && unlockedIds().filter((x) => !SPECIAL_PLATS.has(x)).length > 1 ? `<button class="chip allchip" data-act="cCross" aria-pressed="${!!c.cross}">${ico('repost')} All platforms</button>` : ''}${plats}</div>${c.cross && !SPECIAL_PLATS.has(c.platform) ? `<span class="small muted">Cross-posting: ${crossPlan({ platform: c.platform, format: c.format, topic: c.topic }).map((x) => `${PLATFORMS[x.platform].name} (${FORMATS[x.format].name})`).join(' · ')}. 35% energy discount. The platform you pick first gets your mentions, deals and special topics.</span>` : ''}</div>
     ${body}
-    ${c.platform === 'live' ? '' : `<div class="compose-foot"><div class="forecast" id="cForecast"></div><button class="btn primary big" id="cPost" data-act="cPost">Post</button></div>`}`;
+    ${SPECIAL_PLATS.has(c.platform) ? '' : `<div class="compose-foot"><div class="forecast" id="cForecast"></div><button class="btn primary big" id="cPost" data-act="cPost">Post</button></div>`}`;
   $$('.poll-edit input').forEach((inp) => inp.addEventListener('input', () => { c.poll = c.poll || []; c.poll[+inp.dataset.i] = inp.value; updateComposeLive(); }));
   const fileIn = $('#cFile');
   if (fileIn) fileIn.addEventListener('change', async () => { const f = fileIn.files && fileIn.files[0]; if (!f) return; try { c.img = await resizeImage(f); if (!hasLook(c.format)) c.format = Object.keys(FORMATS).find((k) => FORMATS[k].p === c.platform && hasLook(k)); renderCompose(false); } catch (e) { toast('That file could not be read as an image.', 'bad'); } });
@@ -944,7 +945,7 @@ function renderCompose(focus) {
   updateComposeLive();
 }
 function updateComposeLive() {
-  const c = ui.c; if (!c || c.platform === 'live') return;
+  const c = ui.c; if (!c || SPECIAL_PLATS.has(c.platform)) return;
   const o = composeInput();
   const r = computePost(o, true);
   const T = TONES[o.tone];
@@ -1046,7 +1047,7 @@ const ACT = {
     if (!c.text.trim()) { toast('Write something first, or tap the dice for an idea.', 'bad'); return 'norender'; }
     const o = composeInput();
     let p;
-    if (c.cross && c.platform !== 'live') {
+    if (c.cross && !SPECIAL_PLATS.has(c.platform)) {
       const plan = crossPlan(o);
       const full = plan.reduce((a, x) => a + computePost(x, true).energy, 0), disc = Math.round(full * CROSS_DISCOUNT);
       if (S.energy < disc) { toast(`Cross-posting needs ${disc} energy.`, 'bad'); return 'norender'; }
@@ -1346,10 +1347,10 @@ const ACT = {
   },
   restart: (a) => { if (a === 'yes') { wipeSave(); S = null; ui.confirmRestart = false; showStart(); return 'norender'; } ui.confirmRestart = a !== 'no'; },
 };
-Object.assign(ACT, MONEY_ACT);
+Object.assign(ACT, MONEY_ACT, VAULT_ACT);
 
 const NO_FLASH = new Set(['go', 'back', 'open', 'openDm', 'endDay', 'dmSend', 'noop']);
-const SHEET_ONLY = new Set(['cAff', 'cPoll', 'cCross', 'duet', 'spin', 'cIntent', 'dmChip', 'postAbout', 'cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);
+const SHEET_ONLY = new Set(['vPrice', 'vLink', 'vDrop', 'cAff', 'cPoll', 'cCross', 'duet', 'spin', 'cIntent', 'dmChip', 'postAbout', 'cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);
 function ACT_RUN(act, arg = '') {
   if (!S || !ACT[act]) return;
   const before = statSnap();

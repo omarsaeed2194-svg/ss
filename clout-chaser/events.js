@@ -87,7 +87,7 @@ const EVENTS = {
     ],
   },
   algo_shift: {
-    random: true, w: 3, ctx: () => ({ p: pick(unlockedIds()) }), title: (c) => `${PLATFORMS[c.p].name} changed its algorithm`,
+    random: true, w: 3, ctx: () => ({ p: pick(unlockedIds().filter((x) => x !== 'vault')) }), title: (c) => `${PLATFORMS[c.p].name} changed its algorithm`,
     text: (c) => `Overnight, ${PLATFORMS[c.p].name} started favoring different content. Creator forums are melting down.`,
     choices: (c) => [
       { label: 'Study it and adapt', sub: '−20 energy, algorithm favors you tomorrow', fn: () => { S.algoBoost[c.p] = 1.45; return R('You cracked it before most creators did.', { energy: -20 }); } },
@@ -483,7 +483,7 @@ const EVENTS = {
       c.don = Math.round(c.don + c.viewers * L.hours * rnd(0.03, 0.08) * ch);
       c.gain = Math.round(c.viewers * L.hours * rnd(0.04, 0.09) * ch * diffM() / (1 + Math.log10(Math.max(1, S.platforms.live.followers) / 100 + 1) * 0.6));
       S.platforms.live.followers += c.gain;
-      for (const id of unlockedIds()) if (id !== 'live') S.platforms[id].followers += c.gain * 0.1;
+      for (const id of unlockedIds()) if (id !== 'live' && id !== 'vault') S.platforms[id].followers += c.gain * 0.1;
       S.money += c.don; S.stats.earned += c.don; S.stats.streams++;
       gainEnergy(Math.round(clamp(Math.log10(c.viewers + 1) * 4, 3, 25)), 'Chat hyped you up');
       if (c.len === 's12') S.stats.subathons++;

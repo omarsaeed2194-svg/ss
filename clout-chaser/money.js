@@ -93,13 +93,6 @@ function sellAsset(k, frac) {
   return gain;
 }
 
-/* ---------- subscriptions ---------- */
-const SUB_PRICES = { 2.99: 0.014, 4.99: 0.009, 9.99: 0.0045, 19.99: 0.0018 };
-function subsTarget() {
-  const s = S.subs; if (!s || !s.on) return 0;
-  return Math.round(totalFollowers() * realRatio() * SUB_PRICES[s.price] * clamp(engRate() / 6, 0.4, 2) * clamp(S.rep / 60, 0.2, 1.5) * (S.day - (s.lastEx || 0) <= 4 ? 1 : 0.6));
-}
-
 /* ---------- gigs: paid opportunities in your inbox ---------- */
 function makeGig(kind, extra = {}) {
   const t = totalFollowers();
@@ -127,13 +120,6 @@ function moneyTick(lines) {
   // rent
   let rent = 0; for (const it of SHOP) if (S.owned[it.id] && it.rent) rent += it.rent;
   if (rent) { S.money += rent; S.stats.earned += rent; lines.push(['Rental income', rent]); }
-  // subscriptions
-  if (S.subs && S.subs.on) {
-    const target = subsTarget();
-    S.subs.count = Math.max(0, Math.round(S.subs.count + (target - S.subs.count) * 0.35));
-    const inc = Math.round(S.subs.count * S.subs.price * 0.7 / 30);
-    if (inc) { S.money += inc; S.stats.earned += inc; lines.push([`Subscriptions (${fmt(S.subs.count)} subs)`, inc]); }
-  }
   // course
   if (S.course) {
     const sales = Math.round(totalFollowers() * realRatio() * 0.00003 * clamp(S.rep / 60, 0.2, 1.5) * (S.course.hype || 1) * rnd(0.6, 1.4));
@@ -175,22 +161,19 @@ function vMoney() {
   const incTot = inc.reduce((a, [, v]) => a + v, 0);
   const maxI = Math.max(1, ...inc.map(([, v]) => v));
   const netWorth = S.money + S.savings + holdingsValue() + SHOP.filter((it) => S.owned[it.id] && it.cat === 'Property').reduce((a, it) => a + it.price, 0);
-  const subs = S.subs || { on: false, price: 4.99, count: 0 };
   const m = S.market;
   return `<div class="col-head">${head('Money', `Net worth ${money(netWorth)}`)}</div>
     <div class="sect"><div class="wallet"><div><div class="small muted">Cash</div><div class="big">${money(S.money)}</div></div><div><div class="small muted">Investments</div><div class="big">${money(holdingsValue())}</div></div><div><div class="small muted">Yesterday's income</div><div class="big good">${money(incTot)}</div></div></div>
       ${inc.length ? `<div class="bars">${inc.map(([k, v]) => `<div class="bar-row"><span class="small" title="${esc(k)}">${esc(k.split(' (')[0])}</span><div class="track"><i style="width:${(v / maxI) * 100}%;background:var(--gold)"></i></div><span class="n">${money(v)}</span></div>`).join('')}</div>` : '<p class="small muted">Sleep once to see where your money comes from.</p>'}</div>
-    <div class="sect"><div class="row between"><h3>${ico('star')} Fan subscriptions</h3>${subs.on ? `<span class="pill good">${fmt(subs.count)} subscribers</span>` : ''}</div>
-      ${t < 1000 ? `<span class="small muted">${ico('lock')} Unlocks at 1K followers.</span>` : !subs.on ? `<p class="small muted">Fans pay monthly for exclusive posts. Keep posting exclusives or they cancel.</p><div>${btn('Turn on subscriptions', 'subsOn', '', 'primary')}</div>` : `
-      <div class="row">${Object.keys(SUB_PRICES).map((p) => chip(`$${p}/mo`, 'subsPrice', p, String(subs.price) === p)).join('')}</div>
-      <span class="small muted">Cheaper means more subscribers; pricier means fewer but more per fan. About ${fmt(subsTarget())} fans want in at this price. You keep 70%.</span>
-      <div class="row">${btn(`${ico('feather')} Post exclusive content · 12`, 'subsPost', '', 'sm blue', S.energy < 12 || subs.lastEx === S.day)}<span class="small ${S.day - (subs.lastEx || 0) > 4 ? 'bad' : 'muted'}">${subs.lastEx ? `Last exclusive: day ${subs.lastEx}` : 'No exclusives yet'}${S.day - (subs.lastEx || 0) > 4 ? ' · subscribers are cancelling' : ''}</span></div>`}</div>
+    <div class="sect"><div class="row between"><h3>${ico('lock')} FanVault</h3>${vaultOn() ? `<span class="pill blue">${fmt(vaultSubs())} subscribers</span>` : ''}</div>
+      ${vaultOn() ? `<span class="small muted">${money(vaultSubs() * vaultInit().price * vaultCut() / 30)}/day from subscriptions at $${vaultInit().price}/mo · ${money(vaultInit().earned)} lifetime · ${fmt(vaultInit().ppvSold)} pay-per-view unlocks</span><div>${btn(`${ico('feather')} Open FanVault`, 'compose', 'vault', 'sm blue')}</div>` : t >= PLATFORMS.vault.unlock ? `<p class="small muted">A paid-subscription platform: fans pay monthly for exclusive drops. Big money, nervous brands.</p><div>${btn('Join FanVault', 'unlock', 'vault', 'primary')}</div>` : `<span class="small muted">${ico('lock')} Unlocks at ${fmt(PLATFORMS.vault.unlock)} followers.</span>`}</div>
     <div class="sect"><h3>${ico('chart')} Markets</h3><span class="small muted">Prices move every night. News moves them a lot. Not financial advice, but definitely financial chaos.</span>
       ${Object.entries(ASSETS).map(([k, a]) => { const p = m.p[k], h = m.h[k], ch = h.length > 1 ? (p / h[h.length - 2] - 1) * 100 : 0, own = m.q[k] * p, pl = (p - m.c[k]) * m.q[k];
         return `<div class="asset"><div style="min-width:0"><b>${a.tick}</b> <span class="small muted">${a.name}</span><div class="num">${p < 10 ? '$' + p.toFixed(3) : money(p)} <span class="${ch >= 0 ? 'good' : 'bad'} small">${ch >= 0 ? '▲' : '▼'} ${Math.abs(ch).toFixed(1)}%</span></div>${own > 0.5 ? `<div class="small">You own ${money(own)} <span class="${pl >= 0 ? 'good' : 'bad'}">(${pl >= 0 ? '+' : '−'}${money(Math.abs(pl))})</span></div>` : ''}</div>${sparkline(h)}<div class="row" style="justify-content:flex-end">${[[100, '$100'], [1000, '$1K'], [10000, '$10K']].map(([v, l]) => btn(`+${l}`, 'buy$', `${k}:${v}`, 'sm', S.money < v, `Buy ${money(v)}`)).join('')}${own > 0.5 ? btn('Sell ½', 'sell$', `${k}:0.5`, 'sm', false, 'Sell half') + btn('Sell all', 'sell$', `${k}:1`, 'sm danger') : ''}</div></div>`; }).join('')}
       ${S.stats.tradeProfit ? `<span class="small ${S.stats.tradeProfit >= 0 ? 'good' : 'bad'}">Realized trading P&L: ${S.stats.tradeProfit >= 0 ? '+' : '−'}${money(Math.abs(S.stats.tradeProfit))}</span>` : ''}</div>
     <div class="sect"><h3>${ico('brief')} Online course</h3>${S.course ? `<span class="small">Sold ${fmt(S.course.sold)} copies at $49 · hype ×${(S.course.hype || 1).toFixed(1)}</span><div>${btn('Promote it · 15', 'coursePush', '', 'sm', S.energy < 15)}</div>` : t >= 50000 ? `<p class="small muted">"How I Went Viral (And You Can Too)". $49, sells every day.</p><div>${btn('Record and launch · $15,000', 'courseLaunch', '', 'primary', S.money < 15000)}</div>` : `<span class="small muted">${ico('lock')} Unlocks at 50K followers.</span>`}</div>
     <div class="sect"><h3>More ways to earn</h3><div class="small muted" style="display:flex;flex-direction:column;gap:4px">
+      <span>• FanVault: fans pay monthly for exclusive drops; pay-per-view posts and custom videos pay big.</span>
       <span>• Every post earns tips, more with high reputation and superfans.</span>
       <span>• Add an affiliate link when you post for a commission on views (fans notice if you overdo it).</span>
       <span>• Paid gigs land in Messages: shoutouts, club appearances, speaking, clip licensing, movie cameos.</span>
@@ -198,9 +181,6 @@ function vMoney() {
 }
 
 const MONEY_ACT = {
-  subsOn: () => { S.subs = { on: true, price: 4.99, count: 0, lastEx: S.day }; toast('Subscriptions are live. Post exclusives to keep fans paying.', 'gold'); },
-  subsPrice: (a) => { S.subs.price = +a; },
-  subsPost: () => { if (!needEnergy(12)) return 'norender'; S.subs.lastEx = S.day; S.subs.count = Math.round(S.subs.count * 1.03 + 3); unlockedIds().forEach((p) => { S.platforms[p].eng = clamp(S.platforms[p].eng + 0.1, 0.5, 30); }); toast('Exclusive posted. Subscribers are happy.'); },
   'buy$': (a) => { const [k, v] = a.split(':'); if (!buyAsset(k, +v)) toast('Not enough cash.', 'bad'); },
   'sell$': (a) => { const [k, f] = a.split(':'); const g = sellAsset(k, +f); toast(`${g >= 0 ? 'Profit' : 'Loss'}: ${money(Math.abs(g))}`, g >= 0 ? 'gold' : 'bad'); },
   courseLaunch: () => { if (!spend(15000)) return 'norender'; S.course = { sold: 0, hype: 3 }; news(`@${S.handle} launches an online course. The comments are divided.`, true); toast('Course launched. Sales arrive every night.', 'gold'); },

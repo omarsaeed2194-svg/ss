@@ -97,6 +97,9 @@ function migrate(s) {
   s.country = s.country || 'us'; s.faceSeed = s.faceSeed || s.name; s.tea = s.tea || []; s.visited = s.visited || [s.country];
   if (!s.geo) { s.geo = { [s.country]: 0.7, us: 0.1, br: 0.08, in: 0.07, gb: 0.05 }; }
   s.aesthetic = s.aesthetic || 'neon';
+  for (const [id, p] of Object.entries(PLATFORMS)) if (!s.platforms[id]) s.platforms[id] = { unlocked: false, followers: 0, eng: p.baseEng };
+  if (s.subs && s.subs.on) { s.platforms.vault.unlocked = true; s.platforms.vault.followers += s.subs.count || 0; s.vault = { price: 9.99, link: false, lastDrop: s.subs.lastEx || 0, lastPpv: -9, earned: 0, ppvSold: 0, drops: [], ownApp: false }; }
+  delete s.subs;
   s.frames = s.frames || []; s.banners = s.banners || []; if (s.frame === undefined) s.frame = null; if (s.banner === undefined) s.banner = null;
   if (!s.challenge) { const prev = S; S = s; newChallenge(); S = prev; }
   return s;
@@ -144,7 +147,7 @@ const npcName = (id) => NPCS[id].name;
 function changeRep(d) { if (d > 0) d *= clamp(1.25 - S.rep / 100, 0.15, 1); S.rep = clamp(S.rep + d, 0, 100); } // goodwill is harder to earn at the top
 function changeRel(id, d) { const n = S.npcs[id]; n.rel = clamp(n.rel + d, -100, 100); }
 function addFollowers(n) {
-  const ids = unlockedIds(); const tot = totalFollowers();
+  const ids = unlockedIds().filter((id) => id !== 'vault'); const tot = ids.reduce((a, id) => a + S.platforms[id].followers, 0);
   for (const id of ids) {
     const p = S.platforms[id];
     const share = tot > 0 ? p.followers / tot : 1 / ids.length;
@@ -530,7 +533,8 @@ function doPost(o) {
   S.energy -= r.energy;
   S.stress = clamp(S.stress + r.energy * 0.12, 0, 100);
   ps.followers = Math.max(0, ps.followers + r.gain - r.loss);
-  for (const id of unlockedIds()) if (id !== o.platform) S.platforms[id].followers += r.gain * rnd(0.02, 0.05);
+  for (const id of unlockedIds()) if (id !== o.platform && id !== 'vault') S.platforms[id].followers += r.gain * rnd(0.02, 0.05);
+  if (typeof vaultFunnel === 'function') vaultFunnel(r);
   ps.eng = clamp(ps.eng * 0.85 + r.er * 0.15, 0.5, 30);
   changeRep(r.rep < 0 ? r.rep * sev() * (S.team.pr ? 0.7 : 1) : r.rep);
   const h0 = S.heat;
@@ -646,7 +650,7 @@ function doPost(o) {
 
 /* ---------- daily creative challenge ---------- */
 function newChallenge() {
-  const plats = unlockedIds().filter((p) => p !== 'live');
+  const plats = unlockedIds().filter((p) => p !== 'live' && p !== 'vault');
   const plat = pick(plats);
   const fm = pick(Object.keys(FORMATS).filter((f) => FORMATS[f].p === plat));
   const lookFm = pick(Object.keys(FORMATS).filter((f) => plats.includes(FORMATS[f].p) && hasLook(f)));
@@ -779,10 +783,12 @@ function endDay() {
   // Tube passive ad revenue from the back catalog
   const tube = S.platforms.tube;
   if (tube.unlocked && tube.followers >= 1000) { const ad = Math.round(tube.followers * 0.02 * PLATFORMS.tube.cpm / 10 * realRatio()); if (ad) { S.money += ad; S.stats.earned += ad; lines.push(['ViewTube back-catalog ads', ad]); } }
+  if (typeof vaultTick === 'function') vaultTick(lines);
   if (typeof moneyTick === 'function') moneyTick(lines);
   // Organic growth / decay
   const idle = S.day - S.lastPostDay;
   for (const id of unlockedIds()) {
+    if (id === 'vault') continue; // subscribers renew or cancel in vaultTick
     const p = S.platforms[id];
     let g = ((S.rep - 40) / 100) * 0.02 * diffM();
     if (idle > 2) g -= Math.min(0.05, (idle - 2) * 0.008);
@@ -909,7 +915,8 @@ function canUnlock(id) { return !S.platforms[id].unlocked && totalFollowers() >=
 function unlockPlatform(id) {
   if (!canUnlock(id)) return;
   const p = S.platforms[id];
-  p.unlocked = true; p.followers = Math.round(totalFollowers() * 0.04 + 20);
+  p.unlocked = true; p.followers = Math.round(totalFollowers() * (id === 'vault' ? 0.008 : 0.04) + 20);
+  if (id === 'vault') { vaultInit(); changeRep(-1); }
   log(`Joined ${PLATFORMS[id].name}. ${fmt(p.followers)} fans followed you over.`, 'gold');
   toast(`${PLATFORMS[id].name} unlocked`, 'gold');
   news(`@${S.handle} just joined ${PLATFORMS[id].name}`, true);
@@ -929,7 +936,7 @@ const ACHIEVEMENTS = [
   ['viral10', 'Algorithm whisperer', '10 viral posts', () => S.stats.viral >= 10],
   ['viral25', 'Main character', '25 viral posts', () => S.stats.viral >= 25],
   ['posts100', 'Content machine', 'Publish 100 posts', () => S.stats.posts >= 100],
-  ['allplat', 'Omnipresent', 'Unlock all five platforms', () => unlockedIds().length === 5],
+  ['allplat', 'Omnipresent', 'Unlock all five platforms', () => unlockedIds().length >= 5],
   ['verified', 'Blue check', 'Get verified', () => !!S.flags.verified],
   ['deal1', 'Paid partnership', 'Complete a brand deal', () => S.stats.deals >= 1],
   ['deal10', 'Brand darling', 'Complete 10 brand deals', () => S.stats.deals >= 10],
