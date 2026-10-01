@@ -32,6 +32,7 @@ const IC = {
   star: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
   send: '<path d="M4 12 20 4l-6 16-3-7z"/>',
   live: '<circle cx="12" cy="12" r="3"/><path d="M6.3 6.3a8 8 0 0 0 0 11.4M17.7 6.3a8 8 0 0 1 0 11.4"/>',
+  bolt: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
   sparkle: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>',
 };
 const ico = (k, cls = 'ico') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>`;
@@ -93,6 +94,18 @@ function toast(msg, cls = '') {
   $('#toasts').appendChild(t); setTimeout(() => t.remove(), 3000);
   while ($('#toasts').children.length > 3) $('#toasts').firstChild.remove();
 }
+let chargeUntil = 0;
+const chargedCls = () => (performance.now() < chargeUntil ? 'charged' : '');
+/* Energy rewards get their own gold pop-up so they feel like a win */
+function energyBurst(n, reason) {
+  const box = $('#deltas'); if (!box) return;
+  const el = document.createElement('div'); el.className = 'delta energy';
+  el.innerHTML = `<span class="pill gold">${ico('bolt')} +${n} energy</span><span class="why">${esc(reason)}</span>`;
+  box.prepend(el); setTimeout(() => el.remove(), 3200);
+  while (box.children.length > 4) box.lastChild.remove();
+  chargeUntil = performance.now() + 400;
+  sound('zap');
+}
 /* Floating stat changes after every action, like Status's aura pop-ups */
 function statSnap() { return S ? { f: totalFollowers(), rep: S.rep, heat: S.heat, money: S.money, energy: S.energy, stress: S.stress } : null; }
 function flashDelta(a, b) {
@@ -147,7 +160,7 @@ function tabsBar(items, cur, act) { return `<div class="tabs" role="tablist">${i
 function statusStrip() {
   const me = maxEnergy();
   const sp = (l, v) => `<button class="sp" data-act="go" data-arg="profile"><span class="l">${l}</span>${v}</button>`;
-  return `<div class="strip">${sp('Followers', fmt(totalFollowers()))}${sp('Rep', `<span class="${repClass()}">${Math.round(S.rep)}</span>`)}${sp('Heat', `<span class="${S.heat >= 60 ? 'bad' : S.heat >= 30 ? 'warn' : ''}">${Math.round(S.heat)}</span>`)}${sp('Energy', `<span class="blue">${Math.round(S.energy)}/${me}</span>`)}${sp('Cash', money(S.money))}${sp('Stress', `<span class="${S.stress >= 70 ? 'bad' : S.stress >= 40 ? 'warn' : 'good'}">${Math.round(S.stress)}</span>`)}${sp('Eng', engRate().toFixed(1) + '%')}</div>`;
+  return `<div class="strip">${sp('Followers', fmt(totalFollowers()))}${sp('Rep', `<span class="${repClass()}">${Math.round(S.rep)}</span>`)}${sp('Heat', `<span class="${S.heat >= 60 ? 'bad' : S.heat >= 30 ? 'warn' : ''}">${Math.round(S.heat)}</span>`)}${sp(`${ico('bolt')} Energy`, `<span class="energy-val ${chargedCls()} ${S.energy > me ? 'gold' : 'blue'}">${Math.round(S.energy)}/${me}</span>`)}${S.streak ? sp(`${ico('fire')} Streak`, `<span class="gold">${S.streak}d</span>`) : ''}${sp('Cash', money(S.money))}${sp('Stress', `<span class="${S.stress >= 70 ? 'bad' : S.stress >= 40 ? 'warn' : 'good'}">${Math.round(S.stress)}</span>`)}${sp('Eng', engRate().toFixed(1) + '%')}</div>`;
 }
 function statGrid() {
   const cell = (k, v, sub, pct, cls) => `<div class="statcell"><div class="k"><span>${k}</span><span>${sub}</span></div><div class="v">${v}</div>${pct !== null ? `<div class="meter ${cls}"><i style="width:${clamp(pct, 0, 100)}%"></i></div>` : ''}</div>`;
@@ -158,7 +171,7 @@ function statGrid() {
     ${cell('Reputation', Math.round(S.rep), repLabel(), S.rep, repClass())}
     ${cell('Heat', Math.round(S.heat), heatLabel(), S.heat, S.heat >= 60 ? 'bad' : S.heat >= 30 ? 'warn' : 'like')}
     ${cell('Money', money(S.money), '', null)}
-    ${cell('Energy', `${Math.round(S.energy)}`, `of ${maxEnergy()}`, (S.energy / maxEnergy()) * 100, '')}
+    ${cell('Energy', `<span class="energy-val ${chargedCls()} ${S.energy > maxEnergy() ? 'gold' : ''}">${Math.round(S.energy)}</span>`, S.energy > maxEnergy() ? 'overcharged' : `of ${maxEnergy()}`, (S.energy / maxEnergy()) * 100, S.energy > maxEnergy() ? 'gold' : '')}
     ${cell('Stress', Math.round(S.stress), stressLabel(), S.stress, S.stress >= 70 ? 'bad' : S.stress >= 40 ? 'warn' : 'good')}
   </div>`;
 }
@@ -268,7 +281,7 @@ function vHome() {
   const prompt = `<div class="reply-box" data-act="compose" style="cursor:text">${meAv()}<div><div class="muted" style="font-size:20px;padding:8px 0">What's happening?</div><div class="row between"><span class="small muted">${S.trends[0] ? `Trending: <span class="blue">${esc(S.trends[0].tag)}</span>` : ''}</span><span class="btn primary sm">Post</span></div></div></div>`;
   const empty = ui.feedTab === 'following' ? `<div class="empty"><h3>Follow some stars</h3><p>Posts from people you follow show up here. Find them in Explore.</p>${btn('Explore', 'go', 'explore', 'blue')}</div>`
     : `<div class="empty"><h3>Nothing yet</h3><p>Your posts show up here. Write your first one.</p>${btn('Post', 'compose', '', 'blue')}</div>`;
-  return `<div class="col-head">${head('Home', `Day ${S.day} · ${weekday()} · ${tier().name} creator`, false, `<button class="btn sm" data-act="endDay" title="Sleep to end the day">${ico('moon')} Sleep</button>`)}
+  return `<div class="col-head">${head('Home', `Day ${S.day} · ${weekday()} · ${tier().name} creator${S.streak ? ` · <span class="gold">${S.streak}-day streak</span>` : ''}`, false, `<button class="btn sm" data-act="endDay" title="Sleep to end the day">${ico('moon')} Sleep</button>`)}
     ${tabsBar([['foryou', 'For you'], ['following', 'Following'], ['mine', 'Your posts']], ui.feedTab, 'feedTab')}</div>
     ${statusStrip()}${prompt}
     ${items.length ? items.slice(0, 50).map((it) => it.k === 'me' ? myPostCard(it.p) : npcPostCard(it.f)).join('') : empty}`;
@@ -534,7 +547,8 @@ function vLife() {
   const locked = (id) => (id === 'meetup' && t < 1e4) || (id === 'party' && t < 5e4);
   return `<div class="col-head">${head('Life & skills', `Stress ${Math.round(S.stress)} · Energy ${Math.round(S.energy)}`)}</div>
     <div class="sect"><div class="cards">${LIFE.map(([id, n, d, e, fx]) => `<div class="card"><div class="t"><span>${n}</span><span class="pill blue">${e} energy</span></div><span class="small muted">${d}</span><span class="small">${fx}</span>${btn('Do it', 'life', id, 'sm', S.energy < e || locked(id) || (S.flags['life_' + id] === S.day && id !== 'replies'))}</div>`).join('')}</div>
-    <div class="hint">Stress above 80 cuts tomorrow's energy by 30% and hurts post quality. At 100 you burn out.</div></div>
+    <div class="hint">Stress above 80 cuts tomorrow's energy by 30% and hurts post quality. At 100 you burn out.</div>
+    <div class="hint"><b>Getting energy back:</b> posts that land well refund energy, viral posts give +25, and every follower milestone, new tier, achievement, skill level, paid deal, collab, shoutout and star follow-back gives a burst. Milestones and tiers also raise your max energy for good. Post every day to build a streak for extra morning energy (+5 per day, up to +30). Rewards can overcharge you past your max.</div></div>
     <div class="sect"><h3>Skills</h3><div class="cards">${Object.entries(S.skills).map(([k, s]) => `<div class="card"><div class="t"><span>${k[0].toUpperCase() + k.slice(1)}</span><span class="pill ${s.lvl >= 10 ? 'gold' : ''}">Level ${s.lvl}</span></div><div class="meter"><i style="width:${s.lvl >= 10 ? 100 : (s.xp / (s.lvl * 60)) * 100}%"></i></div><span class="small muted">${COURSES[k].desc}</span>${btn('Practice · 15', 'practice', k, 'sm', S.energy < 15 || s.lvl >= 10)}</div>`).join('')}</div></div>`;
 }
 function statsBody() {
@@ -543,7 +557,7 @@ function statsBody() {
   const maxF = Math.max(...unlockedIds().map((id) => S.platforms[id].followers), 1);
   const kpi = (l, v, cls = '') => `<div class="statcell"><div class="k">${l}</div><div class="v ${cls}">${v}</div></div>`;
   const top = posts.slice().sort((a, b) => b.views - a.views).slice(0, 5);
-  return `<div class="sect"><div class="statgrid" style="border-radius:16px;overflow:hidden">${kpi('Real followers', fmt(t - S.fake))}${kpi('Avg views', fmt(avg))}${kpi('Best post', fmt(S.stats.bestViews))}${kpi('Viral hits', S.stats.viral, 'gold')}${kpi('Lifetime $', money(S.stats.earned), 'good')}${kpi('Deals', S.stats.deals)}${kpi('Collabs', S.stats.collabs)}${kpi('Streams', S.stats.streams)}${kpi('Cancellations', S.stats.cancels, S.stats.cancels ? 'bad' : '')}</div></div>
+  return `<div class="sect"><div class="statgrid" style="border-radius:16px;overflow:hidden">${kpi('Real followers', fmt(t - S.fake))}${kpi('Avg views', fmt(avg))}${kpi('Best post', fmt(S.stats.bestViews))}${kpi('Viral hits', S.stats.viral, 'gold')}${kpi('Lifetime $', money(S.stats.earned), 'good')}${kpi('Deals', S.stats.deals)}${kpi('Collabs', S.stats.collabs)}${kpi('Streams', S.stats.streams)}${kpi('Energy earned', fmt(S.stats.energyEarned || 0), 'gold')}${kpi('Best streak', Math.max(S.stats.bestStreak || 0, S.streak || 0) + 'd')}${kpi('Cancellations', S.stats.cancels, S.stats.cancels ? 'bad' : '')}</div></div>
     <div class="sect"><div class="row between"><h3>History</h3><div class="scroller">${[['f', 'Followers'], ['rep', 'Rep'], ['m', 'Money'], ['e', 'Engagement'], ['h', 'Heat']].map(([k, l]) => chip(l, 'metric', k, ui.metric === k)).join('')}</div></div><div class="chart-box"><canvas id="chart" aria-label="History chart"></canvas></div></div>
     <div class="sect"><h3>Followers by platform</h3><div class="bars">${Object.keys(PLATFORMS).map((id) => { const p = S.platforms[id]; return `<div class="bar-row"><span>${pdot(id)} ${PLATFORMS[id].name}</span><div class="track"><i style="width:${p.unlocked ? (p.followers / maxF) * 100 : 0}%;background:${PLATFORMS[id].color}"></i></div><span class="n">${p.unlocked ? fmt(p.followers) : 'Locked'}</span></div>`; }).join('')}</div></div>
     <div class="sect"><h3>Top posts</h3>${top.length ? top.map((p) => `<div class="row between small" data-act="open" data-arg="post:${p.id}" style="cursor:pointer;flex-wrap:nowrap"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.caption)}</span><b class="num">${fmt(p.views)}</b></div>`).join('') : '<p class="muted">No posts yet.</p>'}</div>`;
@@ -603,6 +617,7 @@ function vAccount() {
     <div class="sect"><h3>How to play</h3><div class="small" style="display:flex;flex-direction:column;gap:8px">
       <p><b>Post</b> by writing anything. The game reads your tone from your words (you can override it), picks up hashtags, and shows a forecast before you publish.</p>
       <p><b>Every action</b> changes your stats. Watch the pop-ups at the top of the screen.</p>
+      <p><b>Energy</b> comes back when things go well: posts fans love, viral hits, milestones, new tiers, achievements, skill levels, deals, collabs and stars following you. Daily posting streaks add morning energy, and milestones raise your max for good.</p>
       <p><b>Sleep</b> to end the day: growth, income, salaries, trends, DMs and random events happen overnight.</p>
       <p><b>Heat</b> at 100 gets you cancelled. <b>Reputation</b> at 0 gets you deplatformed. <b>Stress</b> at 100 burns you out.</p>
       <p><b>Stars</b> answer DMs, reply to your posts, collab, date, and feud. Be nice, be funny, or be messy.</p>
@@ -700,7 +715,7 @@ function updateComposeLive() {
   const live = $('#cLive');
   if (live) live.innerHTML = `<div class="row small"><span class="pill ${T.rep >= 1 ? 'good' : T.rep < 0 ? 'bad' : ''}">Tone: ${T.name}</span><span class="pill blue">${esc(r.topic.label)}</span>${useful ? `<span class="pill good">${useful} useful tag${useful > 1 ? 's' : ''}</span>` : ''}${o.tags.length > 4 ? '<span class="pill warn">Too many hashtags</span>' : ''}<span class="muted">${280 - c.text.length}</span></div>`;
   const fc = $('#cForecast');
-  if (fc) fc.innerHTML = `<span><b>~${fmt(r.views)}</b> views</span><span><b class="${r.gain - r.loss >= 0 ? 'good' : 'bad'}">${signed(r.gain - r.loss)}</b> followers</span><span><b>${(r.viralP * 100).toFixed(1)}%</b> viral</span><span>Rep <b class="${r.rep >= 1 ? 'good' : r.rep <= -1 ? 'bad' : ''}">${r.rep >= 1 ? 'up' : r.rep <= -1 ? 'down' : 'flat'}</b></span><span>Heat <b class="${r.heat > 8 ? 'bad' : r.heat > 0 ? 'warn' : 'good'}">${r.heat > 8 ? 'spicy' : r.heat > 0 ? 'warm' : 'safe'}</b></span>${S.shadowbanUntil >= S.day ? '<span class="bad">Shadowbanned</span>' : ''}`;
+  if (fc) fc.innerHTML = `<span><b>~${fmt(r.views)}</b> views</span><span><b class="${r.gain - r.loss >= 0 ? 'good' : 'bad'}">${signed(r.gain - r.loss)}</b> followers</span><span><b class="gold">+${r.refund}</b> energy back</span><span><b>${(r.viralP * 100).toFixed(1)}%</b> viral</span><span>Rep <b class="${r.rep >= 1 ? 'good' : r.rep <= -1 ? 'bad' : ''}">${r.rep >= 1 ? 'up' : r.rep <= -1 ? 'down' : 'flat'}</b></span><span>Heat <b class="${r.heat > 8 ? 'bad' : r.heat > 0 ? 'warn' : 'good'}">${r.heat > 8 ? 'spicy' : r.heat > 0 ? 'warm' : 'safe'}</b></span>${S.shadowbanUntil >= S.day ? '<span class="bad">Shadowbanned</span>' : ''}`;
   const pb = $('#cPost');
   if (pb) { pb.textContent = `Post · ${r.energy}`; pb.disabled = S.energy < r.energy || S.hackedUntil >= S.day; pb.title = S.energy < r.energy ? 'Not enough energy. Sleep to recharge.' : ''; }
   $$('[data-act="cTopic"]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.arg === c.topic));
@@ -797,9 +812,9 @@ const ACT = {
     f.commented = true; f.myReply = text;
     const kind = classifyReply(text), n = S.npcs[f.npc], N = NPCS[f.npc];
     const vis = Math.min(n.followers * 0.00002 * rnd(0.5, 2), Math.max(totalFollowers() * 0.2, 150));
-    if (kind === 'nice') { changeRel(f.npc, 3); addFollowers(vis * 0.2); f.replyResult = { good: true, text: `${N.name.split(' ')[0]} liked your reply` }; }
+    if (kind === 'nice') { changeRel(f.npc, 3); addFollowers(vis * 0.2); f.replyResult = { good: true, text: `${N.name.split(' ')[0]} liked your reply` }; gainEnergy(2, `${N.name.split(' ')[0]} liked your reply`); }
     if (kind === 'funny') {
-      if (chance(0.3 + skillLvl('charisma') * 0.05)) { changeRel(f.npc, 4); addFollowers(vis * diffM()); addXp('charisma', 6); f.replyResult = { good: true, text: 'Top reply! Their fans found you.' }; log(`Top reply on ${N.name}'s post.`, 'good'); notify('like', f.npc, 'liked your reply', { npc: true }); }
+      if (chance(0.3 + skillLvl('charisma') * 0.05)) { changeRel(f.npc, 4); addFollowers(vis * diffM()); addXp('charisma', 6); f.replyResult = { good: true, text: 'Top reply! Their fans found you.' }; gainEnergy(8, 'Your reply took off'); log(`Top reply on ${N.name}'s post.`, 'good'); notify('like', f.npc, 'liked your reply', { npc: true }); }
       else f.replyResult = { good: false, text: 'The joke got 3 likes. One was your mom.' };
     }
     if (kind === 'promo') { changeRel(f.npc, -3); addFollowers(vis * 0.4); changeRep(-0.3); f.replyResult = { good: false, text: 'Some clicks, lots of eye-rolls' }; }
@@ -811,7 +826,7 @@ const ACT = {
     if (!c || c.mine) return 'norender';
     if (kind === 'heart') { c.likes = (c.likes || 0) + 1; c.mine = '♥'; unlockedIds().forEach((id) => { S.platforms[id].eng = clamp(S.platforms[id].eng + 0.02, 0.5, 30); }); if (c.npc) changeRel(c.npc, 1); return; }
     if (!needEnergy(2)) return 'norender';
-    if (kind === 'thanks') { c.mine = pick(['thank you!! means a lot', 'love you for this', 'you are the best']); changeRep(0.3); unlockedIds().forEach((id) => { S.platforms[id].eng = clamp(S.platforms[id].eng + 0.06, 0.5, 30); }); if (c.npc) changeRel(c.npc, 3); }
+    if (kind === 'thanks') { c.mine = pick(['thank you!! means a lot', 'love you for this', 'you are the best']); changeRep(0.3); gainEnergy(3, 'Fan love'); unlockedIds().forEach((id) => { S.platforms[id].eng = clamp(S.platforms[id].eng + 0.06, 0.5, 30); }); if (c.npc) changeRel(c.npc, 3); }
     if (kind === 'clap') { c.mine = pick(['and yet here you are', 'ratio + you fell off', 'imagine being this pressed']); changeRep(-0.8 * sev()); S.heat = clamp(S.heat + 4, 0, 100); addFollowers(Math.max(3, totalFollowers() * 0.002)); if (c.npc) changeRel(c.npc, -8); }
     if (kind === 'kind') { c.mine = pick(['sorry you feel that way, hope your day gets better', 'appreciate the feedback anyway!', 'sending love regardless']); changeRep(0.8); if (chance(0.3)) toast('They deleted their reply and followed you.'); }
     checkAll();
@@ -820,7 +835,7 @@ const ACT = {
     const n = S.npcs[a]; n.following = !n.following;
     if (n.following) {
       if (!n.everFollowed) { changeRel(a, 2); n.everFollowed = true; }
-      if (!n.followsYou && chance(clamp(0.05 + n.rel / 120 + ratio(a) * 0.6 - NPCS[a].ego * 0.2, 0.01, 0.9))) { n.followsYou = true; changeRel(a, 3); notify('follow', a, 'followed you back', { npc: true }); toast(`${NPCS[a].name} followed you back!`, 'gold'); log(`${NPCS[a].name} followed you back.`, 'gold'); }
+      if (!n.followsYou && chance(clamp(0.05 + n.rel / 120 + ratio(a) * 0.6 - NPCS[a].ego * 0.2, 0.01, 0.9))) { n.followsYou = true; changeRel(a, 3); notify('follow', a, 'followed you back', { npc: true }); log(`${NPCS[a].name} followed you back.`, 'gold'); gainEnergy(8, `${NPCS[a].name} followed you back`); }
     }
   },
   dmSend: (a) => {
@@ -841,10 +856,10 @@ const ACT = {
       if (/collab|work together|film something/.test(low) && !n.feud) {
         n.lastAsk = S.day;
         const pc = clamp(0.1 + n.rel / 120 + ratio(a) * 0.8 - N.ego * 0.3 + (S.rep - 50) / 150 - (S.heat > 60 ? 0.2 : 0), 0.02, 0.92);
-        if (n.rel >= 15 && !S.collab && chance(pc)) { S.collab = { npc: a, until: S.day + 4 }; changeRel(a, 4); say(pick(["yes!! let's do it this week", 'down. send me a time', "ok I love this idea, let's film"])); toast(`${N.name} said yes. Post the collab within 4 days.`, 'gold'); log(`${N.name} agreed to collab.`, 'gold'); }
+        if (n.rel >= 15 && !S.collab && chance(pc)) { S.collab = { npc: a, until: S.day + 4 }; changeRel(a, 4); gainEnergy(6, 'Collab locked in'); say(pick(["yes!! let's do it this week", 'down. send me a time', "ok I love this idea, let's film"])); toast(`${N.name} said yes. Post the collab within 4 days.`, 'gold'); log(`${N.name} agreed to collab.`, 'gold'); }
         else { changeRel(a, -1); say(pick(['my schedule is packed rn, maybe later', "hmm not sure it's a fit right now", "let's get to know each other first lol"])); }
       } else if (/\bdate\b|dinner|go out with me/.test(low) && n.rel >= 65 && !S.partner) {
-        if (chance(clamp(0.3 + n.rel / 300 + ratio(a) * 0.3, 0.1, 0.9))) { S.partner = a; S.stats.dates++; applyFx({ fp: 0.05 }); news(`It's official: @${S.handle} and ${N.name} are dating`, true); say('I was hoping you would ask. Friday?'); toast(`You and ${N.name} are official!`, 'gold'); sound('viral'); }
+        if (chance(clamp(0.3 + n.rel / 300 + ratio(a) * 0.3, 0.1, 0.9))) { S.partner = a; S.stats.dates++; applyFx({ fp: 0.05 }); news(`It's official: @${S.handle} and ${N.name} are dating`, true); say('I was hoping you would ask. Friday?'); toast(`You and ${N.name} are official!`, 'gold'); gainEnergy(20, 'Butterflies'); sound('viral'); }
         else { changeRel(a, -10); say('aw you are sweet but I think we are better as friends'); }
       } else if (kind === 'troll') {
         changeRel(a, -10); S.heat = clamp(S.heat + 3, 0, 100);
@@ -853,7 +868,7 @@ const ACT = {
       } else {
         if (kind === 'nice') p += 0.1; if (kind === 'promo') p *= 0.5;
         if (kind === 'funny') p += skillLvl('charisma') * 0.02;
-        if (chance(p)) { changeRel(a, kind === 'promo' ? 1 : 5); say(kind === 'promo' ? pick(['lol I will check it out', 'maybe!']) : kind === 'funny' ? pick(['LMAO', 'ok that was actually funny', 'you are unwell 😂']) : pick(['aw thank you!! that means a lot', 'appreciate you fr', 'omg hi, I actually watch your stuff', 'haha thanks, love what you are doing'])); }
+        if (chance(p)) { changeRel(a, kind === 'promo' ? 1 : 5); if (kind !== 'promo') gainEnergy(4, `${N.name.split(' ')[0]} replied`); say(kind === 'promo' ? pick(['lol I will check it out', 'maybe!']) : kind === 'funny' ? pick(['LMAO', 'ok that was actually funny', 'you are unwell 😂']) : pick(['aw thank you!! that means a lot', 'appreciate you fr', 'omg hi, I actually watch your stuff', 'haha thanks, love what you are doing'])); }
         else { changeRel(a, kind === 'promo' ? -2 : 0); toast(`Seen by ${N.name.split(' ')[0]}`); }
       }
       checkAll(); save(); flashDelta(s0, statSnap()); renderAll(); processQueue();
@@ -869,7 +884,7 @@ const ACT = {
   shout: (a) => {
     const n = S.npcs[a], N = NPCS[a]; if (!needEnergy(5)) return 'norender'; n.lastShout = S.day;
     const p = clamp(n.rel / 150 + ratio(a) * 0.5 - N.ego * 0.2 + 0.1, 0.05, 0.8);
-    if (chance(p)) { const g = Math.min(n.followers * 0.0015 * rnd(0.5, 1.5), Math.max(totalFollowers() * 0.6, 2000)) * diffM(); addFollowers(g); changeRel(a, -3); toast(`${N.name} shouted you out!`, 'gold'); log(`${N.name} shouted you out (${signed(g)}).`, 'gold'); notify('repost', a, 'shouted you out to their followers', { npc: true }); }
+    if (chance(p)) { const g = Math.min(n.followers * 0.0015 * rnd(0.5, 1.5), Math.max(totalFollowers() * 0.6, 2000)) * diffM(); addFollowers(g); changeRel(a, -3); toast(`${N.name} shouted you out!`, 'gold'); log(`${N.name} shouted you out (${signed(g)}).`, 'gold'); notify('repost', a, 'shouted you out to their followers', { npc: true }); gainEnergy(12, 'Shoutout rush'); }
     else { changeRel(a, -4); toast(`${N.name.split(' ')[0]} politely passed.`); }
   },
   feud: (a) => {
@@ -889,7 +904,7 @@ const ACT = {
   },
   date: (a) => {
     const n = S.npcs[a], N = NPCS[a]; if (!needEnergy(10)) return 'norender';
-    if (chance(clamp(0.3 + n.rel / 300 + ratio(a) * 0.3, 0.1, 0.9))) { S.partner = a; S.stats.dates++; applyFx({ fp: 0.05 }); news(`It's official: @${S.handle} and ${N.name} are dating`, true); log(`You're dating ${N.name}.`, 'gold'); toast(`You and ${N.name} are official!`, 'gold'); sound('viral'); }
+    if (chance(clamp(0.3 + n.rel / 300 + ratio(a) * 0.3, 0.1, 0.9))) { S.partner = a; S.stats.dates++; applyFx({ fp: 0.05 }); news(`It's official: @${S.handle} and ${N.name} are dating`, true); log(`You're dating ${N.name}.`, 'gold'); toast(`You and ${N.name} are official!`, 'gold'); gainEnergy(20, 'Butterflies'); sound('viral'); }
     else { changeRel(a, -10); toast(`${N.name.split(' ')[0]} sees you as a friend.`); }
   },
   breakup: () => { S.queue.push({ ev: 'breakup', ctx: {} }); processQueue(); },

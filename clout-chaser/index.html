@@ -303,6 +303,12 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100
 .deltas { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 14px); left: 50%; transform: translateX(-50%); z-index: 70; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
 .delta { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; background: var(--surface-2); border: 1px solid var(--line); border-radius: 99px; padding: 6px 8px; box-shadow: 0 10px 30px rgba(0,0,0,.35); animation: floatin 2.6s ease forwards; max-width: calc(100vw - 32px); }
 .delta .pill { font-size: 13px; padding: 3px 9px; }
+.delta.energy { border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); align-items: center; padding: 6px 12px 6px 6px; animation-duration: 3.1s; }
+.delta.energy .why { font-size: 13px; font-weight: 600; }
+.delta .pill .ico, .strip .sp .ico { width: 14px; height: 14px; }
+.energy-val { display: inline-block; }
+.energy-val.charged { animation: charge .7s ease; }
+@keyframes charge { 0% { transform: scale(1); } 35% { transform: scale(1.35); color: var(--gold); } 100% { transform: scale(1); } }
 .toasts { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 60; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
 .toast { background: var(--accent); color: #fff; padding: 12px 18px; border-radius: 8px; font-weight: 600; font-size: 15px; max-width: min(420px, calc(100vw - 32px)); animation: rise .2s ease; text-align: center; }
 .toast.gold { background: var(--gold); color: #1a1400; }

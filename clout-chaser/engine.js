@@ -105,7 +105,8 @@ const tier = (t) => TIERS[tierIndex(t)];
 const diffM = () => ({ chill: 1.35, normal: 1, brutal: 0.75 }[S.diff] || 1);
 const sev = () => ({ chill: 0.7, normal: 1, brutal: 1.4 }[S.diff] || 1);
 const skillLvl = (k) => S.skills[k].lvl;
-function maxEnergy() { return 100 + (S.team.assistant ? 20 : 0) + (S.owned.mansion ? 10 : 0) + (S.owned.island ? 10 : 0); }
+function maxEnergy() { return 100 + (S.bonusMaxE || 0) + (S.team.assistant ? 20 : 0) + (S.owned.mansion ? 10 : 0) + (S.owned.island ? 10 : 0); }
+const energyCap = () => maxEnergy() + 60; // rewards can overcharge you past your normal max
 function gearQ(pid) {
   let q = 0;
   for (const it of SHOP) if (S.owned[it.id] && it.q && (!it.plats || it.plats.includes(pid))) q += it.q;
@@ -138,6 +139,19 @@ function addFollowersPct(pct) {
   if (pct < 0) S.fake = Math.max(0, S.fake * (1 + pct));
 }
 function spend(n) { if (S.money < n) return false; S.money -= n; return true; }
+/* Good things give you a second wind. Every reward shows up as an energy burst in the UI. */
+function gainEnergy(n, reason) {
+  if (!S || n <= 0) return 0;
+  const before = S.energy;
+  S.energy = Math.min(energyCap(), S.energy + n);
+  const got = Math.round(S.energy - before);
+  if (got > 0) {
+    S.stats.energyEarned = (S.stats.energyEarned || 0) + got;
+    if (typeof energyBurst === 'function') energyBurst(got, reason);
+  }
+  return got;
+}
+const FOLLOWER_MILESTONES = [500, 1e3, 2500, 5e3, 1e4, 25e3, 5e4, 1e5, 25e4, 5e5, 1e6, 25e5, 5e6, 1e7, 25e6, 5e7, 1e8, 25e7, 5e8, 1e9];
 
 function log(msg, cls = '') { S.log.unshift({ d: S.day, m: msg, c: cls }); if (S.log.length > 80) S.log.length = 80; }
 function news(msg, you = false) { S.news.unshift({ d: S.day, m: msg, you }); if (S.news.length > 80) S.news.length = 80; }
@@ -271,6 +285,7 @@ function computePost(o, det = false) {
   if (topic.deal && !o.disclose) er *= 1.1;
   er = clamp(er, 0.3, 40);
   const likes = Math.round((views * er) / 100);
+  const refund = viral || flop ? 0 : Math.round(energy * clamp((er / P.baseEng - 0.6) * 0.5, 0, 0.6)); // a warm reception gives energy back
   const spicy = T.heat + topic.heat >= 10;
   const comments = Math.round(likes * R(0.03, 0.09) * (spicy ? 2.5 : 1));
   const shares = Math.round(likes * R(0.02, 0.07) * (viral ? 2.5 : 1));
@@ -286,7 +301,7 @@ function computePost(o, det = false) {
   let cash = 0;
   if (o.platform === 'tube' && ps.followers >= 1000) cash += (views / 1000) * P.cpm * (1 + 0.05 * skillLvl('business'));
   if (o.platform === 'clipz') cash += (views / 1000) * P.cpm;
-  return { energy, q, views, er, likes, comments, shares, gain: Math.round(gain), loss: Math.round(loss), rep, heat, cash, viral, flop, topic, viralP, sellout };
+  return { energy, refund, q, views, er, likes, comments, shares, gain: Math.round(gain), loss: Math.round(loss), rep, heat, cash, viral, flop, topic, viralP, sellout };
 }
 
 function genCaption(o, topic) {
@@ -323,7 +338,7 @@ function addXp(skill, amount) {
   const s = S.skills[skill];
   if (skill === 'editing' && S.owned.editsw) amount *= 2;
   s.xp += amount;
-  while (s.lvl < 10 && s.xp >= s.lvl * 60) { s.xp -= s.lvl * 60; s.lvl++; toast(`${skill[0].toUpperCase() + skill.slice(1)} leveled up to ${s.lvl}`, 'gold'); log(`${skill} skill reached level ${s.lvl}.`, 'good'); }
+  while (s.lvl < 10 && s.xp >= s.lvl * 60) { s.xp -= s.lvl * 60; s.lvl++; log(`${skill} skill reached level ${s.lvl}.`, 'good'); gainEnergy(10, `${skill[0].toUpperCase() + skill.slice(1)} reached level ${s.lvl}`); }
   if (s.lvl >= 10) s.xp = 0;
 }
 
@@ -371,6 +386,15 @@ function doPost(o) {
   } else if (r.flop) { S.stats.flops++; log(`Post flopped on ${PLATFORMS[o.platform].name}.`, 'bad'); sound('bad'); }
   else { log(`Posted on ${PLATFORMS[o.platform].name}: ${fmt(r.views)} views, ${signed(r.gain - r.loss)} followers.`); sound('post'); }
   if (r.sellout) log('Fans are calling you a sellout. Too many ads lately.', 'bad');
+  // Energy rewards for a post that lands
+  const prev = S.posts.slice(1, 11);
+  const avg = prev.length ? prev.reduce((a, p) => a + p.views, 0) / prev.length : 0;
+  if (r.viral) gainEnergy(25, 'Your post went viral');
+  else if (!r.flop) {
+    if (r.refund > 0) gainEnergy(r.refund, 'Fans loved it');
+    if (prev.length >= 3 && r.views > avg * 1.6) gainEnergy(8, 'Beat your average views');
+  }
+  if (post.comms.some((c) => c.npc && !c.neg)) gainEnergy(5, 'A star replied to you');
 
   // Deal progress
   if (r.topic.deal) {
@@ -388,6 +412,7 @@ function doPost(o) {
     changeRel(id, 10); S.stats.collabs++;
     if (NPCS[id].followers >= 1e7) S.stats.celebCollabs++;
     S.collab = null;
+    gainEnergy(15, `Collab with ${npcName(id).split(' ')[0]}`);
     log(`Collab with ${npcName(id)} brought in ${fmt(bonus)} extra followers.`, 'gold');
     news(`${npcName(id)} and @${S.handle} team up in a surprise collab`, true);
   }
@@ -424,6 +449,7 @@ function completeDeal(d) {
   const b = BRANDS[d.brand];
   d.status = 'done';
   S.money += d.pay; S.stats.earned += d.pay; S.stats.deals++;
+  gainEnergy(10, `${b.name} paid you`);
   if (b.shady) { S.flags.shadyDeal = d.brand; }
   log(`Deal complete: ${b.name} paid ${money(d.pay)}.`, 'good');
   toast(`${b.name} paid ${money(d.pay)}`, 'gold');
@@ -533,13 +559,19 @@ function endDay() {
   }
   if (S.collab && S.collab.until < S.day + 1) { if (S.collab.until <= S.day) { log(`Collab window with ${npcName(S.collab.npc)} expired.`, 'bad'); S.collab = null; } }
 
+  // Posting streak: show up every day and you wake up hyped
+  S.streak = S.lastPostDay === S.day ? (S.streak || 0) + 1 : 0;
+  S.stats.bestStreak = Math.max(S.stats.bestStreak || 0, S.streak);
+  const streakBonus = Math.min(30, S.streak * 5);
+  if (streakBonus) lines.push([`${S.streak}-day posting streak: +${streakBonus} morning energy`, 0]);
+  else lines.push(['No post today, streak reset', 0]);
   // Advance
   S.day++;
   simulateNpcs();
   S.trends = S.trends.filter((tr) => S.day - tr.born < tr.life);
   while (S.trends.length < 5) addTrend();
   rollAlgo();
-  S.energy = Math.round(maxEnergy() * (S.stress >= 80 ? 0.7 : 1));
+  S.energy = Math.round(maxEnergy() * (S.stress >= 80 ? 0.7 : 1)) + streakBonus;
   generateInbox();
   // Burnout
   if (S.stress >= 100) S.queue.push({ ev: 'burnout', ctx: {} });
@@ -681,6 +713,19 @@ function checkAll() {
   const t = totalFollowers();
   const ti = tierIndex(t);
   if (S.flags.tier === undefined) S.flags.tier = ti;
+  if (S.flags.tierMax === undefined) S.flags.tierMax = ti;
+  if (S.flags.ms === undefined) S.flags.ms = FOLLOWER_MILESTONES.filter((m) => t >= m).length;
+  while (S.flags.ms < FOLLOWER_MILESTONES.length && t >= FOLLOWER_MILESTONES[S.flags.ms]) {
+    const m = FOLLOWER_MILESTONES[S.flags.ms++];
+    S.bonusMaxE = (S.bonusMaxE || 0) + 2;
+    notify('system', null, `You hit ${fmt(m)} followers! Max energy +2.`);
+    gainEnergy(15, `${fmt(m)} followers`);
+  }
+  if (ti > S.flags.tierMax) {
+    S.flags.tierMax = ti;
+    S.bonusMaxE = (S.bonusMaxE || 0) + 5;
+    gainEnergy(Math.max(0, maxEnergy() - S.energy) + 15, `New tier: ${TIERS[ti].name}. Energy refilled, max +5`);
+  }
   if (ti > S.flags.tier) {
     S.flags.tier = ti;
     toast(`New tier: ${TIERS[ti].name} creator`, 'gold');
@@ -689,12 +734,12 @@ function checkAll() {
     sound('viral');
   } else if (ti < S.flags.tier) S.flags.tier = ti;
   if (!S.flags.verified && t >= 1e5 && S.rep >= 40) {
-    S.flags.verified = true; S.queue.push({ ev: '_verified', ctx: {} });
+    S.flags.verified = true; S.queue.push({ ev: '_verified', ctx: {} }); gainEnergy(30, 'You got verified');
   }
   if (S.flags.verified && S.rep < 15 && !S.flags.lostCheck) { S.flags.verified = false; S.flags.lostCheck = true; log('Platforms removed your verification badge.', 'bad'); toast('You lost your verification badge', 'bad'); }
   if (S.stats.cancels && S.rep < 40) S.flags.canceledLow = true;
   for (const [id, name, , test] of ACHIEVEMENTS) {
-    if (!S.achievements[id] && test()) { S.achievements[id] = S.day; toast(`Achievement: ${name}`, 'gold'); log(`Achievement unlocked: ${name}.`, 'gold'); }
+    if (!S.achievements[id] && test()) { S.achievements[id] = S.day; log(`Achievement unlocked: ${name}.`, 'gold'); gainEnergy(8, `Achievement: ${name}`); }
   }
   if (!S.won && t >= 1e8 && S.rep >= 60) { S.won = true; S.queue.push({ ev: '_win', ctx: {} }); }
   if (S.rep <= 0 && !S.over) { S.over = true; S.queue.unshift({ ev: '_gameover', ctx: {} }); }
@@ -706,7 +751,7 @@ function sound(kind) {
   if (!S || !S.settings.sound) return;
   try {
     actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-    const notes = { post: [660], viral: [523, 659, 784, 1046], bad: [220, 165], cash: [880, 1320], click: [500], alert: [440, 330] }[kind] || [440];
+    const notes = { post: [660], viral: [523, 659, 784, 1046], bad: [220, 165], cash: [880, 1320], click: [500], alert: [440, 330], zap: [784, 1175, 1568] }[kind] || [440];
     notes.forEach((f, i) => {
       const o = actx.createOscillator(), g = actx.createGain();
       o.type = kind === 'bad' ? 'sawtooth' : 'triangle'; o.frequency.value = f;

@@ -452,7 +452,7 @@ const EVENTS = {
       const cat = awardCat();
       const p = clamp(0.12 + Math.log10(T()) / 22 + (S.rep - 50) / 140 + S.stats.viral * 0.006, 0.05, 0.8);
       const outcome = (bonus) => {
-        if (chance(p + bonus)) { S.stats.awards++; S.awards = S.awards || []; S.awards.push({ d: S.day, cat }); news(`@${S.handle} wins ${cat} at the Clout Awards`, true); sound('viral'); return R(`You won ${cat}!`, { fp: 0.05, rep: 4 }); }
+        if (chance(p + bonus)) { S.stats.awards++; S.awards = S.awards || []; S.awards.push({ d: S.day, cat }); gainEnergy(40, 'You won an award'); news(`@${S.handle} wins ${cat} at the Clout Awards`, true); sound('viral'); return R(`You won ${cat}!`, { fp: 0.05, rep: 4 }); }
         return R('You lost to someone with worse content. Allegedly.', { fp: 0.01 });
       };
       return [
@@ -485,6 +485,7 @@ const EVENTS = {
       S.platforms.live.followers += c.gain;
       for (const id of unlockedIds()) if (id !== 'live') S.platforms[id].followers += c.gain * 0.1;
       S.money += c.don; S.stats.earned += c.don; S.stats.streams++;
+      gainEnergy(Math.round(clamp(Math.log10(c.viewers + 1) * 4, 3, 25)), 'Chat hyped you up');
       if (c.len === 's12') S.stats.subathons++;
       S.platforms.live.eng = clamp(S.platforms.live.eng * 0.8 + 14 * 0.2, 0.5, 30);
       addXp('charisma', 10 * L.hours);

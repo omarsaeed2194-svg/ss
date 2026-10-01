@@ -32,9 +32,34 @@ The game looks and plays like a social app (inspired by the Status social-media 
 | Engagement | Weighted average across platforms. Bot followers drag it down. Raises deal pay. |
 | Reputation (0–100) | Boosts follower conversion and passive growth. At 0 you get deplatformed. |
 | Heat (0–100) | Controversy. Adds reach, but at 100 you get cancelled. Cools each night. |
-| Energy | Spent on every post and action. Refills when you end the day. |
+| Energy | Spent on every post and action. Refills when you sleep, and comes back during the day when things go well (see below). Rewards can overcharge you up to 60 past your max. |
 | Stress | Rises with work and heat. Above 80 it cuts energy; at 100 you burn out. |
 | Money | Earned from ads, deals, streams, merch, products, podcasts, events. |
+
+## Energy rewards
+
+Doing well gives you a second wind, shown as a gold energy pop-up:
+
+| Trigger | Energy |
+| --- | --- |
+| Post that fans engage with | Refund of up to 60% of its cost (shown in the composer forecast) |
+| Post that beats your recent average views | +8 |
+| Viral post | +25 |
+| A star replies to your post | +5 |
+| Follower milestone (500, 1K, 2.5K, 5K, 10K, ...) | +15 and +2 max energy for good |
+| New creator tier | Full refill +15, and +5 max energy for good |
+| Getting verified | +30 |
+| Achievement unlocked | +8 |
+| Skill level up | +10 |
+| Brand deal paid | +10 |
+| Collab posted / collab agreed in DMs | +15 / +6 |
+| Shoutout from a star | +12 |
+| Star follows you back | +8 |
+| Starting to date a star | +20 |
+| Award win | +40 |
+| Stream ends | +3 to +25 depending on viewers |
+| Thanking fans, star replies to your DM or reply | +2 to +8 |
+| Daily posting streak | +5 morning energy per day in a row, up to +30 |
 
 ## Features
 
