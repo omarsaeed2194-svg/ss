@@ -43,6 +43,15 @@ The game looks and plays like a social app (inspired by the Status social-media 
 - **Your move**: back a side (their fans follow you, the other side resents you, and backing the winner pays off), broker peace (a charisma check that ends the clash in a truce), stir the pot (followers and heat), or post about it (a high-reach topic). Stars who like you DM you to ask for your support.
 - **Clash battles**: challenge any star from their profile to three rounds judged by a public vote. Roast beats meme, meme beats receipts, receipts beat roast. Taking the high road wins against attacks, and fan armies depend on who has more followers. Winning brings followers, energy and the option to end the feud with a handshake.
 
+## Companies, countries and spice
+
+- **@mention autocomplete**: type `@` in a post, a reply or a DM to get a dropdown of stars and companies (arrow keys plus Enter/Tab, or click).
+- **Images**: every star, fan and you get a generated illustrated face (shuffle yours at signup). Posts get generated art in their format and look: memes with real top and bottom text, reels, carousels, polaroid photos, reactions and vlog thumbnails. You can also upload your own photo to a post (resized in the browser; +8 originality, +8% quality).
+- **Parody companies**: Windy's, McDougal's, Nikey, Pear, Tezla, Netflux, Starbux, Red Bully, Coca-Kola, Amazin', Gucchi and Duolinguo post on the timeline, drop into your replies (the roast accounts roast), answer when you tag them, and send sponsorship offers.
+- **Countries**: pick a home country. Your audience is spread across countries (see Analytics), international fans comment with their flags, stars have home countries, and a world tour lets you travel for content, grow abroad and run into local stars. Controversy can get you restricted in a country.
+- **Creative comments**: replies quote words from your caption and reference your niche and platform, with stans, askers, bots, haters, international fans, company accounts and reply chains.
+- **Spicier, harder game**: cost of fame grows every tier; scandal events hit more often the more famous you are; three weak posts in a row start "did they fall off?" discourse; you collect harmless secrets ("tea") on stars at parties, collabs and in DMs and can spill them for huge reach (they won't forget it). There are new events: leaked DMs, an ex's tell-all, deepfakes, lip-sync scandals, plagiarism accusations, 3 AM posts, star subtweets, company roasts, tax audits, country restrictions, and a hot-seat interview with three spicy questions.
+
 ## Creativity
 
 - **Originality score** (0–100) for every post: your own words, a wide vocabulary, questions, emoji and @mentions raise it. Repeating yourself or using the dice's canned captions lowers it. Higher originality means more reach and viral chance, and 85+ gives a small energy bonus.
@@ -102,7 +111,10 @@ Doing well gives you a second wind, shown as a gold energy pop-up:
 - `index.html` – layout and styles
 - `data.js` – platforms, formats, tones, trends, stars, brands, shop, team
 - `engine.js` – simulation: posting math, day cycle, NPCs, deals, achievements, saving
+- `art.js` – generated faces, logos, post illustrations, photo resizing
 - `events.js` – random and triggered events, livestream chat, modal queue
+- `clash.js` – celebrity clashes and clash battles
+- `spicy.js` – scandal events, hot seat, tea fallout, world tour
 - `ui.js` – rendering, player actions, start screen
 
-All people, brands and platforms in the game are fictional.
+All people, brands and platforms in the game are fictional or clearly marked parody with tweaked names; everything they do in the game is invented.

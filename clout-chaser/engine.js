@@ -60,6 +60,10 @@ function newGame(o) {
   mail({ type: 'fan', from: '@' + fanHandle(), subject: 'first!!', body: "I don't know you yet but your vibe is immaculate. Following." });
   S.notifs = []; S.bio = `${NICHES[o.niche].name} creator. Posting my way to the top.`;
   S.clashes = []; S.aesthetic = pick(Object.keys(FILTERS));
+  S.country = o.country || 'us'; S.faceSeed = o.faceSeed || o.name; S.tea = []; S.visited = [S.country];
+  S.geo = { [S.country]: 0.62 };
+  shuffle(['us', 'in', 'br', 'gb', 'mx', 'ph', 'id', 'ca', 'ng', 'de', 'fr', 'es', 'tr', 'sa', 'ae', 'eg', 'jp', 'kr', 'au', 'it', 'ar', 'co'].filter((c) => c !== S.country)).slice(0, 6).forEach((c, i) => { S.geo[c] = [0.12, 0.08, 0.06, 0.05, 0.04, 0.03][i]; });
+  for (const id of shuffle(Object.keys(COMPANIES)).slice(0, 3)) companyPost(id);
   startClash(true);
   newChallenge();
   notify('system', null, `Welcome to the timeline, ${o.name}. Your first post is waiting.`);
@@ -87,6 +91,8 @@ function migrate(s) {
   (s.posts || []).forEach((p) => (p.comms || []).forEach((c) => { if (c.likes === undefined) c.likes = 0; }));
   for (const [id, n] of Object.entries(NPCS)) if (!s.npcs[id]) s.npcs[id] = { followers: n.followers, rel: 0, following: false, followsYou: false, feud: false, rep: n.rep };
   s.clashes = s.clashes || [];
+  s.country = s.country || 'us'; s.faceSeed = s.faceSeed || s.name; s.tea = s.tea || []; s.visited = s.visited || [s.country];
+  if (!s.geo) { s.geo = { [s.country]: 0.7, us: 0.1, br: 0.08, in: 0.07, gb: 0.05 }; }
   s.aesthetic = s.aesthetic || 'neon';
   if (!s.challenge) { const prev = S; S = s; newChallenge(); S = prev; }
   return s;
@@ -231,7 +237,8 @@ function topicsFor() {
   t.push({ id: 'cause', label: 'Social cause', reach: 0.85, eng: 1.0, rep: 2.5, heat: -2, viral: 0.01, phrase: pick(['mental health', 'ocean cleanups', 'local food banks', 'creator burnout']) });
   t.push({ id: 'hot', label: 'Controversial take', reach: 1.8, eng: 1.35, rep: -3, heat: 14, viral: 0.05, phrase: pick(HOT_TAKES) });
   if (S.owned.wardrobe || S.owned.car || S.owned.mansion || S.owned.jet) t.push({ id: 'flex', label: 'Luxury flex', reach: 1.4, eng: 0.9, rep: -1.5, heat: 4, viral: 0.02, phrase: S.owned.jet ? 'the jet' : S.owned.mansion ? 'the new house' : S.owned.car ? 'the new ride' : 'the new fits' });
-  if (S.travelUntil >= S.day) t.push({ id: 'travel', label: 'Vacation dump', reach: 1.35, eng: 1.2, rep: 0.3, heat: 1, viral: 0.02, phrase: 'Bali photo dump' });
+  if (S.travelUntil >= S.day) { const tc = COUNTRIES[S.travelCountry || 'id']; t.push({ id: 'travel', label: `Trip to ${tc.name}`, reach: 1.35, eng: 1.2, rep: 0.3, heat: 1, viral: 0.03, phrase: `${tc.flag} ${tc.name} photo dump` }); }
+  for (const x of (S.tea || [])) t.push({ id: 'tea:' + x.id, label: `Spill ${NPCS[x.npc].name.split(' ')[0]}'s tea`, group: 'Tea', reach: 2.4, eng: 1.5, rep: -3, heat: 20, viral: 0.1, tea: x.id, phrase: `${NPCS[x.npc].name} ${x.text}` });
   if (S.merch) t.push({ id: 'merch', label: 'Plug your merch', reach: 0.8, eng: 0.85, rep: -0.3, heat: 0, viral: 0, phrase: 'the new merch drop', merch: true });
   for (const d of S.deals.filter((x) => x.status === 'active')) {
     const b = BRANDS[d.brand];
@@ -289,11 +296,12 @@ function computePost(o, det = false) {
   const FL = hasLook(o.format) && o.filter && FILTERS[o.filter] ? FILTERS[o.filter] : null;
   const lookMatch = !!FL && o.filter === S.aesthetic;
   const energy = Math.max(2, Math.round(F.e * E.e * (S.team.editor && F.video ? 0.8 : 1)) + (FL && FL.e ? FL.e : 0));
-  const orig = originality(o.caption);
+  const orig = Math.min(100, originality(o.caption) + (o.img ? 8 : 0)); // your own photo counts as original
   let q = E.q * (1 + 0.07 * (skillLvl(F.skill) - 1)) * (1 + gearQ(o.platform));
   if (T.skill) q *= 1 + 0.03 * (skillLvl(T.skill) - 1);
   if (S.stress > 70) q *= 0.85;
   if (FL && FL.q) q *= 1 + FL.q;
+  if (o.img) q *= 1.08;
   q *= R(0.7, 1.3);
   let tagB = 0;
   for (const tg of o.tags) tagB += tagValue(tg);
@@ -353,28 +361,84 @@ function genCaption(o, topic) {
   return tpl.replace('{t}', t).replace('{T}', t.toUpperCase());
 }
 
+const STOP_WORDS = new Set(['this', 'that', 'with', 'have', 'just', 'your', 'from', 'they', 'what', 'when', 'about', 'there', 'their', 'will', 'been', 'were', 'into', 'more', 'than', 'then', 'them', 'some', 'like', 'really', 'honestly', 'today']);
+function pickWord(caption) {
+  const ws = (caption || '').replace(/[#@]\S+/g, '').split(/\s+/).map((w) => w.replace(/[^A-Za-z']/g, '')).filter((w) => w.length >= 4 && !STOP_WORDS.has(w.toLowerCase()));
+  return ws.length ? pick(ws).toLowerCase() : null;
+}
+function fillTpl(t, o, w) { return t.replace(/\{w\}/g, w || 'this').replace(/\{h\}/g, S.handle).replace(/\{n\}/g, NICHES[S.niche].name.toLowerCase()).replace(/\{p\}/g, PLATFORMS[o.platform].name); }
+function geoPick(excludeHome) {
+  const e = Object.entries(S.geo || {}).filter(([c]) => !excludeHome || c !== S.country);
+  if (!e.length) return pick(Object.keys(COUNTRIES));
+  let x = Math.random() * e.reduce((a, [, v]) => a + v, 0);
+  for (const [c, v] of e) { x -= v; if (x <= 0) return c; }
+  return e[0][0];
+}
+/* Comments read your caption, your niche and the room. Companies and international fans show up too. */
 function genComments(o, r) {
   const out = [], n = Math.min(9, 2 + Math.floor(Math.log10(r.comments + 1) * 1.3));
-  const neg = clamp(0.1 + (TONES[o.tone].heat + r.topic.heat) / 30 + (50 - S.rep) / 150 + S.heat / 250, 0.03, 0.8);
+  const neg = clamp(0.1 + (TONES[o.tone].heat + r.topic.heat) / 30 + (50 - S.rep) / 150 + S.heat / 250 + (r.flop ? 0.15 : 0), 0.03, 0.8);
+  const w = pickWord(o.caption);
+  const L = (r) => Math.round(r.likes * rnd(0.0005, 0.03));
   for (let i = 0; i < n; i++) {
-    let pool;
-    if (S.fake > 0 && chance(0.25 * (1 - realRatio()) + 0.05)) pool = COMMENTS.bot;
-    else if (r.topic.deal && chance(0.35)) pool = COMMENTS.spon;
-    else if (S.heat > 40 && chance(0.25)) pool = COMMENTS.heat;
-    else if (chance(neg)) pool = COMMENTS.neg;
-    else if (o.tone === 'funny' && chance(0.5)) pool = COMMENTS.fun;
-    else pool = COMMENTS.pos;
-    out.push({ who: fanHandle(), text: pick(pool), likes: Math.round(r.likes * rnd(0.0005, 0.03)), neg: pool === COMMENTS.neg || pool === COMMENTS.heat });
+    let text, isNeg = false;
+    const tpl = (k) => fillTpl(pick(COMMENT_TPL[k]), o, w);
+    if (S.fake > 0 && chance(0.25 * (1 - realRatio()) + 0.05)) text = pick(COMMENTS.bot);
+    else if (r.topic.deal && chance(0.35)) text = pick(COMMENTS.spon);
+    else if (S.heat > 40 && chance(0.25)) { text = pick(COMMENTS.heat); isNeg = true; }
+    else if (chance(neg)) { text = w && chance(0.65) ? tpl('neg') : pick(COMMENTS.neg); isNeg = true; }
+    else if (chance(0.12)) text = tpl('ask');
+    else if (S.rep > 60 && chance(0.15)) text = tpl('stan');
+    else if ((o.tone === 'funny' || chance(0.25)) && chance(0.6)) text = w && chance(0.7) ? tpl('fun') : pick(COMMENTS.fun);
+    else text = w && chance(0.6) ? tpl('pos') : pick(COMMENTS.pos);
+    out.push({ who: fanHandle(), text, likes: L(r), neg: isNeg });
+  }
+  // international fans
+  if (chance(0.25)) { const c = geoPick(true); out.push({ who: fanHandle(), cc: c, text: pick(COUNTRY_FAN).replace('{f}', COUNTRIES[c].flag).replace('{c}', COUNTRIES[c].name), likes: L(r) }); }
+  // reply chains under the top comments
+  out.sort((a, b) => b.likes - a.likes);
+  out.slice(0, 2).forEach((c) => { if (chance(0.45)) c.sub = [{ who: fanHandle(), text: c.neg ? pick(['who hurt you', `@${c.who} touch grass`, 'ratio incoming', 'the jealousy is loud']) : pick(COMMENT_TPL.thread) }]; });
+  // a company account might drop in
+  const spicy = TONES[o.tone].heat + r.topic.heat >= 10;
+  if (r.viral || chance(0.07) || (spicy && chance(0.12))) {
+    const roasters = Object.keys(COMPANIES).filter((k) => COMPANIES[k].roast);
+    const id = (spicy || r.flop) && chance(0.6) ? pick(roasters) : pick(Object.keys(COMPANIES));
+    out.unshift({ who: COMPANIES[id].handle, co: id, text: r.flop && COMPANIES[id].roast ? 'we would roast this but it already roasted itself' : pick(COMPANIES[id].replies), likes: Math.round(r.likes * rnd(0.03, 0.12)) });
   }
   // a celebrity friend might chime in
   const friends = Object.entries(S.npcs).filter(([, n]) => n.rel >= 35 && !n.feud);
   if (friends.length && chance(0.35)) {
     const [id] = pick(friends);
-    out.unshift({ who: NPCS[id].handle, npc: id, text: pick(['we need to collab fr', 'this is so good', 'proud of you', 'ok you ate', 'how are you this talented', 'the vision!!']), likes: Math.round(r.likes * rnd(0.05, 0.2)) });
+    out.unshift({ who: NPCS[id].handle, npc: id, text: pick(['we need to collab fr', 'this is so good', 'proud of you', 'ok you ate', 'how are you this talented', 'the vision!!', w ? `"${w}" is going in my next caption, sorry` : 'stealing this idea']), likes: Math.round(r.likes * rnd(0.05, 0.2)) });
   }
-  for (const [id, n] of Object.entries(S.npcs)) if (n.feud && chance(0.25)) out.unshift({ who: NPCS[id].handle, npc: id, text: pick(['lol who is this', 'desperate much?', 'still irrelevant I see', 'ratio']), likes: Math.round(r.likes * rnd(0.05, 0.2)), neg: true });
-  const celeb = out.filter((c) => c.npc), rest = out.filter((c) => !c.npc).sort((a, b) => b.likes - a.likes);
-  return [...celeb, ...rest].slice(0, 9);
+  for (const [id, n] of Object.entries(S.npcs)) if (n.feud && chance(0.25)) out.unshift({ who: NPCS[id].handle, npc: id, text: pick(['lol who is this', 'desperate much?', 'still irrelevant I see', 'ratio', w ? `"${w}"? be serious` : 'be serious']), likes: Math.round(r.likes * rnd(0.05, 0.2)), neg: true });
+  const top = out.filter((c) => c.npc || c.co), rest = out.filter((c) => !c.npc && !c.co).sort((a, b) => b.likes - a.likes);
+  return [...top, ...rest].slice(0, 10);
+}
+
+/* ---------- companies, countries, tea ---------- */
+function companyPost(id) {
+  const c = COMPANIES[id];
+  const likes = Math.round(rnd(4e3, 3e5));
+  S.feed.unshift({ id: uid(), co: id, day: S.day, text: pick(c.posts), likes, comments: Math.round(likes * rnd(0.01, 0.05)), reposts: Math.round(likes * rnd(0.03, 0.1)), views: Math.round(likes * rnd(20, 50)), liked: false, commented: false, reposted: false });
+  if (S.feed.length > 60) S.feed.length = 60;
+}
+const mentionedCompanies = (t) => { const low = (t || '').toLowerCase(); return Object.keys(COMPANIES).filter((id) => low.includes('@' + COMPANIES[id].handle)); };
+function geoAdd(cc, amt) {
+  if (!S.geo) S.geo = {};
+  S.geo[cc] = (S.geo[cc] || 0) + amt;
+  const tot = Object.values(S.geo).reduce((a, b) => a + b, 0);
+  for (const k of Object.keys(S.geo)) { S.geo[k] /= tot; if (S.geo[k] < 0.004) delete S.geo[k]; }
+}
+function gainTea(npc, how) {
+  if (!S.tea) S.tea = [];
+  const used = new Set(S.tea.filter((t) => t.npc === npc).map((t) => t.text));
+  const text = pick(TEA_LINES.filter((t) => !used.has(t)));
+  if (!text) return;
+  S.tea.unshift({ id: uid(), npc, text, day: S.day });
+  if (S.tea.length > 6) S.tea.length = 6;
+  notify('system', null, `You heard some tea ${how}: ${NPCS[npc].name} ${text}. Spill it or keep it.`);
+  log(`Got tea on ${NPCS[npc].name}.`, 'gold');
 }
 
 function addXp(skill, amount) {
@@ -406,9 +470,10 @@ function doPost(o) {
     caption: (o.caption || '').trim().slice(0, 220) || genCaption(o, r.topic), tags: o.tags.slice(0, 6),
     views: r.views, likes: r.likes, comments: r.comments, shares: r.shares, gain: r.gain - r.loss, rep: r.rep, cash: r.cash,
     viral: r.viral, flop: r.flop, sponsored: !!r.topic.deal, q: r.q, comms: genComments(o, r),
-    filter: hasLook(o.format) && o.filter ? o.filter : null, orig: r.orig, lookMatch: r.lookMatch,
+    filter: hasLook(o.format) && o.filter ? o.filter : null, orig: r.orig, lookMatch: r.lookMatch, img: o.img || null,
   };
   S.posts.unshift(post); if (S.posts.length > 80) S.posts.length = 80;
+  S.posts.filter((p) => p.img).slice(10).forEach((p) => { p.img = null; }); // keep saves small
   post.fresh = true;
   // @mentions: stars notice, friends might answer
   post.mentions = mentionedNpcs(o.caption).slice(0, 2);
@@ -418,10 +483,31 @@ function doPost(o) {
     changeRel(id, TONES[o.tone].heat >= 10 ? -4 : 1.5);
     if (n.rel >= 25 && chance(0.4) && !post.comms.some((c) => c.npc === id)) post.comms.unshift({ who: NPCS[id].handle, npc: id, text: pick(['haha thank you for the mention!', 'this is so real', 'love you for this', 'ok I see you 👀']), likes: Math.round(r.likes * rnd(0.05, 0.2)) });
   }
+  for (const id of mentionedCompanies(o.caption).slice(0, 2)) {
+    const c = COMPANIES[id];
+    if (chance(0.55)) {
+      const roast = c.roast && (TONES[o.tone].heat >= 3 || chance(0.5));
+      post.comms.unshift({ who: c.handle, co: id, text: roast ? pick(['and yet you still tagged us', 'we have more followers and better fries', 'bold of you to @ us with that caption', 'this is giving "tagged a brand for clout"']) : pick(c.replies), likes: Math.round(r.likes * rnd(0.05, 0.2)), neg: roast });
+      gainEnergy(4, `${c.name} replied to you`);
+      S.stats.coReplies = (S.stats.coReplies || 0) + 1;
+    }
+    if (chance(0.08) && totalFollowers() >= BRANDS[id].min) { const b = BRANDS[id]; const req = 1; mail({ type: 'deal', brand: id, pay: dealPay(b), req, days: ri(3, 6), from: b.name, subject: 'Saw your tag. Want to make it official?', body: `${b.name} noticed your post and wants a paid one.` }); }
+  }
+  for (const [cc, C] of Object.entries(COUNTRIES)) if ((o.caption || '').includes(C.flag) || (o.caption || '').toLowerCase().includes(C.name.toLowerCase())) geoAdd(cc, 0.01);
+  if (r.topic.tea) {
+    const t = S.tea.find((x) => x.id === r.topic.tea);
+    if (t) {
+      S.tea = S.tea.filter((x) => x.id !== t.id);
+      changeRel(t.npc, -45); S.stats.teaSpilled = (S.stats.teaSpilled || 0) + 1;
+      if (chance(0.6) && !S.npcs[t.npc].feud) { S.npcs[t.npc].feud = true; S.stats.feuds++; }
+      news(`@${S.handle} spills tea: ${NPCS[t.npc].name} ${t.text}`, true);
+      S.queue.push({ ev: 'tea_fallout', ctx: { npc: t.npc } });
+    }
+  }
   if (r.topic.clash) { const c = S.clashes.find((x) => x.id === r.topic.clash); if (c) c.playerPosts = (c.playerPosts || 0) + 1; }
   if (r.orig >= 85) S.stats.originals = (S.stats.originals || 0) + 1;
   // notifications, the way a real app would batch them
-  post.comms.slice(0, 3).forEach((c) => notify('reply', c.npc || c.who, c.text, { post: post.id, npc: !!c.npc }));
+  post.comms.slice(0, 3).forEach((c) => notify('reply', c.npc || c.co || c.who, c.text, { post: post.id, npc: !!c.npc, co: !!c.co }));
   const starLiker = Object.entries(S.npcs).filter(([, n]) => n.rel >= 25 && !n.feud).map(([id]) => id);
   const liker = starLiker.length && chance(0.4) ? pick(starLiker) : null;
   if (r.likes > 0) notify('like', liker || fanHandle(), `and ${fmt(Math.max(0, r.likes - 1))} others liked your post`, { post: post.id, npc: !!liker });
@@ -443,6 +529,9 @@ function doPost(o) {
   // Energy rewards for a post that lands
   const prev = S.posts.slice(1, 11);
   const avg = prev.length ? prev.reduce((a, p) => a + p.views, 0) / prev.length : 0;
+  const weak = r.flop || (prev.length >= 3 && r.views < avg * 0.45);
+  S.flopStreak = weak ? (S.flopStreak || 0) + 1 : 0;
+  if (S.flopStreak >= 3) { S.flopStreak = 0; if (!S.queue.some((q) => q.ev === 'fell_off')) S.queue.push({ ev: 'fell_off', ctx: {} }); }
   if (r.viral) gainEnergy(25, 'Your post went viral');
   else if (!r.flop) {
     if (r.refund > 0) gainEnergy(r.refund, 'Fans loved it');
@@ -475,6 +564,7 @@ function doPost(o) {
     if (NPCS[id].followers >= 1e7) S.stats.celebCollabs++;
     S.collab = null;
     gainEnergy(15, `Collab with ${npcName(id).split(' ')[0]}`);
+    if (chance(0.35)) { const others = Object.keys(NPCS).filter((x) => x !== id); gainTea(pick(others), `from ${npcName(id).split(' ')[0]} during the collab`); }
     log(`Collab with ${npcName(id)} brought in ${fmt(bonus)} extra followers.`, 'gold');
     news(`${npcName(id)} and @${S.handle} team up in a surprise collab`, true);
   }
@@ -560,14 +650,14 @@ function npcPost(id, silent) {
   const text = (n.lines && chance(0.65) ? pick(n.lines) : pick(NPC_POSTS[n.niche] || NPC_POSTS.lifestyle)).replace('{trend}', tr);
   const likes = Math.round(S.npcs[id].followers * rnd(0.01, 0.06));
   S.feed.unshift({ id: uid(), npc: id, day: S.day, text, likes, comments: Math.round(likes * rnd(0.01, 0.04)), reposts: Math.round(likes * rnd(0.02, 0.06)), views: Math.round(likes * rnd(15, 40)), liked: false, commented: false, reposted: false });
-  if (S.feed.length > 40) S.feed.length = 40;
+  if (S.feed.length > 60) S.feed.length = 60;
 }
 
 function simulateNpcs(report) {
   const t = totalFollowers();
   for (const [id, n] of Object.entries(S.npcs)) {
     n.followers *= 1 + rnd(-0.002, 0.007) + (n.feud ? 0.004 : 0);
-    if (chance(0.45)) npcPost(id);
+    if (chance(0.3)) npcPost(id);
     if (n.rel > 5 && !n.feud) n.rel -= 0.3; // relationships need upkeep
     if (n.rel < -5 && !n.feud) n.rel += 0.5;
     // rising creators grow faster
@@ -605,6 +695,8 @@ function endDay() {
   let upkeep = 0; for (const it of SHOP) if (S.owned[it.id] && it.upkeep) upkeep += it.upkeep;
   if (salaries) { S.money -= salaries; lines.push(['Team salaries', -salaries]); }
   if (upkeep) { S.money -= upkeep; lines.push(['Lifestyle upkeep', -upkeep]); }
+  const fameTax = [0, 10, 45, 160, 550, 1600, 6500, 26000][tierIndex()];
+  if (fameTax) { S.money -= fameTax; lines.push(['Cost of fame (rent, stylist, security)', -fameTax]); }
   // Passive businesses
   const t = totalFollowers(); const repF = clamp(S.rep / 60, 0.2, 1.6);
   if (S.merch) {
@@ -678,6 +770,8 @@ function endDay() {
   // Random events
   rollRandomEvents();
   tickClashes();
+  if (chance(0.6)) companyPost(pick(Object.keys(COMPANIES)));
+  if (S.geo) geoAdd(pick(['us', 'in', 'br', 'id', 'ph', 'mx']), 0.003);
   if (chance(0.35)) startClash();
   if ((S.day - 1) % 7 === 0) { S.aesthetic = pick(Object.keys(FILTERS).filter((k) => k !== S.aesthetic)); news(`This week's look: everyone is posting ${FILTERS[S.aesthetic].name}.`); }
   if (S.challenge && !S.challenge.done) log('Missed yesterday\'s challenge.', '');
@@ -730,14 +824,16 @@ function generateInbox() {
 }
 
 function rollRandomEvents() {
-  const n = chance(0.6) ? (chance(0.18) ? 2 : 1) : 0;
+  const ti = tierIndex();
+  const n = chance(Math.min(0.88, 0.58 + ti * 0.04)) ? (chance(0.16 + ti * 0.03) ? 2 : 1) : 0; // fame brings scrutiny
   const used = new Set(S.queue.map((q) => q.ev));
+  const wt = (e) => (e.w || 1) * (e.neg ? 1 + ti * 0.2 : 1);
   for (let i = 0; i < n; i++) {
     const pool = Object.entries(EVENTS).filter(([id, e]) => e.random && !used.has(id) && (!e.when || e.when()) && !(e.once && S.flags['ev_' + id]));
     if (!pool.length) return;
-    const tot = pool.reduce((a, [, e]) => a + (e.w || 1), 0);
+    const tot = pool.reduce((a, [, e]) => a + wt(e), 0);
     let r = Math.random() * tot;
-    for (const [id, e] of pool) { r -= e.w || 1; if (r <= 0) { S.queue.push({ ev: id, ctx: e.ctx ? e.ctx() : {} }); used.add(id); if (e.once) S.flags['ev_' + id] = true; break; } }
+    for (const [id, e] of pool) { r -= wt(e); if (r <= 0) { S.queue.push({ ev: id, ctx: e.ctx ? e.ctx() : {} }); used.add(id); if (e.once) S.flags['ev_' + id] = true; break; } }
   }
 }
 
@@ -812,6 +908,10 @@ const ACHIEVEMENTS = [
   ['challenge1', 'Challenge accepted', 'Complete a daily challenge', () => (S.stats.challenges || 0) >= 1],
   ['challenge10', 'Daily grinder', 'Complete 10 daily challenges', () => (S.stats.challenges || 0) >= 10],
   ['alist', 'A-list friends', 'Reach Friend (40+) with a parody A-lister', () => Object.keys(PARODY_NPCS).some((id) => S.npcs[id] && S.npcs[id].rel >= 40)],
+  ['tea', 'Tea time', 'Spill a star\'s tea', () => (S.stats.teaSpilled || 0) >= 1],
+  ['corp', 'Brand bestie', 'Get 5 replies from company accounts', () => (S.stats.coReplies || 0) >= 5],
+  ['globe', 'Globetrotter', 'Visit 5 countries', () => (S.visited || []).length >= 5],
+  ['hotseat', 'Hot seat survivor', 'Finish a hot seat interview', () => (S.stats.hotseats || 0) >= 1],
   ['nemesis', 'Arch-nemesis', 'Make a Nemesis', () => Object.values(S.npcs).some((n) => n.rel <= -60)],
   ['top10', 'Top 10', 'Pass 10 stars on the leaderboard', () => Object.values(S.npcs).filter((n) => n.followers < totalFollowers()).length >= 10],
   ['number1', 'Number one', 'Top the leaderboard', () => Object.values(S.npcs).every((n) => n.followers < totalFollowers())],

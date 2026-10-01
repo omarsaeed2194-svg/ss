@@ -2,7 +2,7 @@
 'use strict';
 
 const activeClashes = () => (S.clashes || []).filter((c) => !c.done);
-const firstName = (id) => NPCS[id].name.replace(/^Dwayne "The Pebble" Johnson$/, 'The Pebble').split(' ')[0];
+const firstName = (id) => (id === 'pebble' ? 'The Pebble' : NPCS[id].name.split(' ')[0]);
 
 /* ---------- world clashes ---------- */
 function startClash(quiet) {
@@ -173,7 +173,7 @@ Object.assign(EVENTS, {
   _battle: {
     eyebrow: (c) => `Clash battle · Round ${c.round} of 3 · ${c.vote}% for you`,
     title: (c) => `You vs ${NPCS[c.npc].name}`,
-    text: (c) => `<div class="battle"><div class="bside">${typeof npcAv === 'function' ? avatar(S.name, S.color, 'lg') : ''}<b>You</b></div><div class="bmeter"><i style="width:${c.vote}%"></i></div><div class="bside">${typeof npcAv === 'function' ? npcAv(c.npc, 'lg') : ''}<b>${esc(firstName(c.npc))}</b></div></div>
+    text: (c) => `<div class="battle"><div class="bside">${typeof meAv === 'function' ? meAv('lg') : ''}<b>You</b></div><div class="bmeter"><i style="width:${c.vote}%"></i></div><div class="bside">${typeof npcAv === 'function' ? npcAv(c.npc, 'lg') : ''}<b>${esc(firstName(c.npc))}</b></div></div>
       <p class="small muted" style="margin-top:10px">Roast beats meme, meme beats receipts, receipts beat roast. The high road wins against attacks. Fan armies depend on who has more followers.</p>
       ${c.hist.length ? `<div class="small" style="margin-top:8px">${c.hist.map((h, i) => `Round ${i + 1}: ${MOVES[h.move].name} vs ${MOVES[h.them].name} <b class="${h.d >= 0 ? 'good' : 'bad'}">${h.d >= 0 ? '+' : ''}${h.d}</b>`).join('<br>')}</div>` : ''}`,
     choices: (c) => Object.entries(MOVES).map(([k, m]) => ({

@@ -326,3 +326,87 @@ const FILTERS = {
   cinematic: { name: 'Cinematic', desc: '+quality, costs 3 more energy', g: ['#1B2A41', '#C08A3E'], q: 0.06, e: 3 },
   lofi:      { name: 'Lo-fi',     desc: 'Costs 2 less energy',          g: ['#7A8B7F', '#3E4A44'], e: -2 },
 };
+
+/* ---------- More parody A-listers (satire, tweaked names, invented behavior) ---------- */
+Object.assign(PARODY_NPCS, {
+  badbunni:  { name: 'Bad Bunni',        handle: 'badbunni',       type: 'Reggaeton king',    niche: 'music',     followers: 46e6,  ego: 0.6, kind: 0.7, drama: 0.4, rep: 83, color: '#C2410C', bio: 'Painted nails, sold-out stadiums, and a skirt at the Met. Sí.', lines: ['Nuevo álbum. Sin aviso.', 'Painted my nails for the tour. Rate them.', 'Wrestling cameo tonight. Do not ask.', 'Gracias a todos 🐰'] },
+  selina:    { name: 'Selina Gomes',     handle: 'selinagomes',    type: 'Actor & beauty founder', niche: 'beauty', followers: 421e6, ego: 0.5, kind: 0.85, drama: 0.3, rep: 86, color: '#B45F7A', bio: 'Solving murders on TV, selling blush off TV. Mental health matters.', lines: ['Reminder: take breaks from your phone (after liking this).', 'Blush restock. Liquid. Iconic.', 'Filming season 5. No spoilers.', 'Cooking show disaster, part 3.'] },
+  zendayah:  { name: 'Zendayah',         handle: 'zendayah',       type: 'Movie star',        niche: 'fashion',   followers: 184e6, ego: 0.5, kind: 0.8, drama: 0.15, rep: 91, color: '#7A5C3E', bio: 'Every red carpet is a costume. Every costume is a moment.', lines: ['Red carpet look tonight is a reference. Guess it.', 'Press tour day 40.', 'Sand. So much sand. Movie out Friday.', 'Thank you for 10 years 🤍'] },
+  oprah:     { name: 'Oprah Windfall',   handle: 'oprahwindfall',  type: 'Media legend',      niche: 'lifestyle', followers: 23e6,  ego: 0.6, kind: 0.85, drama: 0.1, rep: 92, color: '#7E3F8F', bio: 'You get a follow! You get a follow! Everybody gets a follow!', lines: ['YOU get a book club pick!', 'Gratitude journal: entry 9,000.', 'Bread is still my favorite food.', 'Live your best life, and hydrate.'] },
+  khaby:     { name: 'Khaby Same',       handle: 'khabysame',      type: 'Silent comedian',   niche: 'comedy',    followers: 162e6, ego: 0.3, kind: 0.8, drama: 0.1, rep: 89, color: '#3A6B4A', bio: '🤷', lines: ['🤷', '(points at the obvious)', '🤲', '...'] },
+  lebrawn:   { name: 'LeBrawn James',    handle: 'lebrawnjames',   type: 'Basketball legend', niche: 'fitness',   followers: 160e6, ego: 0.8, kind: 0.65, drama: 0.4, rep: 80, color: '#552583', bio: 'Year 22. Taco Tuesday forever. Spends $1.5M a year on his body.', lines: ['TACO TUESDAYYYY', 'Year 22. Still here.', 'Recovery day. Cryo chamber. Wine.', 'Playing with my son. Surreal.'] },
+  shakirra:  { name: 'Shakirra',         handle: 'shakirra',       type: 'Pop superstar',     niche: 'music',     followers: 90e6,  ego: 0.6, kind: 0.6, drama: 0.6, rep: 82, color: '#C08A2E', bio: 'Hips do not lie. Neither do lyrics. Women no longer cry, they invoice.', lines: ['Women don\'t cry anymore, they bill.', 'My hips still don\'t lie.', 'Waka waka (rehearsal day).', 'New song, very specific lyrics. No comment.'] },
+  charlie:   { name: "Charlie D'Amelo",  handle: 'charliedamelo',  type: 'Dance creator',     niche: 'lifestyle', followers: 156e6, ego: 0.4, kind: 0.7, drama: 0.35, rep: 72, color: '#E07B9B', bio: 'Learned one dance in my bedroom. Now there is a reality show.', lines: ['New dance. Learn it in 10 seconds.', 'Family dinner on camera again lol', 'Dunkin\' order hasn\'t changed in 5 years.', 'Grateful 🤍'] },
+  doja:      { name: 'Doja Kat',         handle: 'dojakat',        type: 'Rapper & chaos agent', niche: 'music',  followers: 25e6,  ego: 0.7, kind: 0.45, drama: 0.85, rep: 63, color: '#D4572B', bio: 'Will roast my own fans. Will meow on a track. Cannot be stopped.', lines: ['stop calling yourselves that name, love you though', 'meow', 'shaved my eyebrows for art', 'I said what I said'] },
+  cardi:     { name: 'Cardi C',          handle: 'cardic',         type: 'Rapper',            niche: 'music',     followers: 166e6, ego: 0.75, kind: 0.6, drama: 0.9, rep: 68, color: '#C4245C', bio: 'Okurrr. Will go live about the price of groceries.', lines: ['Why are eggs so expensive??? OKURRR', 'Going live in 5. It is about to be a long one.', 'Hit single dropping Friday.', 'My accountant is crying.'] },
+  nicki:     { name: 'Nicki Menage',     handle: 'nickimenage',    type: 'Rap queen',         niche: 'music',     followers: 230e6, ego: 0.92, kind: 0.4, drama: 0.9, rep: 64, color: '#E0479E', bio: 'Queen of rap. Barbz, assemble. Pink wigs only.', lines: ['Barbz, the album is coming.', 'Pink wig day.', 'They will never be me.', 'Did someone say my name? Because I heard it.'] },
+  sped:      { name: 'IShowSped',        handle: 'ishowsped',      type: 'Streamer',          niche: 'gaming',    followers: 37e6,  ego: 0.6, kind: 0.6, drama: 0.75, rep: 66, color: '#E2462C', bio: 'Barks at strangers on world tours. SUIII adjacent. Backflips.', lines: ['WORLD TOUR DAY 12 LET\'S GOOO', 'Did a backflip in a museum. Got kicked out.', 'Barked at a tourist. They barked back.', 'Chat, I am NOT okay'] },
+});
+Object.assign(NPCS, PARODY_NPCS);
+RIVALRIES.push(
+  { a: 'cardi', b: 'nicki', kind: 'Rap queen showdown', verbA: 'went live for 45 minutes about "certain people"', verbB: 'posted a pink-wig selfie captioned "irrelevant"' },
+  { a: 'lebrawn', b: 'ronaldough', kind: 'Greatest athlete debate', verbA: 'posted his career points total', verbB: 'posted his goals total with a SIUUU' },
+  { a: 'sped', b: 'senate', kind: 'Streamer world tour race', verbA: 'claimed his world tour was bigger', verbB: 'announced a tour of 30 countries in 30 days' },
+  { a: 'shakirra', b: 'kym', kind: 'Lyrics with receipts', verbA: 'released a song with very specific lyrics', verbB: 'posted a 9-slide notes-app response' },
+  { a: 'doja', b: 'charlie', kind: 'Dance trend beef', verbA: 'called the dance "cringe, respectfully"', verbB: 'did the dance with 40 million views in reply' },
+  { a: 'zendayah', b: 'eyelash', kind: 'Best-dressed war', verbA: 'wore a robot suit to the gala', verbB: 'wore pajamas to the same gala and won best dressed' },
+);
+
+/* Home countries and where your audience lives */
+const COUNTRIES = {
+  us: { name: 'United States', flag: '🇺🇸' }, br: { name: 'Brazil', flag: '🇧🇷' }, in: { name: 'India', flag: '🇮🇳' },
+  gb: { name: 'United Kingdom', flag: '🇬🇧' }, mx: { name: 'Mexico', flag: '🇲🇽' }, ph: { name: 'Philippines', flag: '🇵🇭' },
+  id: { name: 'Indonesia', flag: '🇮🇩' }, jp: { name: 'Japan', flag: '🇯🇵' }, kr: { name: 'South Korea', flag: '🇰🇷' },
+  ng: { name: 'Nigeria', flag: '🇳🇬' }, eg: { name: 'Egypt', flag: '🇪🇬' }, sa: { name: 'Saudi Arabia', flag: '🇸🇦' },
+  ae: { name: 'UAE', flag: '🇦🇪' }, fr: { name: 'France', flag: '🇫🇷' }, de: { name: 'Germany', flag: '🇩🇪' },
+  es: { name: 'Spain', flag: '🇪🇸' }, it: { name: 'Italy', flag: '🇮🇹' }, tr: { name: 'Turkey', flag: '🇹🇷' },
+  ca: { name: 'Canada', flag: '🇨🇦' }, au: { name: 'Australia', flag: '🇦🇺' }, ar: { name: 'Argentina', flag: '🇦🇷' },
+  pt: { name: 'Portugal', flag: '🇵🇹' }, co: { name: 'Colombia', flag: '🇨🇴' }, za: { name: 'South Africa', flag: '🇿🇦' },
+  pr: { name: 'Puerto Rico', flag: '🇵🇷' }, bb: { name: 'Barbados', flag: '🇧🇧' }, tt: { name: 'Trinidad and Tobago', flag: '🇹🇹' },
+};
+const TRAVEL_SPOTS = ['us', 'br', 'jp', 'kr', 'fr', 'it', 'gb', 'mx', 'ae', 'id', 'in', 'ng', 'eg', 'es', 'au', 'tr', 'co', 'pt'];
+const NPC_COUNTRY = { aurora: 'us', jaxon: 'us', nova: 'us', mira: 'ng', rico: 'us', dex: 'mx', marcus: 'us', luna: 'kr', gordon: 'gb', tate: 'us', chad: 'us', kenzie: 'us', priya: 'in', brody: 'au', bella: 'us', twins: 'ca', sage: 'us', tony: 'it', ivy: 'gb', skye: 'us', milo: 'de',
+  taylor: 'us', elon: 'us', zuck: 'us', kym: 'us', kylie: 'us', ronaldough: 'pt', messy: 'ar', mrfeast: 'us', drayke: 'ca', kendrik: 'us', rihannah: 'bb', beyonslay: 'us', beaver: 'ca', venti: 'us', pebble: 'us', loganp: 'us', jakep: 'us', senate: 'us', snoop: 'us', eyelash: 'us',
+  badbunni: 'pr', selina: 'us', zendayah: 'us', oprah: 'us', khaby: 'it', lebrawn: 'us', shakirra: 'co', charlie: 'us', doja: 'us', cardi: 'us', nicki: 'tt', sped: 'us' };
+
+/* Parody company accounts: they post, roast, comment and sponsor */
+const COMPANIES = {
+  windys:   { name: "Windy's",      handle: 'windys',      color: '#D7263D', cat: 'Fast food', roast: true, posts: ['Our burgers are fresh. Our replies are fresher.', 'Imagine freezing your beef. Couldn\'t be us.', 'Someone said our fries are mid. They have been reported to the fryer.'], replies: ['this post is fresher than our competitor\'s beef. barely.', 'we would roast this but it already roasted itself', 'ok this one is actually good. don\'t tell anyone we said that.', 'counterpoint: no'] },
+  mcdougals:{ name: "McDougal's",   handle: 'mcdougals',   color: '#E2A400', cat: 'Fast food', posts: ['The ice cream machine is working. Today only. Hurry.', 'New nugget shape just dropped.', 'Breakfast ends at 10:30. Respect the clock.'], replies: ['ba da ba ba ba 🍟', 'this deserves a happy meal', 'ice cream machine is down but our love for this is up'] },
+  nikey:    { name: 'Nikey',        handle: 'nikey',       color: '#111111', cat: 'Sportswear', posts: ['Just did it.', 'New runner. Old excuses not included.', 'Champions don\'t sleep. They lace up.'], replies: ['just did it. respect.', 'this energy runs in our shoes', 'we see the vision 👟'] },
+  pear:     { name: 'Pear',         handle: 'pear',        color: '#8E9AA6', cat: 'Tech', posts: ['Introducing the Pear 17. It is the same, but more.', 'Shot on Pear.', 'Now in a new color: slightly different gray.'], replies: ['shot on Pear? 👀', 'courageous', 'this is what we call a magic moment'] },
+  tezla:    { name: 'Tezla',        handle: 'tezla',       color: '#CC0000', cat: 'EVs', posts: ['Self-driving update: it now drives itself to the service center.', 'Cybertruck window test, round 2.', 'Delivery dates: soon™'], replies: ['this post has autopilot', 'faster than our delivery dates', 'Elon Tusk liked this (probably)'] },
+  netflux:  { name: 'Netflux',      handle: 'netflux',     color: '#B20710', cat: 'Streaming', posts: ['Are you still watching?', 'Canceled a show you loved. Renewed one you did not watch.', 'Sharing passwords is love. Sharing passwords is also $7.99.'], replies: ['renewed for season 2', 'are you still watching? we are.', 'this has documentary potential'] },
+  starbux:  { name: 'Starbux',      handle: 'starbux',     color: '#00704A', cat: 'Coffee', posts: ['Pumpkin season is a state of mind.', 'Your name, spelled wrong, with love.', 'New drink: it is coffee pretending to be dessert.'], replies: ['we\'ll name a drink after this (spelled wrong)', 'venti levels of iconic', 'this deserves an extra shot'] },
+  redbully: { name: 'Red Bully',    handle: 'redbully',    color: '#1E3264', cat: 'Energy drink', posts: ['Jumped out of space again. Normal Tuesday.', 'Wings not included. Legally.', 'Sponsoring a guy who skis down a volcano.'], replies: ['this post gives wings (legally not)', 'extreme content detected 🪽', 'send this to space'] },
+  cocakola: { name: 'Coca-Kola',    handle: 'cocakola',    color: '#E41E2B', cat: 'Soda', posts: ['Share a Kola with someone you tolerate.', 'Polar bears were consulted.', 'Holiday trucks are coming.'], replies: ['open happiness, close this tab', 'this is the real thing', 'ice cold take'] },
+  amazin:   { name: "Amazin'",      handle: 'amazin',      color: '#FF9900', cat: 'Shopping', posts: ['Your package is 3 stops away. It will remain 3 stops away.', 'Prime day is every day if you believe.', 'We put a smile on the box. You put boxes in your closet.'], replies: ['added to cart', 'arriving tomorrow: our respect', 'customers who liked this also liked you'] },
+  gucchi:   { name: 'Gucchi',       handle: 'gucchi',      color: '#1F4E3D', cat: 'Luxury', posts: ['A belt. $1,200. Holds up pants.', 'New collection inspired by your grandmother\'s couch.', 'Logos, but bigger.'], replies: ['this is luxury', 'very on brand for us', 'we would put this on a $900 shirt'] },
+  duolinguo:{ name: 'Duolinguo',    handle: 'duolinguo',   color: '#58CC02', cat: 'Language app', roast: true, posts: ['You missed your Spanish lesson. We know where you live.', 'Streak frozen. Like your heart.', '5 minutes a day. Or else. 🦉'], replies: ['you posted this but skipped your lesson 🦉', 'cute post. do your french lesson.', 'we are watching. always.'] },
+};
+for (const [id, c] of Object.entries(COMPANIES)) {
+  BRANDS[id] = { name: c.name, niches: ['all'], base: 60 + (c.cat === 'Luxury' ? 80 : 0), rep: c.cat === 'Luxury' ? 1 : 0.3, min: c.cat === 'Luxury' ? 2e5 : 5e3, company: true };
+}
+
+/* Silly secrets you can collect and spill. Harmless by design. */
+const TEA_LINES = [
+  'still uses a flip phone for "important" calls', 'runs 14 burner accounts to defend themselves', 'cried at a cereal commercial last week',
+  'ghostwrites their own fan account', 'cannot parallel park, at all', 'sleeps with a dolphin-shaped nightlight', 'takes 400 selfies to post one',
+  'secretly hates the drink they promote', 'once got lost inside their own house', 'practices their "candid" laugh in the mirror',
+  'has never seen the movie they quote constantly', 'buys their own merch to make it look sold out', 'serves takeout on nice plates and calls it homemade',
+  'has a secret account that only posts pictures of bread', 'still does not know how to pronounce "quinoa"', 'is terrified of geese',
+];
+
+/* Creative comment templates. {w} = a word from your post, {h} = your handle, {n} = niche, {p} = platform */
+const COMMENT_TPL = {
+  pos: ['the way you said "{w}" 😭', '"{w}" supremacy', 'saving this to my {n} folder', '@{h} never misses', 'I didn\'t know I needed "{w}" in my life', 'this is the {n} content {p} was built for', 'printing this and putting it on my fridge', 'my therapist will hear about "{w}"', 'you\'re carrying {p} on your back', 'okay "{w}" just healed me'],
+  neg: ['"{w}" 💀 who approved this', 'this is the {n} equivalent of a parking ticket', 'unfollowing, refollowing, unfollowing again', 'the audacity of "{w}"', 'I\'ve seen better {n} content from my microwave', 'ratio + "{w}" is not a thing', 'blink twice if your manager wrote this', 'this aged badly and it\'s been 4 minutes'],
+  fun: ['me reading "{w}" at 3am', 'POV: your mom finds this post', 'the "{w}" to unemployment pipeline', 'adding "{w}" to my personality', 'my roman empire is now "{w}"', 'not me sending this to the group chat with no context', 'the dog barked when I read this. true story'],
+  stan: ['MOTHER', '@{h} for president', 'we\'re getting married in the comments, it\'s decided', 'I\'d take a bullet for this post', 'protect @{h} at all costs', 'ICON behavior'],
+  ask: ['wait is "{w}" a real thing?', 'is this sponsored?', 'what filter is this??', 'tutorial when?', 'can someone explain "{w}" to me', 'drop the playlist'],
+  thread: ['literally', 'this', 'came here to say this', 'LMAOOO', 'you\'re so real for this', 'no because why is this so true'],
+};
+const COUNTRY_FAN = ['{f} {c} loves you!!', 'come to {c} please 🙏 {f}', 'greetings from {c} {f}', '{f} {c} fans where you at', 'you\'re trending in {c} {f}'];
+
+/* Big emoji motifs for generated post art */
+const NICHE_EMOJI = { beauty: ['💄', '✨', '🪞'], gaming: ['🎮', '🕹️', '🏆'], fitness: ['🏋️', '💪', '🥇'], comedy: ['😂', '🎭', '🤡'], tech: ['📱', '💻', '🤖'], food: ['🍜', '🍕', '🧁'], music: ['🎤', '🎧', '🎸'], fashion: ['👗', '🕶️', '👠'], travel: ['✈️', '🏝️', '🗺️'], lifestyle: ['☕', '🌿', '🛋️'] };

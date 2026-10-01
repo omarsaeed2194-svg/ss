@@ -33,6 +33,8 @@ const IC = {
   send: '<path d="M4 12 20 4l-6 16-3-7z"/>',
   live: '<circle cx="12" cy="12" r="3"/><path d="M6.3 6.3a8 8 0 0 0 0 11.4M17.7 6.3a8 8 0 0 1 0 11.4"/>',
   bolt: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+  image: '<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>',
+  plane: '<path d="M10 14 3 11l1-2 8 1 5-6h2l-2 7 4 1 1-1h1l-1 3-1 3h-1l-1-1-4 1 1 7h-2l-4-7z"/>',
   sparkle: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>',
 };
 const ico = (k, cls = 'ico') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>`;
@@ -50,9 +52,11 @@ const CAREER = [['deals', 'Brand deals', 'brief'], ['shop', 'Shop', 'bag'], ['te
 const NICHE_DESC = { beauty: 'Skincare, makeup, dupes', gaming: 'Clutches, speedruns, rage', fitness: 'Gains, routines, discipline', comedy: 'Skits, bits, chaos', tech: 'Reviews, setups, hot takes', food: 'Recipes, taste tests', music: 'Covers, hooks, studio life', fashion: 'Fits, thrift flips, trends', travel: 'Hidden gems, packing hacks', lifestyle: 'Routines, resets, vibes' };
 
 /* ---------- small helpers ---------- */
-const avatar = (name, color, size = '') => `<span class="av ${size}" style="background:${color}" aria-hidden="true">${esc(initials(name))}</span>`;
-const npcAv = (id, size = '') => avatar(NPCS[id].name, NPCS[id].color, size);
-const meAv = (size = '') => avatar(S.name, S.color, size);
+const avatar = (name, color, size = '', seed) => `<span class="av ${size}" style="background:${color}" aria-hidden="true">${faceSvg(seed || name)}</span>`;
+const npcAv = (id, size = '') => avatar(NPCS[id].name, NPCS[id].color, size, 'npc:' + id);
+const meAv = (size = '') => avatar(S.name, S.color, size, S.faceSeed || S.name);
+const coAv = (id, size = '') => `<span class="av co ${size}" aria-hidden="true">${logoSvg(COMPANIES[id].name, COMPANIES[id].color)}</span>`;
+const flag = (cc) => (COUNTRIES[cc] ? `<span class="flag" title="${COUNTRIES[cc].name}">${COUNTRIES[cc].flag}</span>` : '');
 const vb = (gold) => `<span class="badge-v ${gold ? 'gold' : ''}" title="${gold ? 'Paid badge' : 'Verified'}">${VBADGE}</span>`;
 const meBadge = () => S.flags.verified ? vb() : S.flags.paidCheck ? vb(true) : '';
 const npcBadge = (id) => NPCS[id].followers >= 1e5 ? vb() : '';
@@ -96,6 +100,75 @@ function toast(msg, cls = '') {
 }
 let chargeUntil = 0;
 const chargedCls = () => (performance.now() < chargeUntil ? 'charged' : '');
+/* ---------- @mention autocomplete ---------- */
+let mentionState = null;
+function mentionCandidates(q) {
+  const out = [];
+  q = q.toLowerCase();
+  for (const [id, N] of Object.entries(NPCS)) {
+    const h = N.handle.toLowerCase(), nm = N.name.toLowerCase();
+    const score = !q ? 3 : h.startsWith(q) ? 0 : nm.split(/\s+/).some((w) => w.replace(/[^a-z]/g, '').startsWith(q)) ? 1 : (h.includes(q) || nm.includes(q)) ? 2 : -1;
+    if (score >= 0) out.push({ kind: 'npc', id, handle: N.handle, score, sort: -(S.npcs[id].rel * 1e3) - Math.log10(S.npcs[id].followers) });
+  }
+  for (const [id, C] of Object.entries(COMPANIES)) {
+    const h = C.handle.toLowerCase(), nm = C.name.toLowerCase();
+    const score = !q ? 4 : h.startsWith(q) ? 0 : nm.startsWith(q) ? 1 : (h.includes(q) || nm.includes(q)) ? 2 : -1;
+    if (score >= 0) out.push({ kind: 'co', id, handle: C.handle, score, sort: 0 });
+  }
+  return out.sort((a, b) => a.score - b.score || a.sort - b.sort).slice(0, 7);
+}
+function mentionBox() {
+  let b = $('#mentionBox');
+  if (!b) { b = document.createElement('div'); b.id = 'mentionBox'; b.className = 'mention-box'; b.setAttribute('role', 'listbox'); document.body.appendChild(b); }
+  return b;
+}
+function hideMentions() { mentionState = null; const b = $('#mentionBox'); if (b) b.hidden = true; }
+function renderMentions() {
+  const st = mentionState, b = mentionBox();
+  if (!st || !st.items.length) { b.hidden = true; return; }
+  const r = st.el.getBoundingClientRect();
+  b.style.left = Math.max(8, Math.min(window.innerWidth - 328, r.left)) + 'px';
+  const below = r.bottom + 6, h = Math.min(st.items.length * 54 + 10, 390);
+  b.style.top = (below + h > window.innerHeight && r.top > h ? r.top - h - 6 : below) + 'px';
+  b.innerHTML = st.items.map((it, i) => {
+    const isCo = it.kind === 'co';
+    const name = isCo ? COMPANIES[it.id].name : NPCS[it.id].name;
+    const tag = isCo ? COMPANIES[it.id].cat : S.npcs[it.id].feud ? 'Feuding' : relLabel(S.npcs[it.id].rel);
+    return `<div class="mention-item ${i === st.sel ? 'on' : ''}" role="option" data-i="${i}">${isCo ? coAv(it.id, 'sm') : npcAv(it.id, 'sm')}<div style="min-width:0;flex:1"><b style="display:flex;gap:4px;align-items:center">${esc(name)} ${isCo ? vb(true) : npcBadge(it.id)}</b><span class="small muted">@${it.handle}</span></div><span class="pill">${esc(tag)}</span></div>`;
+  }).join('');
+  b.hidden = false;
+  b.querySelectorAll('.mention-item').forEach((n) => n.addEventListener('mousedown', (e) => { e.preventDefault(); applyMention(+n.dataset.i); }));
+}
+function applyMention(i) {
+  const st = mentionState; if (!st) return;
+  const it = st.items[i]; const el = st.el;
+  const before = el.value.slice(0, st.start), after = el.value.slice(el.selectionStart);
+  el.value = before + '@' + it.handle + ' ' + after.replace(/^\S*/, '');
+  const pos = (before + '@' + it.handle + ' ').length;
+  el.setSelectionRange(pos, pos); el.focus();
+  hideMentions();
+  el.dispatchEvent(new Event('input'));
+}
+function checkMention(el) {
+  const v = el.value.slice(0, el.selectionStart);
+  const m = v.match(/(^|\s)@([\w.]{0,20})$/);
+  if (!m) { hideMentions(); return; }
+  const items = mentionCandidates(m[2]);
+  mentionState = { el, start: v.length - m[2].length - 1, items, sel: 0 };
+  renderMentions();
+}
+function attachMentions(el) {
+  el.addEventListener('keydown', (e) => {
+    if (!mentionState || mentionState.el !== el || !mentionState.items.length) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); e.stopImmediatePropagation(); const n = mentionState.items.length; mentionState.sel = (mentionState.sel + (e.key === 'ArrowDown' ? 1 : n - 1)) % n; renderMentions(); }
+    else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); e.stopImmediatePropagation(); applyMention(mentionState.sel); }
+    else if (e.key === 'Escape') { e.stopImmediatePropagation(); hideMentions(); }
+  });
+  el.addEventListener('input', () => checkMention(el));
+  el.addEventListener('click', () => checkMention(el));
+  el.addEventListener('blur', () => setTimeout(() => { if (mentionState && mentionState.el === el) hideMentions(); }, 150));
+}
+
 /* Energy rewards get their own gold pop-up so they feel like a win */
 function energyBurst(n, reason) {
   const box = $('#deltas'); if (!box) return;
@@ -129,6 +202,7 @@ function flashDelta(a, b) {
    ====================================================================== */
 function renderAll() {
   if (!S) return;
+  if (mentionState && !document.body.contains(mentionState.el)) hideMentions();
   applyTheme();
   renderSidebar(); renderTopbar(); renderTabbar(); renderCol(); renderRail();
 }
@@ -213,7 +287,8 @@ function renderCol() {
   if ((tab === 'stats' || (tab === 'profile' && ui.profTab === 'analytics')) && !v) drawChart();
   animateFresh();
   const bio = $('#bioEdit'); if (bio) bio.addEventListener('input', () => { S.bio = bio.value.slice(0, 160); save(); });
-  const dm = $('#dmInput'); if (dm) dm.addEventListener('keydown', (e) => { if (e.key === 'Enter' && dm.value.trim()) { e.preventDefault(); ACT_RUN('dmSend', dm.dataset.npc); } });
+  const rt = $('#replyText'); if (rt) attachMentions(rt);
+  const dm = $('#dmInput'); if (dm) attachMentions(dm); if (dm) dm.addEventListener('keydown', (e) => { if (e.key === 'Enter' && dm.value.trim()) { e.preventDefault(); ACT_RUN('dmSend', dm.dataset.npc); } });
   const q = $('#exploreSearch'); if (q) q.addEventListener('input', () => { ui.q = q.value; const r = $('#exploreResults'); if (r) r.innerHTML = exploreResults(); });
 }
 
@@ -228,13 +303,14 @@ function animateFresh() {
 }
 
 /* ---------- post cards ---------- */
-function media(format, label, color, seed, look) {
+function media(format, label, color, seed, look, x = {}) {
   const F = FORMATS[format]; if (!F) return '';
   if (format === 'take' || format === 'thread') return '';
   const r = srand(seed);
   const L = look && FILTERS[look];
+  const art = x.img ? `<img class="scene" src="${x.img}" alt="" style="filter:${look ? LOOK_CSS[look] : 'none'}">` : sceneSvg({ seed, format, niche: x.niche || S.niche, look, caption: x.caption, label, color });
   const dur = F.video ? `${Math.floor(r() * (F.p === 'tube' ? 20 : 1)) + (F.p === 'tube' ? 8 : 0)}:${String(Math.floor(r() * 60)).padStart(2, '0')}` : '';
-  return `<div class="tw-media" style="background:${L ? `linear-gradient(${Math.floor(r() * 360)}deg, ${L.g[0]}, ${L.g[1]})` : `linear-gradient(${Math.floor(r() * 360)}deg, ${color}, #111 140%)`};${L && L.ink ? `color:${L.ink}` : ''}"><div class="lbl" style="${L && L.ink ? 'text-shadow:none' : ''}">${esc(label)}</div>${L ? `<span class="dur" style="left:auto;right:10px">${L.name}</span>` : ''}${F.video ? `<span class="play">${ico('live')}</span><span class="dur">${dur}</span>` : ''}${format === 'carousel' ? '<span class="dur">1/5</span>' : ''}</div>`;
+  return `<div class="tw-media">${art}${L ? `<span class="dur" style="left:auto;right:10px;top:10px;bottom:auto">${L.name}</span>` : ''}${F.video ? `<span class="play">${ico('live')}</span><span class="dur">${dur}</span>` : ''}${format === 'carousel' ? '<span class="dur">1/5</span>' : ''}</div>`;
 }
 function actions(o) {
   const c = (v, fresh) => fresh ? `<span data-count="${v}">0</span>` : fmt(v);
@@ -251,12 +327,21 @@ function myPostCard(p) {
   return `<article class="tw ${p.fresh ? 'fresh' : ''}" data-act="open" data-arg="post:${p.id}">${ctx}${meAv()}<div class="tw-main">
     <div class="tw-head"><b>${esc(S.name)}</b>${meBadge()}<span class="h">@${esc(S.handle)} · ${ago(p.day)}</span><span class="pl">${pdot(p.platform)}${P.name}</span></div>
     <div class="tw-text">${rich(p.caption)}${extra.length ? ' ' + rich(extra.join(' ')) : ''}</div>
-    ${media(p.format, `${FORMATS[p.format].name}: ${p.topic}`, P.color, p.id, p.filter)}
+    ${media(p.format, p.topic, P.color, p.id, p.filter, { caption: p.caption, img: p.img })}
     ${actions({ replyAct: 'open', arg: 'post:' + p.id, replies: p.comments, reposts: p.shares, likes: p.likes, views: p.views, fresh: p.fresh })}
     ${p.fresh ? `<div class="row small">${p.gain ? `<span class="pill ${p.gain > 0 ? 'good' : 'bad'}">${signed(p.gain)} followers</span>` : ''}<span class="pill ${p.rep >= 0 ? 'good' : 'bad'}">${signed1(p.rep)} rep</span>${p.cash > 0.5 ? `<span class="pill gold">${money(p.cash)} ads</span>` : ''}</div>` : ''}
   </div></article>`;
 }
+function coPostCard(f) {
+  const C = COMPANIES[f.co];
+  return `<article class="tw">${coAv(f.co)}<div class="tw-main">
+    <div class="tw-head"><b>${esc(C.name)}</b>${vb(true)}<span class="h">@${C.handle} · ${ago(f.day)}</span><span class="pl">${esc(C.cat)}</span></div>
+    <div class="tw-text">${rich(f.text)}</div>
+    ${actions({ replyAct: 'composeAt', arg: C.handle, id: String(f.id), replies: f.comments, reposts: f.reposts || 0, likes: f.likes, views: f.views || 0, liked: f.liked, reposted: f.reposted, likeAct: f.liked ? 'noop' : 'like', repostAct: f.reposted ? 'noop' : 'repost' })}
+  </div></article>`;
+}
 function npcPostCard(f) {
+  if (f.co) return coPostCard(f);
   const N = NPCS[f.npc], n = S.npcs[f.npc];
   const r = srand(f.id);
   const hasMedia = r() < 0.35;
@@ -266,7 +351,7 @@ function npcPostCard(f) {
     <span data-act="open" data-arg="star:${f.npc}">${npcAv(f.npc)}</span><div class="tw-main">
     <div class="tw-head"><b>${esc(N.name)}</b>${npcBadge(f.npc)}<span class="h">@${N.handle} · ${ago(f.day)}</span></div>
     <div class="tw-text">${rich(f.text)}</div>
-    ${hasMedia ? media(fmtK, N.type, N.color, f.id) : ''}
+    ${hasMedia ? media(fmtK, N.type, N.color, f.id, null, { niche: N.niche, caption: f.text }) : ''}
     ${actions({ replyAct: 'open', arg: 'npcpost:' + f.id, id: String(f.id), replies: f.comments + (f.commented ? 1 : 0), reposts: f.reposts || 0, likes: f.likes, views: f.views || f.likes * 25, liked: f.liked, reposted: f.reposted, likeAct: f.liked ? 'noop' : 'like', repostAct: f.reposted ? 'noop' : 'repost' })}
   </div></article>`;
 }
@@ -295,7 +380,7 @@ function vHome() {
   let items;
   if (ui.feedTab === 'mine') items = S.posts.map((p) => ({ k: 'me', d: p.day, id: p.id, p }));
   else {
-    const feed = ui.feedTab === 'following' ? S.feed.filter((f) => S.npcs[f.npc].following) : S.feed;
+    const feed = ui.feedTab === 'following' ? S.feed.filter((f) => f.npc && S.npcs[f.npc].following) : S.feed;
     items = [...S.posts.map((p) => ({ k: 'me', d: p.day, id: p.id, p })), ...feed.map((f) => ({ k: 'npc', d: f.day, id: f.id, f }))];
   }
   items.sort((a, b) => b.d - a.d || b.id - a.id);
@@ -311,7 +396,7 @@ function vHome() {
 /* ---------- Threads ---------- */
 function vThread(id, isNpc) {
   if (isNpc) {
-    const f = S.feed.find((x) => x.id === id); if (!f) return head('Post', '', true) + '<div class="empty">This post was deleted.</div>';
+    const f = S.feed.find((x) => x.id === id); if (!f || f.co) return head('Post', '', true) + '<div class="empty">This post was deleted.</div>';
     const N = NPCS[f.npc];
     const r = srand(f.id * 7);
     const fans = Array.from({ length: 4 }, () => ({ who: HANDLE_A[Math.floor(r() * HANDLE_A.length)] + '.' + HANDLE_B[Math.floor(r() * HANDLE_B.length)], text: COMMENTS[r() < 0.7 ? 'pos' : 'fun'][Math.floor(r() * 7)], likes: Math.round(f.likes * r() * 0.01) }));
@@ -331,19 +416,21 @@ function vThread(id, isNpc) {
   return `<div class="col-head">${head('Post', P.name, true)}</div><div class="thread-main">
     <div class="row" style="flex-wrap:nowrap">${meAv()}<div style="min-width:0"><b style="display:flex;gap:4px;align-items:center">${esc(S.name)} ${meBadge()}</b><span class="muted">@${esc(S.handle)}</span></div></div>
     <div class="tw-text">${rich(p.caption)}</div>
-    ${media(p.format, `${FORMATS[p.format].name}: ${p.topic}`, P.color, p.id, p.filter)}
+    ${media(p.format, p.topic, P.color, p.id, p.filter, { caption: p.caption, img: p.img })}
     <div class="thread-meta">Day ${p.day} · ${P.name} · ${FORMATS[p.format].name} · ${TONES[p.tone].name}${p.orig !== undefined ? ` · Originality ${p.orig}` : ''}${p.filter ? ` · ${FILTERS[p.filter].name} look${p.lookMatch ? ' (on trend)' : ''}` : ''} · <b style="color:var(--ink)">${fmt(p.views)}</b> Views</div>
     <div class="thread-counts"><span><b>${fmt(p.shares)}</b> Reposts</span><span><b>${fmt(p.likes)}</b> Likes</span><span><b>${fmt(p.comments)}</b> Replies</span><span class="${p.gain >= 0 ? 'good' : 'bad'}"><b style="color:inherit">${signed(p.gain)}</b> Followers</span><span class="${p.rep >= 0 ? 'good' : 'bad'}"><b style="color:inherit">${signed1(p.rep)}</b> Rep</span>${p.cash > 0.5 ? `<span><b>${money(p.cash)}</b> Ad revenue</span>` : ''}</div></div>
     <div class="hint" style="margin:12px 16px">Talk to your replies. Thanking fans builds engagement and reputation. Clapping back at haters gets attention but raises heat. 2 energy each.</div>
     ${p.comms.map((c, i) => {
-      const who = c.npc ? NPCS[c.npc] : null;
-      return `<article class="tw" style="cursor:default">${c.npc ? `<span data-act="open" data-arg="star:${c.npc}" style="cursor:pointer">${npcAv(c.npc)}</span>` : avatar(c.who, c.neg ? '#7A2E2E' : '#44505E')}<div class="tw-main">
-        <div class="tw-head"><b>${esc(who ? who.name : c.who)}</b>${c.npc ? npcBadge(c.npc) : ''}<span class="h">@${esc(c.who)}</span></div>
+      const who = c.npc ? NPCS[c.npc] : c.co ? COMPANIES[c.co] : null;
+      const av = c.npc ? `<span data-act="open" data-arg="star:${c.npc}" style="cursor:pointer">${npcAv(c.npc)}</span>` : c.co ? coAv(c.co) : avatar(c.who, c.neg ? '#7A2E2E' : '#44505E');
+      return `<article class="tw" style="cursor:default">${av}<div class="tw-main">
+        <div class="tw-head"><b>${esc(who ? who.name : c.who)}</b>${c.npc ? npcBadge(c.npc) : c.co ? vb(true) : ''}${c.cc ? flag(c.cc) : ''}<span class="h">@${esc(c.who)}</span></div>
         <div class="small muted">Replying to <span class="blue">@${esc(S.handle)}</span></div>
         <div class="tw-text">${esc(c.text)}</div>
         ${c.mine ? (c.mine === '♥' ? `<div class="small" style="color:var(--like)">${ico('heart')} You liked this</div>` : `<div class="tw-text" style="margin-top:6px;padding-left:10px;border-left:2px solid var(--accent)"><b>You:</b> ${esc(c.mine)}</div>`)
           : `<div class="row" style="margin-top:6px">${c.neg ? btn('Clap back', 'engage', `${p.id}:${i}:clap`, 'sm danger') + btn('Kill with kindness', 'engage', `${p.id}:${i}:kind`, 'sm') : btn('Thank them', 'engage', `${p.id}:${i}:thanks`, 'sm') + btn(`${ico('heart')} Like`, 'engage', `${p.id}:${i}:heart`, 'sm')}</div>`}
-        <div class="small muted">${fmt(c.likes || 0)} likes</div></div></article>`;
+        <div class="small muted">${fmt(c.likes || 0)} likes</div>
+        ${(c.sub || []).map((x) => `<div class="subreply">${avatar(x.who, '#44505E', 'xs')}<div><b>@${esc(x.who)}</b> <span class="muted">replying to @${esc(c.who)}</span><div>${esc(x.text)}</div></div></div>`).join('')}</div></article>`;
     }).join('')}`;
 }
 
@@ -368,6 +455,8 @@ function vExplore() {
     <div class="sect" style="padding-bottom:4px;border:0;border-top:1px solid var(--line)"><h3>Trends for you</h3><span class="small muted">Tap a trend to post about it. Fresh trends that fit your niche reach furthest.</span></div>
     ${S.trends.map((t, i) => trendRow(t, i)).join('')}
     <div class="sect" style="padding-bottom:4px;border:0;border-top:1px solid var(--line)"><h3>Who to follow</h3></div>${follow.slice(0, 6).map((id) => personRow(id)).join('')}
+    <div class="sect" style="padding-bottom:4px;border:0;border-top:1px solid var(--line)"><h3>Brands on the timeline</h3><span class="small muted">Tag them with @ in a post. Some reply, some roast, some send deals.</span></div>
+    ${Object.entries(COMPANIES).map(([id, C]) => `<div class="list-row" style="border:0">${coAv(id)}<div class="grow"><b style="display:flex;gap:4px;align-items:center">${esc(C.name)} ${vb(true)}</b><span class="muted small">@${C.handle} · ${esc(C.cat)}</span></div>${btn('Tag in a post', 'composeAt', C.handle, 'sm')}</div>`).join('')}
     <div class="sect" style="border-top:1px solid var(--line)"><h3>Leaderboard</h3><div class="table-wrap"><table class="lb"><tbody>${rows.map((r, i) => `<tr class="${r.id === 'you' ? 'you' : ''}" ${r.id !== 'you' ? `data-act="open" data-arg="star:${r.id}" style="cursor:pointer"` : ''}><td class="num muted">${i + 1}</td><td><div class="row" style="flex-wrap:nowrap">${r.id === 'you' ? meAv('xs') : npcAv(r.id, 'xs')}<span>${esc(r.name)}</span></div></td><td class="n">${fmt(r.f)}</td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
@@ -392,7 +481,7 @@ function vStar(id) {
       <div class="prof-actions"><button class="icon-btn" style="border:1px solid var(--line)" data-act="openDm" data-arg="${id}" aria-label="Message">${ico('mail')}</button>${btn(n.following ? 'Following' : 'Follow', 'follow', id, n.following ? '' : 'primary')}</div>
       <h2>${esc(N.name)} ${npcBadge(id)}</h2><div class="handle">@${N.handle} ${n.followsYou ? '<span class="pill">Follows you</span>' : ''} ${N.lines ? '<span class="pill" title="Satirical character with a tweaked name. Everything they do in the game is invented.">Parody</span>' : ''}</div>
       <div class="bio">${esc(N.bio)}</div>
-      <div class="meta"><span>${N.type}</span><span>${NICHES[N.niche].name}</span><span>Public rep ${Math.round(n.rep)}</span></div>
+      <div class="meta"><span>${N.type}</span><span>${NICHES[N.niche].name}</span><span>${flag(NPC_COUNTRY[id])} ${COUNTRIES[NPC_COUNTRY[id]].name}</span><span>Public rep ${Math.round(n.rep)}</span></div>
       <div class="counts"><span><b>${fmt(n.followers)}</b> Followers</span></div>
       <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"><div class="row between small"><b>${S.partner === id ? 'Dating' : n.feud ? 'Feuding' : relLabel(n.rel)}</b><span class="muted num">${Math.round(n.rel)} / 100</span></div>
         <div class="relbar"><i style="${n.rel >= 0 ? `left:50%;width:${relW}%;background:var(--good)` : `right:50%;width:${relW}%;background:var(--bad)`}"></i></div>
@@ -410,10 +499,10 @@ function vNotifs() {
   const icon = { like: ['heart', 'var(--like)'], follow: ['user', 'var(--accent)'], repost: ['repost', 'var(--repost)'], reply: ['reply', 'var(--accent)'], viral: ['fire', 'var(--gold)'], system: ['sparkle', 'var(--accent)'] };
   const row = (n) => {
     const [ic, col] = icon[n.type] || icon.system;
-    const whoName = n.npc ? NPCS[n.who].name : n.who ? '@' + n.who : '';
-    const av = n.npc ? npcAv(n.who, 'sm') : n.who ? avatar(n.who, '#44505E', 'sm') : '';
+    const whoName = n.npc ? NPCS[n.who].name : n.co && COMPANIES[n.who] ? COMPANIES[n.who].name : n.who ? '@' + n.who : '';
+    const av = n.npc ? npcAv(n.who, 'sm') : n.co && COMPANIES[n.who] ? coAv(n.who, 'sm') : n.who ? avatar(n.who, '#44505E', 'sm') : '';
     const target = n.post ? `post:${n.post}` : n.npc ? `star:${n.who}` : '';
-    if (n.type === 'reply') return `<article class="tw" data-act="open" data-arg="${target}" style="${n.read ? '' : 'background:var(--accent-soft)'}">${n.npc ? npcAv(n.who) : avatar(n.who, '#44505E')}<div class="tw-main"><div class="tw-head"><b>${esc(whoName)}</b>${n.npc ? npcBadge(n.who) : ''}<span class="h">· ${ago(n.d)}</span></div><div class="small muted">Replying to <span class="blue">@${esc(S.handle)}</span></div><div class="tw-text">${esc(n.text)}</div></div></article>`;
+    if (n.type === 'reply') return `<article class="tw" data-act="open" data-arg="${target}" style="${n.read ? '' : 'background:var(--accent-soft)'}">${n.npc ? npcAv(n.who) : n.co && COMPANIES[n.who] ? coAv(n.who) : avatar(n.who, '#44505E')}<div class="tw-main"><div class="tw-head"><b>${esc(whoName)}</b>${n.npc ? npcBadge(n.who) : ''}<span class="h">· ${ago(n.d)}</span></div><div class="small muted">Replying to <span class="blue">@${esc(S.handle)}</span></div><div class="tw-text">${esc(n.text)}</div></div></article>`;
     return `<div class="nt ${n.read ? '' : 'unread'}" ${target ? `data-act="open" data-arg="${target}"` : ''}><div class="ni" style="color:${col}">${ico(ic, 'ico')}</div><div style="min-width:0">${av ? `<div class="row" style="margin-bottom:6px">${av}</div>` : ''}<div>${whoName ? `<b>${esc(whoName)}</b> ` : ''}${esc(n.text)}</div><div class="quote">Day ${n.d}</div></div></div>`;
   };
   return `<div class="col-head">${head('Notifications', '', false, btn('Mark all read', 'readNotifs', '', 'sm'))}${tabsBar([['all', 'All'], ['stars', 'Stars'], ['mentions', 'Replies']], ui.notifTab, 'notifTab')}</div>
@@ -431,7 +520,7 @@ function threads() {
 function threadWho(k, ms) {
   const type = k.slice(0, k.indexOf(':')), id = k.slice(k.indexOf(':') + 1);
   if (type === 'npc') return { name: NPCS[id].name, handle: '@' + NPCS[id].handle, av: npcAv(id), badge: npcBadge(id) };
-  if (type === 'brand') return { name: BRANDS[id].name, handle: BRANDS[id].shady ? 'Unverified business' : 'Business account', av: avatar(BRANDS[id].name, BRANDS[id].shady ? '#6B6B6B' : '#2C3E50'), badge: BRANDS[id].shady ? '' : vb(true) };
+  if (type === 'brand') return { name: BRANDS[id].name, handle: COMPANIES[id] ? '@' + COMPANIES[id].handle : BRANDS[id].shady ? 'Unverified business' : 'Business account', av: COMPANIES[id] ? coAv(id) : `<span class="av" aria-hidden="true">${logoSvg(BRANDS[id].name, BRANDS[id].shady ? '#6B6B6B' : '#2C3E50')}</span>`, badge: BRANDS[id].shady ? '' : vb(true) };
   const m = ms[0] || {};
   const scam = m.type && m.type.startsWith('scam');
   return { name: id, handle: scam ? 'Unknown sender' : m.type === 'hater' ? 'Not following you' : m.type === 'fan' ? 'Follows you' : 'Official', av: avatar(id.replace('@', ''), m.type === 'hater' ? '#7A2E2E' : scam ? '#6B6B6B' : m.type === 'system' ? '#1D9BF0' : '#44505E'), badge: m.type === 'system' ? vb() : '' };
@@ -487,7 +576,7 @@ function vProfile() {
     <div class="prof">${meAv('xl')}<div class="prof-actions">${btn(ui.editBio ? 'Done' : 'Edit profile', 'editBio', '', '')}</div>
       <h2>${esc(S.name)} ${meBadge()}</h2><div class="handle">@${esc(S.handle)}</div>
       ${ui.editBio ? `<textarea class="input" id="bioEdit" maxlength="160" rows="2" style="margin-top:12px" aria-label="Bio">${esc(S.bio)}</textarea>` : `<div class="bio">${esc(S.bio)}</div>`}
-      <div class="meta"><span>${NICHES[S.niche].name} creator</span><span>${tier().name} tier</span><span>Joined day 1</span><span>${{ chill: 'Chill', normal: 'Normal', brutal: 'Unhinged' }[S.diff]} internet</span></div>
+      <div class="meta"><span>${flag(S.country)} ${COUNTRIES[S.country].name}</span><span>${NICHES[S.niche].name} creator</span><span>${tier().name} tier</span><span>Joined day 1</span><span>${{ chill: 'Chill', normal: 'Normal', brutal: 'Unhinged' }[S.diff]} internet</span></div>
       <div class="counts"><span><b>${following}</b> Following</span><span><b>${fmt(t)}</b> Followers</span>${S.partner ? `<span style="color:var(--like)">Dating ${esc(npcName(S.partner))}</span>` : ''}</div>
     </div>
     <div style="margin:0 16px 12px;border-radius:16px;overflow:hidden">${statGrid()}</div>
@@ -575,6 +664,11 @@ function vLife() {
     <div class="sect"><div class="cards">${LIFE.map(([id, n, d, e, fx]) => `<div class="card"><div class="t"><span>${n}</span><span class="pill blue">${e} energy</span></div><span class="small muted">${d}</span><span class="small">${fx}</span>${btn('Do it', 'life', id, 'sm', S.energy < e || locked(id) || (S.flags['life_' + id] === S.day && id !== 'replies'))}</div>`).join('')}</div>
     <div class="hint">Stress above 80 cuts tomorrow's energy by 30% and hurts post quality. At 100 you burn out.</div>
     <div class="hint"><b>Getting energy back:</b> posts that land well refund energy, viral posts give +25, and every follower milestone, new tier, achievement, skill level, paid deal, collab, shoutout and star follow-back gives a burst. Milestones and tiers also raise your max energy for good. Post every day to build a streak for extra morning energy (+5 per day, up to +30). Rewards can overcharge you past your max.</div></div>
+    <div class="sect"><h3>${ico('plane')} World tour</h3><span class="small muted">Travel for content: 25 energy, unlocks a trip topic for 3 days, grows your fans in that country, and you might run into a local star. Visited ${(S.visited || []).length} countries.</span>
+      <div class="scroller" style="flex-wrap:wrap">${TRAVEL_SPOTS.filter((cc) => cc !== S.country).map((cc) => btn(`${COUNTRIES[cc].flag} ${COUNTRIES[cc].name} · ${money(travelCost(cc))}`, 'travel', cc, 'sm', S.money < travelCost(cc) || S.energy < 25 || S.travelUntil >= S.day)).join('')}</div>
+      ${S.travelUntil >= S.day ? `<span class="small gold">You're in ${COUNTRIES[S.travelCountry].name} ${COUNTRIES[S.travelCountry].flag}. Post a trip topic before you fly home.</span>` : ''}</div>
+    <div class="sect"><h3>${ico('tea')} Tea vault</h3><span class="small muted">Secrets you picked up at parties, collabs and in DMs. Spilling one gets huge reach and heat, and the star will not forget it.</span>
+      ${(S.tea || []).length ? S.tea.map((t) => `<div class="card" style="flex-direction:row;align-items:center">${npcAv(t.npc, 'sm')}<div style="flex:1;min-width:0"><b>${esc(NPCS[t.npc].name)}</b><div class="small">${esc(t.text)}</div></div>${btn('Spill it', 'teaSpill', t.id, 'sm danger')}${btn('Keep it', 'teaDrop', t.id, 'sm')}</div>`).join('') : '<p class="small muted">Empty. Go to industry parties, collab, and get close to stars in DMs.</p>'}</div>
     <div class="sect"><h3>Skills</h3><div class="cards">${Object.entries(S.skills).map(([k, s]) => `<div class="card"><div class="t"><span>${k[0].toUpperCase() + k.slice(1)}</span><span class="pill ${s.lvl >= 10 ? 'gold' : ''}">Level ${s.lvl}</span></div><div class="meter"><i style="width:${s.lvl >= 10 ? 100 : (s.xp / (s.lvl * 60)) * 100}%"></i></div><span class="small muted">${COURSES[k].desc}</span>${btn('Practice · 15', 'practice', k, 'sm', S.energy < 15 || s.lvl >= 10)}</div>`).join('')}</div></div>`;
 }
 function statsBody() {
@@ -586,6 +680,7 @@ function statsBody() {
   return `<div class="sect"><div class="statgrid" style="border-radius:16px;overflow:hidden">${kpi('Real followers', fmt(t - S.fake))}${kpi('Avg views', fmt(avg))}${kpi('Best post', fmt(S.stats.bestViews))}${kpi('Viral hits', S.stats.viral, 'gold')}${kpi('Lifetime $', money(S.stats.earned), 'good')}${kpi('Deals', S.stats.deals)}${kpi('Collabs', S.stats.collabs)}${kpi('Streams', S.stats.streams)}${kpi('Energy earned', fmt(S.stats.energyEarned || 0), 'gold')}${kpi('Best streak', Math.max(S.stats.bestStreak || 0, S.streak || 0) + 'd')}${kpi('Cancellations', S.stats.cancels, S.stats.cancels ? 'bad' : '')}</div></div>
     <div class="sect"><div class="row between"><h3>History</h3><div class="scroller">${[['f', 'Followers'], ['rep', 'Rep'], ['m', 'Money'], ['e', 'Engagement'], ['h', 'Heat']].map(([k, l]) => chip(l, 'metric', k, ui.metric === k)).join('')}</div></div><div class="chart-box"><canvas id="chart" aria-label="History chart"></canvas></div></div>
     <div class="sect"><h3>Followers by platform</h3><div class="bars">${Object.keys(PLATFORMS).map((id) => { const p = S.platforms[id]; return `<div class="bar-row"><span>${pdot(id)} ${PLATFORMS[id].name}</span><div class="track"><i style="width:${p.unlocked ? (p.followers / maxF) * 100 : 0}%;background:${PLATFORMS[id].color}"></i></div><span class="n">${p.unlocked ? fmt(p.followers) : 'Locked'}</span></div>`; }).join('')}</div></div>
+    <div class="sect"><h3>Audience by country</h3><div class="bars">${Object.entries(S.geo || {}).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([cc, v]) => `<div class="bar-row"><span>${COUNTRIES[cc].flag} ${esc(COUNTRIES[cc].name)}</span><div class="track"><i style="width:${Math.round(v * 100)}%;background:var(--accent)"></i></div><span class="n">${Math.round(v * 100)}%</span></div>`).join('')}</div></div>
     <div class="sect"><h3>Top posts</h3>${top.length ? top.map((p) => `<div class="row between small" data-act="open" data-arg="post:${p.id}" style="cursor:pointer;flex-wrap:nowrap"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.caption)}</span><b class="num">${fmt(p.views)}</b></div>`).join('') : '<p class="muted">No posts yet.</p>'}</div>`;
 }
 function vStats() { return `<div class="col-head">${head('Analytics', `Day ${S.day}`)}</div>` + statsBody(); }
@@ -649,7 +744,8 @@ function vAccount() {
       <p><b>Stars</b> answer DMs, reply to your posts, collab, date, and feud. Be nice, be funny, or be messy.</p>
       <p><b>Clashes</b>: stars feud with each other in public. Back a side (pay off if they win), broker peace, stir the pot, or post about it for huge reach. You can also challenge any star to a three-round clash battle from their profile.</p>
       <p><b>Creativity</b>: write your own words for a higher originality score (more reach and viral chance), pick a look for photos and videos (this week's trending look gets +12% reach), and complete the daily creative challenge.</p>
-      <p class="muted">Parody stars with tweaked names are satire. Everything they say and do here is invented.</p>
+      <p class="muted">Parody stars and companies with tweaked names are satire. Everything they say and do here is invented.</p>
+      <p><b>Spicy mode is always on</b>: the more famous you get, the more often scandals hit, fame costs money every day, three weak posts in a row start "did they fall off?" discourse, and you can collect and spill tea on stars.</p>
       <p><b>Win</b> with 100M followers and 60+ reputation. Keyboard: N opens the composer, Ctrl/Cmd+E sleeps.</p></div></div>`;
 }
 function applyTheme() {
@@ -682,12 +778,12 @@ function composeInput() {
     else c.topic = 'niche';
   }
   const tone = c.toneMode === 'auto' ? detectTone(c.text) : c.toneMode;
-  return { platform: c.platform, format: c.format, topic: c.topic, tone, effort: c.effort, time: c.time, tags, caption: c.text, disclose: c.disclose, filter: c.filter };
+  return { platform: c.platform, format: c.format, topic: c.topic, tone, effort: c.effort, time: c.time, tags, caption: c.text, disclose: c.disclose, filter: c.filter, img: hasLook(c.format) ? c.img || null : null };
 }
 function renderCompose(focus) {
   const c = ui.c; if (!c) return;
   if (!S.platforms[c.platform].unlocked) c.platform = 'pix';
-  if (c.platform !== 'live' && (!c.format || FORMATS[c.format].p !== c.platform)) c.format = Object.keys(FORMATS).find((f) => FORMATS[f].p === c.platform);
+  if (c.platform !== 'live' && (!c.format || FORMATS[c.format].p !== c.platform)) c.format = Object.keys(FORMATS).find((f) => FORMATS[f].p === c.platform && (!c.img || hasLook(f))) || Object.keys(FORMATS).find((f) => FORMATS[f].p === c.platform);
   const topics = topicsFor();
   if (!topics.some((t) => t.id === c.topic)) c.topic = 'niche';
   const plats = Object.entries(PLATFORMS).map(([id, p]) => {
@@ -709,6 +805,8 @@ function renderCompose(focus) {
     body = `<div class="compose-body">${meAv()}<div>
         <textarea id="cText" maxlength="280" placeholder="What's happening?" aria-label="Post text">${esc(c.text)}</textarea>
         <div class="scroller" style="margin-bottom:8px">${tagSug.map((t) => `<button class="chip" data-act="cTag" data-arg="${esc(t)}" style="color:var(--accent)">${esc(t)}</button>`).join('')}</div>
+        ${c.img ? `<div class="thumb"><img src="${c.img}" alt="Your photo" style="filter:${c.filter ? LOOK_CSS[c.filter] : 'none'}"><button class="icon-btn" data-act="cImgRemove" aria-label="Remove photo">${ico('x')}</button></div>` : ''}
+        <div class="row" style="margin-bottom:6px"><label class="chip" style="color:var(--accent)">${ico('image')} ${c.img ? 'Change photo' : 'Add your photo'}<input type="file" id="cFile" accept="image/*" hidden></label><span class="small muted">Your own photo: +8 originality, +8% quality</span></div>
         <div id="cLive"></div>
       </div></div>
       <div class="opts">
@@ -728,8 +826,11 @@ function renderCompose(focus) {
     <div class="opts" style="border-top:0;padding-top:0"><span class="opt-lbl">Post to</span><div class="scroller">${plats}</div></div>
     ${body}
     ${c.platform === 'live' ? '' : `<div class="compose-foot"><div class="forecast" id="cForecast"></div><button class="btn primary big" id="cPost" data-act="cPost">Post</button></div>`}`;
+  const fileIn = $('#cFile');
+  if (fileIn) fileIn.addEventListener('change', async () => { const f = fileIn.files && fileIn.files[0]; if (!f) return; try { c.img = await resizeImage(f); if (!hasLook(c.format)) c.format = Object.keys(FORMATS).find((k) => FORMATS[k].p === c.platform && hasLook(k)); renderCompose(false); } catch (e) { toast('That file could not be read as an image.', 'bad'); } });
   const ta = $('#cText');
   if (ta) {
+    attachMentions(ta);
     ta.addEventListener('input', () => { c.text = ta.value; updateComposeLive(); });
     ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); ACT_RUN('cPost'); } });
     if (focus) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
@@ -821,13 +922,18 @@ const ACT = {
     const o = composeInput();
     const p = doPost(o);
     if (!p) return 'norender';
-    closeCompose(); c.text = ''; c.toneMode = 'auto'; c.topicManual = false; c.topic = 'niche';
+    closeCompose(); c.text = ''; c.img = null; c.toneMode = 'auto'; c.topicManual = false; c.topic = 'niche';
     tab = 'home'; ui.view = null; ui.hist = []; if (ui.feedTab === 'following') ui.feedTab = 'foryou';
     window.scrollTo({ top: 0 });
     processQueue();
   },
   unlock: (a) => { unlockPlatform(a); if (ui.c && !$('#composeWrap').hidden) { ui.c.platform = a; ui.c.format = null; renderCompose(false); } },
   stream: (a) => { closeCompose(); startStream(a); },
+  cImgRemove: () => { ui.c.img = null; renderCompose(false); return 'norender'; },
+  composeAt: (a) => { openCompose({ text: '@' + a + ' ' }); return 'norender'; },
+  travel: (a) => { if (!needEnergy(25)) return 'norender'; if (!travelTo(a)) { S.energy += 25; return 'norender'; } checkAll(); },
+  teaSpill: (a) => { openCompose({ topic: 'tea:' + a, topicManual: true, text: 'not me finding out that ' }); return 'norender'; },
+  teaDrop: (a) => { S.tea = S.tea.filter((t) => t.id !== +a); changeRep(0.5); toast('Some things stay in the group chat.'); },
   cLook: (a) => { ui.c.filter = a || null; renderCompose(false); return 'norender'; },
   clashSide: (a) => { const [id, side] = a.split(':'); const c = S.clashes.find((x) => x.id === +id); if (!c || c.done || c.side || !needEnergy(5)) return 'norender'; clashSide(c, side); checkAll(); processQueue(); },
   clashPeace: (a) => { const c = S.clashes.find((x) => x.id === +a); if (!c || c.done || c.side || !needEnergy(15)) return 'norender'; if (!clashPeace(c)) toast(`Nobody asked you, said both of them.`, 'bad'); else toast('You got them to hug it out!', 'gold'); checkAll(); },
@@ -836,11 +942,11 @@ const ACT = {
   battle: (a) => { if (!needEnergy(20)) return 'norender'; startBattle(a); processQueue(); },
   like: (a) => {
     const f = S.feed.find((x) => x.id === +a); if (!f || f.liked || !needEnergy(1)) return 'norender';
-    f.liked = true; f.likes++; changeRel(f.npc, 1.5);
+    f.liked = true; f.likes++; if (f.npc) changeRel(f.npc, 1.5);
   },
   repost: (a) => {
     const f = S.feed.find((x) => x.id === +a); if (!f || f.reposted || !needEnergy(2)) return 'norender';
-    f.reposted = true; f.reposts = (f.reposts || 0) + 1; changeRel(f.npc, 2.5); addFollowers(Math.min(S.npcs[f.npc].followers * 0.000004, Math.max(20, totalFollowers() * 0.01)));
+    f.reposted = true; f.reposts = (f.reposts || 0) + 1; if (f.npc) { changeRel(f.npc, 2.5); addFollowers(Math.min(S.npcs[f.npc].followers * 0.000004, Math.max(20, totalFollowers() * 0.01))); }
   },
   npcReply: (a) => {
     const f = S.feed.find((x) => x.id === +a); if (!f || f.commented) return 'norender';
@@ -905,7 +1011,7 @@ const ACT = {
       } else {
         if (kind === 'nice') p += 0.1; if (kind === 'promo') p *= 0.5;
         if (kind === 'funny') p += skillLvl('charisma') * 0.02;
-        if (chance(p)) { changeRel(a, kind === 'promo' ? 1 : 5); if (kind !== 'promo') gainEnergy(4, `${N.name.split(' ')[0]} replied`); say(kind === 'promo' ? pick(['lol I will check it out', 'maybe!']) : kind === 'funny' ? pick(['LMAO', 'ok that was actually funny', 'you are unwell 😂']) : pick(['aw thank you!! that means a lot', 'appreciate you fr', 'omg hi, I actually watch your stuff', 'haha thanks, love what you are doing'])); }
+        if (chance(p)) { changeRel(a, kind === 'promo' ? 1 : 5); if (kind !== 'promo') gainEnergy(4, `${N.name.split(' ')[0]} replied`); if (n.rel >= 30 && chance(0.15)) gainTea(randomNpc((x) => x !== a), `from ${N.name.split(' ')[0]} in DMs`); say(kind === 'promo' ? pick(['lol I will check it out', 'maybe!']) : kind === 'funny' ? pick(['LMAO', 'ok that was actually funny', 'you are unwell 😂']) : pick(['aw thank you!! that means a lot', 'appreciate you fr', 'omg hi, I actually watch your stuff', 'haha thanks, love what you are doing'])); }
         else { changeRel(a, kind === 'promo' ? -2 : 0); toast(`Seen by ${N.name.split(' ')[0]}`); }
       }
       checkAll(); save(); flashDelta(s0, statSnap()); renderAll(); processQueue();
@@ -1024,7 +1130,7 @@ const ACT = {
       case 'replies': unlockedIds().forEach((p) => { S.platforms[p].eng = clamp(S.platforms[p].eng + 0.25, 0.5, 30); }); changeRep(0.4); msg = 'Fans feel seen.'; break;
       case 'giveaway': { const cost = Math.round(Math.max(100, totalFollowers() * 0.01)); S.money -= cost; const g = Math.max(80, totalFollowers() * 0.04) * diffM(); addFollowers(g); S.fake += g * 0.3; S.stats.giveaways++; msg = 'Some of the new followers are clearly bots.'; break; }
       case 'meetup': S.money -= 1000; changeRep(3); addFollowersPct(0.01); S.stats.meetups++; msg = 'Hugs, selfies, and one fan who cried.'; if (!S.team.bodyguard && chance(0.12)) S.queue.push({ ev: 'stalker', ctx: {} }); break;
-      case 'party': { S.money -= 500; const id = randomNpc((x) => !S.npcs[x].feud); changeRel(id, 8); S.stress = clamp(S.stress - 10, 0, 100); msg = `You hit it off with ${npcName(id)}.`; if (chance(0.15)) S.queue.push({ ev: 'paparazzi', ctx: {} }); break; }
+      case 'party': { S.money -= 500; const id = randomNpc((x) => !S.npcs[x].feud); changeRel(id, 8); S.stress = clamp(S.stress - 10, 0, 100); msg = `You hit it off with ${npcName(id)}.`; if (chance(0.5)) gainTea(randomNpc((x) => x !== id), `from ${npcName(id).split(' ')[0]} at the party`); if (chance(0.15)) S.queue.push({ ev: 'paparazzi', ctx: {} }); break; }
     }
     toast(msg); checkAll(); processQueue();
   },
@@ -1046,7 +1152,7 @@ const ACT = {
 };
 
 const NO_FLASH = new Set(['go', 'back', 'open', 'openDm', 'endDay', 'dmSend', 'noop']);
-const SHEET_ONLY = new Set(['cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);
+const SHEET_ONLY = new Set(['cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);
 function ACT_RUN(act, arg = '') {
   if (!S || !ACT[act]) return;
   const before = statSnap();
@@ -1084,13 +1190,14 @@ function showStart() {
     const top = Object.entries(NPCS).sort((a, b) => b[1].followers - a[1].followers).slice(0, 3);
     body = `<div><h1 class="logo">Clout<br><em>Chaser</em></h1><p class="muted" style="font-size:18px;margin-top:14px;max-width:44ch">Sims, but social media. Create a persona, post whatever you want, and see if the internet makes you famous or cancels you.</p></div>
       <div class="preview-card">${top.map(([id, n], i) => `<div class="tw" style="cursor:default${i === 2 ? ';border:0' : ''}">${avatar(n.name, n.color)}<div class="tw-main"><div class="tw-head"><b>${esc(n.name)}</b>${vb()}<span class="h">@${n.handle}</span></div><div class="tw-text">${rich(NPC_POSTS[n.niche][i % 3].replace('{trend}', '#MainCharacterWalk'))}</div><div class="small muted">${fmt(n.followers * 0.03)} likes</div></div></div>`).join('')}</div>
-      <p class="small muted">Includes parody celebrities with tweaked names. They are satire: everything they say and do in the game is invented.</p>
+      <p class="small muted">Includes parody celebrities and companies with tweaked names. They are satire: everything they say and do in the game is invented.</p>
       ${saved ? `<button class="btn primary big" data-act="onbContinue">Continue as @${esc(saved.handle)} · Day ${saved.day}</button><button class="btn big" data-act="onbNext">Create a new persona</button>` : '<button class="btn primary big" data-act="onbNext">Create your persona</button>'}`;
   } else if (o.step === 1) {
     body = `${steps}<div><h2 style="font-size:28px">Who are you online?</h2><p class="muted">This is how you'll show up on everyone's timeline.</p></div>
-      <div class="preview-card"><div style="height:80px;background:linear-gradient(120deg, ${o.color}, #111)"></div><div style="padding:0 16px 16px;margin-top:-24px">${avatar(o.name || 'You', o.color, 'lg')}<div style="margin-top:8px"><b style="font-size:18px" id="pvName">${esc(o.name || 'Your name')}</b><div class="muted" id="pvHandle">@${esc(o.handle || 'handle')}</div></div></div></div>
+      <div class="preview-card"><div style="height:80px;background:linear-gradient(120deg, ${o.color}, #111)"></div><div style="padding:0 16px 16px;margin-top:-24px">${avatar(o.name || 'You', o.color, 'lg', o.faceSeed || o.name)}<div style="margin-top:8px"><b style="font-size:18px" id="pvName">${esc(o.name || 'Your name')}</b><div class="muted" id="pvHandle">@${esc(o.handle || 'handle')}</div></div></div></div>
       <div class="row" style="align-items:flex-start;gap:12px"><label style="flex:1;min-width:180px;display:flex;flex-direction:column;gap:6px"><span class="label">Display name</span><input class="input" id="onbName" maxlength="24" value="${esc(o.name)}"></label>
       <label style="flex:1;min-width:180px;display:flex;flex-direction:column;gap:6px"><span class="label">Handle</span><input class="input" id="onbHandle" maxlength="20" value="${esc(o.handle)}"></label></div>
+      <div class="row"><button class="btn" data-act="onbFace">${ico('dice')} New look</button><label style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:180px"><span class="label">Home country</span><select class="input" id="onbCountry">${Object.entries(COUNTRIES).map(([cc, C]) => `<option value="${cc}" ${cc === (o.country || 'us') ? 'selected' : ''}>${C.flag} ${esc(C.name)}</option>`).join('')}</select></label></div>
       <div><span class="label">Profile color</span><div class="row" style="margin-top:8px">${AVATAR_COLORS.map((c) => `<button class="swatch" style="background:${c}" data-act="onbColor" data-arg="${c}" aria-pressed="${o.color === c}" aria-label="Color ${c}"></button>`).join('')}</div></div>
       <div class="row between"><button class="btn big" data-act="onbBack">Back</button><button class="btn primary big" data-act="onbNext">Next</button></div>`;
   } else if (o.step === 2) {
@@ -1104,7 +1211,8 @@ function showStart() {
   }
   $('#start').hidden = false;
   $('#start').innerHTML = `<div class="onb"><div class="onb-card">${body}</div></div>`;
-  const nm = $('#onbName'), hd = $('#onbHandle');
+  const nm = $('#onbName'), hd = $('#onbHandle'), oc = $('#onbCountry');
+  if (oc) oc.addEventListener('change', () => { o.country = oc.value; });
   const pv = () => { const a = $('#pvName'), b = $('#pvHandle'); if (a) a.textContent = o.name || 'Your name'; if (b) b.textContent = '@' + (o.handle || 'handle'); };
   if (nm) nm.addEventListener('input', () => { o.name = nm.value; if (!o.handleTouched) { o.handle = nm.value.toLowerCase().replace(/[^a-z0-9_.]/g, '').slice(0, 20); hd.value = o.handle; } pv(); });
   if (hd) hd.addEventListener('input', () => { o.handleTouched = true; o.handle = hd.value.replace(/[^a-zA-Z0-9_.]/g, '').slice(0, 20); pv(); });
@@ -1118,8 +1226,9 @@ document.addEventListener('click', (e) => {
   if (act === 'onbColor') o.color = a;
   if (act === 'onbNiche') o.niche = a;
   if (act === 'onbDiff') o.diff = a;
+  if (act === 'onbFace') o.faceSeed = 'face' + Math.random().toString(36).slice(2, 8);
   if (act === 'onbGo') {
-    newGame({ name: (o.name || '').trim() || 'New Creator', handle: (o.handle || '').trim() || 'newcreator' + ri(10, 99), niche: o.niche, diff: o.diff, color: o.color });
+    newGame({ name: (o.name || '').trim() || 'New Creator', handle: (o.handle || '').trim() || 'newcreator' + ri(10, 99), niche: o.niche, diff: o.diff, color: o.color, country: o.country || 'us', faceSeed: o.faceSeed || o.name });
     tab = 'home'; ui.view = null; ui.hist = []; ui.c = null; o.step = 0;
     save(); enterGame(); sound('viral');
     setTimeout(() => openCompose(), 350);
