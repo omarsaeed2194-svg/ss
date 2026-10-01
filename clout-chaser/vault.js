@@ -77,6 +77,7 @@ function vaultDrop(kind) {
   if (D.rep) changeRep(D.rep * sev());
   if (D.stress) S.stress = clamp(S.stress + D.stress, 0, 100);
   v.lastDrop = S.day;
+  if (S.challenge && !S.challenge.done && S.challenge.req.vault) completeChallenge();
   S.stats.vaultDrops = (S.stats.vaultDrops || 0) + 1;
   addXp('creativity', 8);
   if (D.leak && chance(D.leak) && !S.queue.some((q) => q.ev === 'vault_leak')) S.queue.push({ ev: 'vault_leak', ctx: {} });

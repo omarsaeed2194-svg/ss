@@ -410,8 +410,13 @@ function spinCard() {
 }
 function challengeCard() {
   const ch = S.challenge; if (!ch) return '';
-  return `<div class="challenge ${ch.done ? 'done' : ''}">${ico(ch.done ? 'star' : 'sparkle', 'ico-lg')}<div style="flex:1;min-width:0"><div class="small muted">Daily creative challenge · +20 energy, +2% followers</div><b>${esc(ch.text)}</b></div>${ch.done ? '<span class="pill good">Done</span>' : btn('Start', 'compose', '', 'sm blue')}</div>`;
+  const rw = challengeReward(ch);
+  const go = ch.req.stunt ? btn('Go', 'go', 'danger', 'sm blue') : ch.req.vault ? btn('Open', 'compose', 'vault', 'sm blue') : btn('Start', 'compose', '', 'sm blue');
+  const label = `${ch.hard ? '<span class="pill like">Hard</span> ' : ''}${ch.food ? '<span class="pill warn">Food blog</span> ' : ''}Daily challenge · +${rw.e} energy, +${Math.round(rw.fp * 100)}% followers${rw.cash ? `, +${money(rw.cash)}` : ''}`;
+  const reroll = !ch.done && S.flags.rerollDay !== S.day ? `<button class="btn sm" data-act="rerollChallenge" title="Swap for a different challenge (once a day)">${ico('dice')} 5</button>` : '';
+  return `<div class="challenge ${ch.done ? 'done' : ''} ${ch.food ? 'food' : ''}">${ico(ch.done ? 'star' : 'sparkle', 'ico-lg')}<div style="flex:1;min-width:0"><div class="small muted">${label}</div><b>${esc(ch.text)}</b></div>${ch.done ? '<span class="pill good">Done</span>' : `<div class="row" style="flex-wrap:nowrap">${reroll}${go}</div>`}</div>`;
 }
+
 
 /* ---------- Home ---------- */
 function vHome() {
@@ -650,7 +655,7 @@ function vDanger() {
   return `<div class="col-head">${head('Danger Zone', 'High risk, high reward. Every choice here has consequences.')}</div>
     <div class="sect">${injured() ? `<div class="hint" style="border:1px solid var(--bad)">${ico('heartp')} Injured until day ${S.injuredUntil}: max energy is cut by 40%.</div>` : ''}
       <div class="row between"><h3>${ico('fire')} Stunts ${S.stuntStreak ? `<span class="pill gold">Daredevil streak ×${S.stuntStreak} · prizes ×${stuntStreakX().toFixed(2)}</span>` : ''}${stuntsToday() ? `<span class="pill warn">Stunt #${stuntsToday() + 1} today: prizes ×${stuntNumb().toFixed(2)}</span>` : ''}</h3><span class="small muted">Stress raises the odds of failure. A bodyguard and a lawyer lower them.</span></div>
-      <div class="cards">${Object.entries(STUNTS).map(([id, st]) => `<div class="card danger-card"><div class="t"><span>${st.name}</span><span class="pill blue">${st.e} energy</span></div><span class="small muted">${esc(st.desc)}</span><div class="row">${odds(stuntOdds(id))}<span class="pill gold">Win ~${money(stuntPrize(id).cash)} · +${Math.round(stuntPrize(id).fp * 100)}% followers</span></div><span class="small gold">Viral: ×2.5 cash, ×2 followers · Jackpot (${Math.round((0.06 + st.risk * 0.12) * 100)}%): ×3 cash</span><span class="small">If it fails: ${{ injury: 'injury, hospital bill, low energy for days', crash: 'crash, injury, massive backlash', arrest: 'arrest, fine, lost day', burnout: 'collapse, huge stress', backlash: 'public outrage, possible cancellation' }[st.harm]}</span>${btn('Do it', 'dzStunt', id, 'sm danger', S.energy < st.e || S.hackedUntil >= S.day)}</div>`).join('')}</div></div>
+      ${Object.entries(STUNT_TIERS).map(([tk, [tn, td]]) => `<div class="tier-h ${tk}"><b>${tn}</b><span class="small muted">${td}</span></div><div class="cards">${Object.entries(STUNTS).filter(([, st]) => st.tier === tk).map(([id, st]) => `<div class="card danger-card ${tk === 'extreme' ? 'extreme' : ''}"><div class="t"><span>${st.name}</span><span class="pill blue">${st.e} energy</span></div><span class="small muted">${esc(st.desc)}</span><div class="row">${odds(stuntOdds(id))}<span class="pill gold">Win ~${money(stuntPrize(id).cash)} · +${Math.round(stuntPrize(id).fp * 100)}% followers</span></div><span class="small gold">Viral: ×2.5 cash, ×2 followers · Jackpot (${Math.round((0.06 + st.risk * 0.12) * 100)}%): ×3 cash</span><span class="small">If it fails: ${{ injury: 'injury, hospital bill, low energy for days', food: st.tier === 'extreme' ? 'ambulance, 3 days of low energy' : 'food poisoning, a day of low energy', crash: 'crash, injury, massive backlash', arrest: 'arrest, fine, lost day', burnout: 'collapse, huge stress', backlash: 'public outrage, possible cancellation' }[st.harm]}</span>${btn('Do it', 'dzStunt', id, 'sm danger', S.energy < st.e || S.hackedUntil >= S.day)}</div>`).join('')}</div>`).join('')}</div>
     <div class="sect"><div class="row between"><h3>${ico('brief')} Shady schemes</h3><span class="pill ${ic}">Investigation: ${il} (${Math.round(S.investigation || 0)})</span></div>
       <div class="hint">Schemes take money from your own fans. They pay right away, but every one raises the investigation meter, and getting exposed means refunds, fines, suspensions, mass unfollows and possibly getting cancelled. Scammed fans will be in your inbox. ${S.scamTake ? `So far you've taken ${money(S.scamTake)}.` : ''}</div>
       <div class="cards">${Object.entries(SCHEMES).map(([id, sc]) => `<div class="card danger-card"><div class="t"><span>${sc.name}</span><span class="pill blue">${sc.e} energy</span></div><span class="small muted">${esc(sc.desc)}</span><div class="row">${odds(schemeOdds(id))}<span class="pill gold">~${money(Math.max(40, totalFollowers() * realRatio() * sc.cut * clamp(S.rep / 60, 0.3, 1.4)))}</span></div>${btn('Run it', 'dzScheme', id, 'sm danger', S.energy < sc.e || S.hackedUntil >= S.day)}</div>`).join('')}</div></div>`;
@@ -1068,6 +1073,7 @@ const ACT = {
   stream: (a) => { closeCompose(); startStream(a); },
   dzStunt: (a) => { if (!needEnergy(STUNTS[a].e)) return 'norender'; doStunt(a); checkAll(); processQueue(); },
   dzScheme: (a) => { if (!needEnergy(SCHEMES[a].e)) return 'norender'; doScheme(a); checkAll(); processQueue(); },
+  rerollChallenge: () => { if (S.flags.rerollDay === S.day || !needEnergy(5)) return 'norender'; S.flags.rerollDay = S.day; const old = S.challenge.text; for (let i = 0; i < 8 && S.challenge.text === old; i++) newChallenge(); toast('New challenge rolled.'); },
   cAff: () => { ui.c.aff = !ui.c.aff; renderCompose(false); return 'norender'; },
   cPoll: () => { ui.c.pollOn = !ui.c.pollOn; renderCompose(false); return 'norender'; },
   cCross: () => { ui.c.cross = !ui.c.cross; renderCompose(false); return 'norender'; },

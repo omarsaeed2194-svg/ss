@@ -12,6 +12,22 @@ const STUNTS = {
   nosleep:  { name: '48-hour no-sleep stream',   e: 40, risk: 0.35, harm: 'burnout', boost: 0.06, desc: 'Chat keeps you awake. Your body does not consent.' },
   hoax:     { name: 'Fake your disappearance',   e: 25, risk: 0.65, harm: 'backlash', boost: 0.12, desc: 'Go silent, let fans panic, reappear with a "comeback video".' },
 };
+/* Tiers: low risk pays small but steady, extreme risk pays a fortune (and hurts like one) */
+Object.values(STUNTS).forEach((s) => { s.tier = s.tier || 'mid'; });
+Object.assign(STUNTS, {
+  icebath:   { tier: 'low', name: 'Ice bath challenge',         e: 8,  risk: 0.07, harm: 'injury', boost: 0.02,  desc: 'Three minutes in ice water, live. Your scream is the content.' },
+  bungee:    { tier: 'low', name: 'Bungee jump (with a pro)',   e: 12, risk: 0.06, harm: 'injury', boost: 0.03,  desc: 'Certified instructor, triple-checked cord. Still, you\'re falling off a bridge.' },
+  busk:      { tier: 'low', name: 'Busk in Times Square',       e: 10, risk: 0.1,  harm: 'arrest', boost: 0.025, desc: 'Sing for strangers without a permit. Cops might ask questions.' },
+  steak:     { tier: 'low', name: '72oz steak challenge',       e: 12, risk: 0.12, harm: 'food',   boost: 0.03,  desc: 'Finish it in an hour and it\'s free. Your stomach signs no waiver.' },
+  mystery:   { tier: 'low', name: 'Mystery street food tour',   e: 10, risk: 0.14, harm: 'food',   boost: 0.035, desc: 'Ten stalls, no menu, point at whatever smells best. Food bloggers live for this.' },
+  gauntlet:  { tier: 'extreme', name: 'Spiciest food gauntlet', e: 25, risk: 0.55, harm: 'food',   boost: 0.15, desc: 'Ten dishes, each hotter than the last, ending with the Reaper wing. Paramedics on standby.' },
+  skydive:   { tier: 'extreme', name: 'Solo skydive, first time', e: 30, risk: 0.6, harm: 'crash', boost: 0.2, desc: 'No instructor. You watched a tutorial. Twice.' },
+  sharks:    { tier: 'extreme', name: 'Swim with sharks, no cage', e: 30, risk: 0.62, harm: 'injury', boost: 0.22, desc: 'The guide says they\'re "mostly chill". Mostly.' },
+  wedding:   { tier: 'extreme', name: 'Crash a celebrity wedding', e: 25, risk: 0.6, harm: 'arrest', boost: 0.18, desc: 'Sneak in as a waiter, film the first dance, try to catch the bouquet.' },
+  tower:     { tier: 'extreme', name: 'Free-climb a skyscraper',  e: 35, risk: 0.72, harm: 'crash', boost: 0.28, desc: '90 floors, bare hands, a GoPro on your head. The most dangerous thing in this game.' },
+});
+const STUNT_TIERS = { low: ['Low risk', 'Safer stunts, smaller prizes. Food bloggers start here.'], mid: ['Risky', 'Real danger, real payouts.'], extreme: ['Extreme', 'Huge prizes. Huge chance it goes very wrong.'] };
+
 /* Schemes: money now, consequences later. risk feeds the investigation meter. */
 const SCHEMES = {
   spamlinks: { name: 'Spam scam links in replies', e: 8,  cut: 0.012, risk: 0.18, rep: -3, desc: '"Click to claim your prize 🎁" links in your own replies. Fans who click lose money.' },
@@ -42,7 +58,7 @@ const stuntStreakX = () => 1 + Math.min(5, S.stuntStreak || 0) * 0.25;
 const stuntsToday = () => (S.flags.stuntDay === S.day ? S.flags.stuntN || 0 : 0);
 const stuntNumb = () => Math.pow(0.6, stuntsToday()); // the audience gets numb to a second stunt in one day
 function stuntPrize(id, viral = false) {
-  const st = STUNTS[id], k = 1 + st.risk * 4;
+  const st = STUNTS[id], k = (1 + st.risk * 4 + (st.tier === 'extreme' ? st.risk * 6 : 0)) * (st.tier === 'low' ? 0.35 : 1);
   return {
     cash: Math.round(Math.max(800, totalFollowers() * 0.08) * k * (viral ? 2.5 : 1) * stuntStreakX() * stuntNumb() / 50) * 50,
     fp: st.boost * 2 * (viral ? 2 : 1) * stuntStreakX() * stuntNumb(),
@@ -65,6 +81,7 @@ function doStunt(id) {
     if (jackpot) cash *= 3;
     fx = { fp: prize.fp, money: cash, heat: id === 'hoax' ? 25 : id === 'driving' ? 15 : 6, rep: id === 'driving' || id === 'hoax' ? -3 : 1 };
     S.stuntStreak = (S.stuntStreak || 0) + 1;
+    if (S.challenge && !S.challenge.done && S.challenge.req.stunt && (S.challenge.req.stunt === st.tier)) completeChallenge();
     S.stats.stuntWins = (S.stats.stuntWins || 0) + 1;
     S.stats.stuntCash = (S.stats.stuntCash || 0) + cash;
     title = jackpot ? `${st.name}: JACKPOT` : viral ? `${st.name}: it went VIRAL` : `${st.name}: you pulled it off`;
@@ -88,9 +105,16 @@ function doStunt(id) {
       const days = st.harm === 'crash' ? 5 : ri(2, 4);
       S.injuredUntil = S.day + days; S.flags.hospital = S.day;
       title = st.harm === 'crash' ? 'You crashed' : 'You got hurt';
-      text = st.harm === 'crash' ? `You crashed the car. You're alive, with a broken arm. ${days} days of reduced energy, and the internet is furious that you filmed it.` : `Hospital. Stitches. ${days} days of reduced energy. Some fans are sending love, others are sending "I told you so".`;
+      text = st.harm === 'crash' ? `${{ skydive: 'Your chute opened late. You landed in a cornfield with a broken leg.', tower: 'You slipped on floor 61 and a window-cleaning platform caught you. Broken ribs.' }[id] || 'You crashed the car. You\'re alive, with a broken arm.'} ${days} days of reduced energy, and the internet is furious that you filmed it.` : `Hospital. Stitches. ${days} days of reduced energy. Some fans are sending love, others are sending "I told you so".`;
       fx = st.harm === 'crash' ? { money: pay(8000), rep: -12, heat: 30, fp: -0.03 } : { money: pay(2000), fp: 0.01, stress: 15 };
-      news(st.harm === 'crash' ? `@${S.handle} crashes while filming at high speed` : `@${S.handle} hospitalized after ${st.name.toLowerCase()} stunt`, true);
+      news(st.harm === 'crash' ? `@${S.handle} ${{ skydive: 'injured in botched solo skydive', tower: 'rescued from skyscraper mid-climb' }[id] || 'crashes while filming at high speed'}` : `@${S.handle} hospitalized after ${st.name.toLowerCase()} stunt`, true);
+    } else if (st.harm === 'food') {
+      const days = st.tier === 'extreme' ? 3 : 1;
+      S.injuredUntil = S.day + days;
+      title = st.tier === 'extreme' ? 'Ambulance on dish seven' : 'Food poisoning';
+      text = st.tier === 'extreme' ? `You collapsed after the Reaper wing. ${days} days of reduced energy. The clip of you crying into a glass of milk has its own fan edits.` : 'You spent the night hugging a toilet. A day of reduced energy, but "I survived" posts do numbers.';
+      fx = st.tier === 'extreme' ? { money: pay(3000), stress: 20, fp: 0.02, rep: -1 } : { money: pay(150), stress: 10, fp: 0.005 };
+      news(`@${S.handle} ${st.tier === 'extreme' ? 'hospitalized after spicy food gauntlet' : 'gets food poisoning on camera'}`, true);
     } else if (st.harm === 'arrest') {
       S.flags.mugshot = S.day; S.day += 1; S.lastPostDay = S.day;
       title = 'You got arrested';

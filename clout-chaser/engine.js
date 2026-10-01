@@ -609,11 +609,7 @@ function doPost(o) {
   if (post.comms.some((c) => c.npc && !c.neg)) gainEnergy(5, 'A star replied to you');
   if (r.orig >= 85) gainEnergy(4, 'That was original');
   if (S.challenge && !S.challenge.done && challengeMet(S.challenge.req, o, r, post)) {
-    S.challenge.done = true; S.stats.challenges = (S.stats.challenges || 0) + 1;
-    addFollowersPct(0.02 * diffM());
-    notify('system', null, `Daily challenge complete: ${S.challenge.text}`);
-    log(`Daily challenge complete: ${S.challenge.text}.`, 'gold');
-    gainEnergy(20, 'Daily challenge complete');
+    completeChallenge();
   }
 
   // Deal progress
@@ -665,12 +661,43 @@ function newChallenge() {
     { text: 'Ask your followers a question in an Educational post', req: { tone: 'educational', question: true } },
     { text: `Post a Polished ${FORMATS[fm].name}`, req: { format: fm, effort: 'polished' } },
   ];
+  // food blogging and bigger, harder challenges
+  const FOOD = 'food|eat|ate|dish|taste|tasty|recipe|restaurant|burger|pizza|ramen|sushi|taco|brunch|chef|cook|bake|delicious|yum';
+  opts.push(
+    { text: 'Food blog: review a dish and score it out of 10 (like "8/10")', req: { kw: '\\b\\d{1,2}\\s*/\\s*10\\b' }, hard: true, food: true },
+    { text: 'Food blog: share a recipe in an Educational post', req: { tone: 'educational', kw: 'recipe|ingredient|cook|bake|minutes|oven|stir' }, food: true },
+    { text: 'Food blog: hype a restaurant or street food spot with #foodie', req: { kw: '#foodie' }, food: true },
+    { text: 'Food blog: post a Funny food take', req: { tone: 'funny', kw: FOOD }, food: true },
+    { text: 'Run a poll with 3 or more options', req: { poll: 3 } },
+    { text: 'Get double your usual views on one post', req: { viewsX: 2 }, hard: true },
+    { text: 'Pull off a low-risk stunt in the Danger Zone', req: { stunt: 'low' } },
+    { text: 'Survive an EXTREME stunt in the Danger Zone', req: { stunt: 'extreme' }, hard: true },
+  );
+  if (S.platforms.vault && S.platforms.vault.unlocked) opts.push({ text: 'Drop something new on FanVault', req: { vault: true } });
   const live = (S.clashes || []).filter((c) => !c.done);
   if (live.length) { const c = pick(live); opts.push({ text: `Post about the ${NPCS[c.a].name} vs ${NPCS[c.b].name} clash`, req: { clash: c.id } }); }
   const ch = pick(opts);
   S.challenge = { ...ch, day: S.day, done: false };
 }
+/* Challenge rewards: hard ones pay cash and more followers */
+function challengeReward(ch = S.challenge) { return ch && ch.hard ? { fp: 0.04, e: 30, cash: Math.round(Math.max(300, totalFollowers() * 0.012) / 10) * 10 } : { fp: 0.02, e: 20, cash: ch && ch.food ? Math.round(Math.max(100, totalFollowers() * 0.004) / 10) * 10 : 0 }; }
+function completeChallenge() {
+  const ch = S.challenge; if (!ch || ch.done) return;
+  const rw = challengeReward(ch);
+  ch.done = true; S.stats.challenges = (S.stats.challenges || 0) + 1;
+  if (ch.food) S.stats.foodChallenges = (S.stats.foodChallenges || 0) + 1;
+  addFollowersPct(rw.fp * diffM());
+  if (rw.cash) { S.money += rw.cash; S.stats.earned += rw.cash; }
+  notify('system', null, `Daily challenge complete: ${ch.text}`);
+  log(`Daily challenge complete: ${ch.text}${rw.cash ? ` (+${money(rw.cash)})` : ''}.`, 'gold');
+  gainEnergy(rw.e, 'Daily challenge complete');
+  if (ch.hard && typeof celebrate === 'function') celebrate('gold');
+}
 function challengeMet(q, o, r, post) {
+  if (q.stunt || q.vault) return false; // completed elsewhere
+  if (q.kw && !new RegExp(q.kw, 'i').test(o.caption || '')) return false;
+  if (q.poll && !(post.poll && post.poll.opts.length >= q.poll)) return false;
+  if (q.viewsX) { const prev = S.posts.slice(1, 11); const avg = prev.length ? prev.reduce((a, p) => a + p.views, 0) / prev.length : 1e9; if (prev.length < 3 || r.views < avg * q.viewsX) return false; }
   if (q.tone && o.tone !== q.tone) return false;
   if (q.format && o.format !== q.format) return false;
   if (q.effort && o.effort !== q.effort) return false;
