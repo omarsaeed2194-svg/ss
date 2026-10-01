@@ -228,6 +228,7 @@ const TEAM = {
   assistant: { name: 'Personal assistant', pay: 60,  req: 1000,  desc: '+20 max energy every day.' },
   editor:    { name: 'Video editor',       pay: 120, req: 5000,  desc: 'Video posts cost 20% less energy and get +10% quality.' },
   manager:   { name: 'Talent manager',     pay: 80,  req: 10000, desc: 'Deals pay 25% more and arrive more often.' },
+  socialmgr: { name: 'Social media manager', pay: 150, req: 2000, desc: 'Runs your accounts on autopilot: films and posts for you every day, replies to comments, and books small paid promos. Posts, money and achievements roll in while you sleep.' },
   smm:       { name: 'Community manager',  pay: 70,  req: 20000, desc: 'Replies to fans daily. Engagement drifts up.' },
   pr:        { name: 'PR agent',           pay: 150, req: 50000, desc: 'Heat cools twice as fast. Scandal damage cut by 40%.' },
   therapist: { name: 'On-call therapist',  pay: 90,  req: 20000, desc: '−12 stress every day.' },

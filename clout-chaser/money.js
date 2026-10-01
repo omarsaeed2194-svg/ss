@@ -188,3 +188,77 @@ const MONEY_ACT = {
   frame: (a) => { const f = FRAMES[a]; S.frames = S.frames || []; if (!S.frames.includes(a)) { if (!spend(f.price)) { toast('Not enough money.', 'bad'); return 'norender'; } S.frames.push(a); } S.frame = S.frame === a ? null : a; },
   banner: (a) => { const b = BANNERS[a]; S.banners = S.banners || []; if (!S.banners.includes(a)) { if (!spend(b.price)) { toast('Not enough money.', 'bad'); return 'norender'; } S.banners.push(a); } S.banner = S.banner === a ? null : a; },
 };
+
+/* ---------- replying to fans (Life action and the social media manager) ---------- */
+function replyToComments(max = 10) {
+  const todo = [];
+  for (const p of S.posts.slice(0, 8)) for (const c of p.comms || []) if (!c.mine && !c.npc && !c.co && todo.length < max) todo.push(c);
+  const KIND = ['thank you!! means a lot 🥹', 'you get it ❤️', 'love you for this', 'ok you made my day', 'facts 😂', 'saving this comment forever', 'you\'re the reason I post', 'stop you\'re too sweet', 'hahaha exactly', 'more coming soon 👀'];
+  const WITTY = ['noted, ignored 💅', 'and yet you watched till the end', 'thanks for the engagement bestie', 'I\'ll pray for your wifi', 'cute take, wrong though'];
+  let pos = 0, neg = 0;
+  todo.forEach((c, i) => { if (c.neg) { c.mine = pick(WITTY); neg++; } else { c.mine = KIND[i % KIND.length]; pos++; } c.likes = (c.likes || 0) + ri(1, 12); });
+  const n = todo.length;
+  unlockedIds().forEach((p) => { S.platforms[p].eng = clamp(S.platforms[p].eng + 0.1 + n * 0.03, 0.5, 30); });
+  if (n) changeRep(0.2 + pos * 0.06 - neg * 0.05);
+  if (neg) S.heat = clamp(S.heat + neg, 0, 100);
+  if (n) addFollowers(Math.max(2, totalFollowers() * 0.0006 * n) * diffM());
+  if (n && (S.superfans || []).length && chance(0.4)) { const sf = pick(S.superfans); sf.count += 2; notify('reply', sf.handle, 'you replied to me!!! screenshotting this forever'); }
+  return { n, pos, neg };
+}
+
+/* ---------- social media manager: runs your accounts on autopilot ---------- */
+const MGR_STYLES = {
+  safe:  { name: 'Brand-safe', tones: ['authentic', 'wholesome', 'educational'], desc: 'Steady growth, reputation up, brands love it.' },
+  funny: { name: 'Funny',      tones: ['funny', 'authentic'], desc: 'Memes and bits. Good reach, low risk.' },
+  edgy:  { name: 'Edgy',       tones: ['funny', 'ragebait'], desc: 'Hot takes for reach. More views, more heat.' },
+};
+function mgrInit() { if (!S.mgr) S.mgr = { style: 'safe', posts: 2, total: 0, earned: 0, last: [] }; return S.mgr; }
+function mgrPost() {
+  const m = mgrInit();
+  const plats = postIds(); if (!plats.length) return null;
+  const platform = pick(plats);
+  const fmts = Object.keys(FORMATS).filter((f) => FORMATS[f].p === platform); if (!fmts.length) return null;
+  const topics = topicsFor().filter((t) => !t.deal && !t.tea && !t.clash && t.id !== 'hot' && !String(t.id).startsWith('diss'));
+  const trend = topics.find((t) => t.trend && chance(0.6));
+  const topic = trend || pick(topics.filter((t) => t.id === 'niche' || t.id === 'personal' || t.id === 'bts' || t.id === 'pet' || t.id === 'travel').concat(topics.slice(0, 1)));
+  const tone = pick(MGR_STYLES[m.style].tones);
+  const o = { platform, format: pick(fmts), topic: topic.id, tone: TONES[tone] ? tone : 'authentic', effort: 'normal', time: 'prime', tags: S.trends.slice(0, 2).map((x) => x.tag), caption: '', disclose: true, intents: {}, mgr: true };
+  const e0 = S.energy, s0 = S.stress, r = computePost(o, true);
+  S.energy = Math.max(S.energy, 0) + r.energy; // the manager films it, not you
+  const before = S.posts[0];
+  S._autopilot = true;
+  try { doPost(o); } finally { delete S._autopilot; }
+  S.energy = e0; S.stress = s0;
+  const post = S.posts[0];
+  if (!post || post === before) return null;
+  post.byMgr = true;
+  m.total++;
+  return post;
+}
+function mgrTick(lines) {
+  if (!S.team.socialmgr) return;
+  const m = mgrInit();
+  const n = m.posts;
+  let views = 0, gain = 0, cash = 0, viral = 0;
+  for (let i = 0; i < n; i++) { const p = mgrPost(); if (p) { views += p.views; gain += p.gain; cash += p.cash; if (p.viral) viral++; } }
+  const rep = replyToComments(6);
+  // small paid promos the manager books for you
+  const promo = Math.round(Math.max(170, totalFollowers() * realRatio() * 0.005 * clamp(S.rep / 60, 0.3, 1.4)) * (1 + skillLvl('business') * 0.05));
+  S.money += promo; S.stats.earned += promo; m.earned += promo + cash;
+  m.last = [S.day, n, Math.round(views), Math.round(gain), Math.round(cash + promo), rep.n, viral];
+  lines.push([`Your manager posted ${n}× (${fmt(views)} views, ${signed(Math.round(gain))} followers${viral ? `, ${viral} viral!` : ''}) and replied to ${rep.n} fans`, 0]);
+  lines.push(['Manager-booked promos', promo]);
+  checkAll();
+}
+function mgrPanel() {
+  const m = mgrInit(), L = m.last;
+  return `<div class="mgr"><span class="opt-lbl">Posting style</span><div class="scroller">${Object.entries(MGR_STYLES).map(([k, st]) => chip(st.name, 'mgrStyle', k, m.style === k)).join('')}</div>
+    <span class="small muted">${MGR_STYLES[m.style].desc}</span>
+    <span class="opt-lbl">Posts per day</span><div class="scroller">${[1, 2, 3].map((k) => chip(`${k} post${k > 1 ? 's' : ''}`, 'mgrPosts', k, m.posts === k)).join('')}</div>
+    ${L.length ? `<span class="small">Last night: ${L[1]} posts · ${fmt(L[2])} views · ${signed(L[3])} followers · ${money(L[4])} earned · ${L[5]} replies${L[6] ? ` · <span class="gold">${L[6]} viral</span>` : ''}</span>` : '<span class="small muted">Starts working tonight when you sleep.</span>'}
+    <span class="small muted">All-time: ${fmt(m.total)} posts · ${money(m.earned)} earned</span></div>`;
+}
+Object.assign(MONEY_ACT, {
+  mgrStyle: (a) => { mgrInit().style = a; },
+  mgrPosts: (a) => { mgrInit().posts = +a; },
+});

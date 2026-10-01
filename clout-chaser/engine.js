@@ -162,7 +162,7 @@ function addFollowersPct(pct) {
 function spend(n) { if (S.money < n) return false; S.money -= n; return true; }
 /* Good things give you a second wind. Every reward shows up as an energy burst in the UI. */
 function gainEnergy(n, reason) {
-  if (!S || n <= 0) return 0;
+  if (!S || n <= 0 || S._autopilot) return 0; // manager posts at night don't charge you
   const before = S.energy;
   S.energy = Math.min(energyCap(), S.energy + n);
   const got = Math.round(S.energy - before);
@@ -811,6 +811,7 @@ function endDay() {
   // Tube passive ad revenue from the back catalog
   const tube = S.platforms.tube;
   if (tube.unlocked && tube.followers >= 1000) { const ad = Math.round(tube.followers * 0.02 * PLATFORMS.tube.cpm / 10 * realRatio()); if (ad) { S.money += ad; S.stats.earned += ad; lines.push(['ViewTube back-catalog ads', ad]); } }
+  if (typeof mgrTick === 'function') mgrTick(lines);
   if (typeof vaultTick === 'function') vaultTick(lines);
   if (typeof moneyTick === 'function') moneyTick(lines);
   // Organic growth / decay
