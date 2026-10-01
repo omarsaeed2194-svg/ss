@@ -44,33 +44,62 @@ const BANNERS = {
 
 /* ---------- markets ---------- */
 const ASSETS = {
-  wld:   { name: 'World Index',  tick: 'WLD',  price: 100,  vol: 0.012, drift: 0.0007 },
-  pear:  { name: 'Pear Inc.',    tick: 'PEAR', price: 180,  vol: 0.028, drift: 0.0009 },
-  tezla: { name: 'Tezla',        tick: 'TZLA', price: 240,  vol: 0.055, drift: 0.0008 },
-  nflx:  { name: 'Netflux',      tick: 'NFLX', price: 90,   vol: 0.032, drift: 0.0006 },
-  clt:   { name: 'CloutCoin',    tick: 'CLT',  price: 1.2,  vol: 0.13,  drift: 0.001 },
+  wld:   { name: 'World Index', tick: 'WLD',  price: 100, vol: 0.012, drift: 0.004, div: 0.0012, desc: 'Steady. Pays a daily dividend.' },
+  pear:  { name: 'Pear Inc.',   tick: 'PEAR', price: 180, vol: 0.025, drift: 0.005, div: 0.0006, desc: 'Blue chip with a dividend.' },
+  tezla: { name: 'Tezla',       tick: 'TZLA', price: 240, vol: 0.05,  drift: 0.007, desc: 'Wild swings, big runs.' },
+  nflx:  { name: 'Netflux',     tick: 'NFLX', price: 90,  vol: 0.03,  drift: 0.006, div: 0.0005, desc: 'Moves on hit shows.' },
+  clt:   { name: 'CloutCoin',   tick: 'CLT',  price: 1.2, vol: 0.12,  drift: 0.012, desc: 'Pure chaos. Can 10x or go to zero.' },
 };
 const MARKET_NEWS = [
-  ['tezla', 0.14, 'Elon Tusk posts "rocket go up". Tezla rallies.'], ['tezla', -0.16, 'A Cybertruck window shatters on live TV. Tezla slides.'],
-  ['pear', 0.09, 'Pear 17 preorders sell out in an hour.'], ['pear', -0.08, 'Pear 17 is "the same, but more". Analysts yawn.'],
-  ['nflx', 0.12, 'Netflux\'s new true-crime doc breaks records.'], ['nflx', -0.1, 'Netflux cancels the show everyone liked.'],
-  ['clt', 0.45, 'A mega-influencer shills CloutCoin. It moons.'], ['clt', -0.5, 'CloutCoin dev wallet dumps. Chaos.'],
-  ['wld', -0.06, 'Markets wobble on rate fears.'], ['wld', 0.05, 'Strong jobs report lifts everything.'],
+  ['tezla', 0.14, 'Elon Tusk posts "rocket go up". Tezla rallies.'], ['tezla', -0.12, 'A Cybertruck window shatters on live TV. Tezla slides.'],
+  ['pear', 0.09, 'Pear 17 preorders sell out in an hour.'], ['pear', -0.06, 'Pear 17 is "the same, but more". Analysts yawn.'],
+  ['nflx', 0.12, 'Netflux\'s new true-crime doc breaks records.'], ['nflx', -0.08, 'Netflux cancels the show everyone liked.'],
+  ['clt', 0.45, 'A mega-influencer shills CloutCoin. It moons.'], ['clt', -0.35, 'CloutCoin dev wallet dumps. Chaos.'],
+  ['wld', -0.04, 'Markets wobble on rate fears.'], ['wld', 0.05, 'Strong jobs report lifts everything.'],
 ];
-function marketInit() {
-  if (S.market) return;
-  S.market = { p: {}, h: {}, q: {}, c: {} };
-  for (const [k, a] of Object.entries(ASSETS)) { S.market.p[k] = a.price; S.market.h[k] = [a.price]; S.market.q[k] = 0; S.market.c[k] = 0; }
+const TIPSTERS = ['@WallStBets_Wendy', '@ChartWizard', '@DiamondHandsDan', '@Finfluencer_Fiona', '@InsiderIvy', '@TheCandleGuy'];
+/* Tomorrow's whisper: a tip about a big move. Reliability grows with business skill and a talent manager. */
+const tipAccuracy = () => clamp(0.6 + skillLvl('business') * 0.03 + (S.team.manager ? 0.08 : 0), 0.6, 0.92);
+function newTip() {
+  const k = pick(Object.keys(ASSETS)), up = chance(0.6);
+  S.market.tip = { k, up, who: pick(TIPSTERS), size: k === 'clt' ? rnd(0.25, 0.6) : rnd(0.07, 0.18) };
 }
-function marketTick() {
-  marketInit();
+function marketInit() {
+  if (!S.market) S.market = { p: {}, h: {}, q: {}, c: {} };
   const m = S.market;
+  for (const [k, a] of Object.entries(ASSETS)) { if (m.p[k] == null) { m.p[k] = a.price; m.h[k] = [a.price]; m.q[k] = 0; m.c[k] = 0; } }
+  m.trend = m.trend || {};
+  if (!m.tip) newTip();
+}
+function marketTick(lines) {
+  marketInit();
+  const m = S.market, before = holdingsValue();
   let headline = null;
+  // yesterday's tip plays out (usually)
+  const tip = m.tip;
+  if (tip) {
+    const right = chance(tipAccuracy());
+    m.p[tip.k] *= 1 + (tip.up === right ? 1 : -1) * tip.size;
+    m.lastTip = { ...tip, right };
+  }
   if (chance(0.25)) { const [k, shock, h] = pick(MARKET_NEWS); m.p[k] *= 1 + shock * rnd(0.6, 1.2); headline = h; news(`Markets: ${h}`); }
   for (const [k, a] of Object.entries(ASSETS)) {
+    // momentum: bull and bear runs last a few days
+    if (m.trend[k] == null || chance(0.18)) m.trend[k] = +(rnd(-1, 1) + 0.25).toFixed(2);
     const g = (Math.random() + Math.random() + Math.random() - 1.5) * 1.4;
-    m.p[k] = Math.max(0.01, m.p[k] * (1 + a.drift + a.vol * g));
+    m.p[k] = Math.max(0.01, m.p[k] * (1 + a.drift + a.vol * (g * 0.8 + m.trend[k] * 0.6)));
     m.h[k].push(+m.p[k].toFixed(4)); if (m.h[k].length > 40) m.h[k].shift();
+  }
+  // dividends
+  let div = 0; for (const [k, a] of Object.entries(ASSETS)) if (a.div && m.q[k] > 0) div += m.q[k] * m.p[k] * a.div;
+  div = Math.round(div);
+  if (div) { S.money += div; S.stats.earned += div; }
+  newTip();
+  if (lines) {
+    const dv = Math.round(holdingsValue() - before);
+    if (before > 1 || dv) lines.push([`Portfolio ${dv >= 0 ? 'up' : 'down'} ${money(Math.abs(dv))} overnight`, 0]);
+    if (div) lines.push(['Stock dividends', div]);
+    if (m.lastTip && before > 1) lines.push([`Tip from ${m.lastTip.who} was ${m.lastTip.right ? 'right ✅' : 'wrong ❌'}`, 0]);
   }
   return headline;
 }
@@ -129,7 +158,7 @@ function moneyTick(lines) {
   // pet
   if (S.owned.pet) S.stress = clamp(S.stress - 3, 0, 100);
   // markets
-  const h = marketTick();
+  const h = marketTick(lines);
   if (h && Object.values(S.market.q).some((q) => q > 0)) lines.push([`Markets: ${h}`, 0]);
   // gigs
   const t = totalFollowers(), ti = tierIndex();
@@ -167,10 +196,13 @@ function vMoney() {
       ${inc.length ? `<div class="bars">${inc.map(([k, v]) => `<div class="bar-row"><span class="small" title="${esc(k)}">${esc(k.split(' (')[0])}</span><div class="track"><i style="width:${(v / maxI) * 100}%;background:var(--gold)"></i></div><span class="n">${money(v)}</span></div>`).join('')}</div>` : '<p class="small muted">Sleep once to see where your money comes from.</p>'}</div>
     <div class="sect"><div class="row between"><h3>${ico('lock')} FanVault</h3>${vaultOn() ? `<span class="pill blue">${fmt(vaultSubs())} subscribers</span>` : ''}</div>
       ${vaultOn() ? `<span class="small muted">${money(vaultSubs() * vaultInit().price * vaultCut() / 30)}/day from subscriptions at $${vaultInit().price}/mo · ${money(vaultInit().earned)} lifetime · ${fmt(vaultInit().ppvSold)} pay-per-view unlocks</span><div>${btn(`${ico('feather')} Open FanVault`, 'compose', 'vault', 'sm blue')}</div>` : t >= PLATFORMS.vault.unlock ? `<p class="small muted">A paid-subscription platform: fans pay monthly for exclusive drops. Big money, nervous brands.</p><div>${btn('Join FanVault', 'unlock', 'vault', 'primary')}</div>` : `<span class="small muted">${ico('lock')} Unlocks at ${fmt(PLATFORMS.vault.unlock)} followers.</span>`}</div>
-    <div class="sect"><h3>${ico('chart')} Markets</h3><span class="small muted">Prices move every night. News moves them a lot. Not financial advice, but definitely financial chaos.</span>
-      ${Object.entries(ASSETS).map(([k, a]) => { const p = m.p[k], h = m.h[k], ch = h.length > 1 ? (p / h[h.length - 2] - 1) * 100 : 0, own = m.q[k] * p, pl = (p - m.c[k]) * m.q[k];
-        return `<div class="asset"><div style="min-width:0"><b>${a.tick}</b> <span class="small muted">${a.name}</span><div class="num">${p < 10 ? '$' + p.toFixed(3) : money(p)} <span class="${ch >= 0 ? 'good' : 'bad'} small">${ch >= 0 ? '▲' : '▼'} ${Math.abs(ch).toFixed(1)}%</span></div>${own > 0.5 ? `<div class="small">You own ${money(own)} <span class="${pl >= 0 ? 'good' : 'bad'}">(${pl >= 0 ? '+' : '−'}${money(Math.abs(pl))})</span></div>` : ''}</div>${sparkline(h)}<div class="row" style="justify-content:flex-end">${[[100, '$100'], [1000, '$1K'], [10000, '$10K']].map(([v, l]) => btn(`+${l}`, 'buy$', `${k}:${v}`, 'sm', S.money < v, `Buy ${money(v)}`)).join('')}${own > 0.5 ? btn('Sell ½', 'sell$', `${k}:0.5`, 'sm', false, 'Sell half') + btn('Sell all', 'sell$', `${k}:1`, 'sm danger') : ''}</div></div>`; }).join('')}
-      ${S.stats.tradeProfit ? `<span class="small ${S.stats.tradeProfit >= 0 ? 'good' : 'bad'}">Realized trading P&L: ${S.stats.tradeProfit >= 0 ? '+' : '−'}${money(Math.abs(S.stats.tradeProfit))}</span>` : ''}</div>
+    <div class="sect"><div class="row between"><h3>${ico('chart')} Markets</h3><span class="small muted">Portfolio ${money(holdingsValue())}${S.stats.tradeProfit ? ` · realized <span class="${S.stats.tradeProfit >= 0 ? 'good' : 'bad'}">${S.stats.tradeProfit >= 0 ? '+' : '−'}${money(Math.abs(S.stats.tradeProfit))}</span>` : ''}</span></div>
+      ${m.tip ? `<div class="tip"><span class="small muted">Tonight's whisper · ${Math.round(tipAccuracy() * 100)}% reliable</span><b>${esc(m.tip.who)}: "${ASSETS[m.tip.k].tick} is about to ${m.tip.up ? 'rip 🚀' : 'tank 📉'}"</b><span class="small muted">${m.tip.up ? 'Buy before you sleep to ride it.' : 'Sell before you sleep to dodge it.'} Business skill and a talent manager make tips more reliable.</span>${m.lastTip ? `<span class="small">Last tip (${ASSETS[m.lastTip.k].tick}) was ${m.lastTip.right ? '<span class="good">right</span>' : '<span class="bad">wrong</span>'}.</span>` : ''}</div>` : ''}
+      <span class="small muted">Prices move every night, with bull and bear runs that last a few days. The index, Pear and Netflux pay daily dividends.</span>
+      ${Object.entries(ASSETS).map(([k, a]) => { const p = m.p[k], h = m.h[k], ch = h.length > 1 ? (p / h[h.length - 2] - 1) * 100 : 0, own = m.q[k] * p, pl = (p - m.c[k]) * m.q[k], tr = m.trend[k] || 0;
+        const amts = [[100, '$100'], [1000, '$1K'], [10000, '$10K']].filter(([v]) => v <= Math.max(100, S.money));
+        return `<div class="asset"><div style="min-width:0"><b>${a.tick}</b> <span class="small muted">${a.name}</span> ${tr > 0.4 ? '<span class="pill good">Bull run</span>' : tr < -0.4 ? '<span class="pill bad">Bear run</span>' : ''}${a.div ? ` <span class="pill gold">${(a.div * 100).toFixed(2)}%/day div</span>` : ''}<div class="num">${p < 10 ? '$' + p.toFixed(3) : money(p)} <span class="${ch >= 0 ? 'good' : 'bad'} small">${ch >= 0 ? '▲' : '▼'} ${Math.abs(ch).toFixed(1)}%</span></div>${own > 0.5 ? `<div class="small">You own ${money(own)} <span class="${pl >= 0 ? 'good' : 'bad'}">(${pl >= 0 ? '+' : '−'}${money(Math.abs(pl))})</span></div>` : `<div class="small muted">${a.desc}</div>`}</div>${sparkline(h)}<div class="row" style="justify-content:flex-end">${amts.map(([v, l]) => btn(`+${l}`, 'buy$', `${k}:${v}`, 'sm', S.money < v, `Buy ${money(v)}`)).join('')}${S.money >= 400 ? btn('+25%', 'buy$', `${k}:pct25`, 'sm', false, 'Invest 25% of your cash') : ''}${S.money >= 100 ? btn('All in', 'buy$', `${k}:all`, 'sm', false, 'Invest all your cash') : ''}${own > 0.5 ? btn('Sell ½', 'sell$', `${k}:0.5`, 'sm', false, 'Sell half') + btn('Sell all', 'sell$', `${k}:1`, 'sm danger') : ''}</div></div>`; }).join('')}
+    </div>
     <div class="sect"><h3>${ico('brief')} Online course</h3>${S.course ? `<span class="small">Sold ${fmt(S.course.sold)} copies at $49 · hype ×${(S.course.hype || 1).toFixed(1)}</span><div>${btn('Promote it · 15', 'coursePush', '', 'sm', S.energy < 15)}</div>` : t >= 50000 ? `<p class="small muted">"How I Went Viral (And You Can Too)". $49, sells every day.</p><div>${btn('Record and launch · $15,000', 'courseLaunch', '', 'primary', S.money < 15000)}</div>` : `<span class="small muted">${ico('lock')} Unlocks at 50K followers.</span>`}</div>
     <div class="sect"><h3>More ways to earn</h3><div class="small muted" style="display:flex;flex-direction:column;gap:4px">
       <span>• FanVault: fans pay monthly for exclusive drops; pay-per-view posts and custom videos pay big.</span>
@@ -181,7 +213,7 @@ function vMoney() {
 }
 
 const MONEY_ACT = {
-  'buy$': (a) => { const [k, v] = a.split(':'); if (!buyAsset(k, +v)) toast('Not enough cash.', 'bad'); },
+  'buy$': (a) => { const [k, v] = a.split(':'); const amt = v === 'all' ? Math.floor(S.money) : v === 'pct25' ? Math.floor(S.money * 0.25) : +v; if (!buyAsset(k, amt)) toast('Not enough cash.', 'bad'); },
   'sell$': (a) => { const [k, f] = a.split(':'); const g = sellAsset(k, +f); toast(`${g >= 0 ? 'Profit' : 'Loss'}: ${money(Math.abs(g))}`, g >= 0 ? 'gold' : 'bad'); },
   courseLaunch: () => { if (!spend(15000)) return 'norender'; S.course = { sold: 0, hype: 3 }; news(`@${S.handle} launches an online course. The comments are divided.`, true); toast('Course launched. Sales arrive every night.', 'gold'); },
   coursePush: () => { if (!needEnergy(15)) return 'norender'; S.course.hype += 1.5; toast('Course promo posted.'); },
