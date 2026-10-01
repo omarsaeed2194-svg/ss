@@ -198,3 +198,49 @@ Object.assign(EVENTS, {
     ],
   },
 });
+
+/* ---------- Spicy moves: celebrity-style drama for clout (PG-13) ---------- */
+const spicyStar = () => randomNpc((id) => !S.npcs[id].feud) || pick(Object.keys(NPCS));
+const spicyRival = () => { const f = Object.keys(S.npcs).filter((id) => S.npcs[id].feud); return f.length ? pick(f) : randomNpc(); };
+const SPICY = {
+  showmance: { name: 'Fake a showmance with a star', e: 20, risk: 0.3, pay: '+8% followers, a paid couple shoot',
+    desc: 'Hold hands at a café, "accidentally" get photographed. Both your follower counts explode.',
+    win: (n) => ({ t: `You and ${npcName(n)} are the internet's new favorite couple`, x: 'The blurry café photos broke the timeline. A brand paid for your first "couple shoot".', fx: { fp: 0.08, money: Math.round(Math.max(1500, T() * 0.02)), rel: { [n]: 10 }, heat: 8 } }),
+    lose: (n) => ({ t: 'The showmance contract leaked', x: `A PDF titled "${npcName(n)} x @${S.handle} — 6 week arrangement" is everywhere. Clause 4: "must look in love at brunch".`, fx: { rep: -8, heat: 25, fp: 0.01, rel: { [n]: -15 } } }) },
+  burner: { name: 'Troll rivals with a burner account', e: 10, risk: 0.35, pay: 'Rival bleeds followers, you get tea',
+    desc: 'A secret account that leaves "just asking questions" comments on your rival\'s posts.',
+    win: (n) => { S.npcs[n].followers *= 0.97; gainTea(n, 'from your burner\'s DMs'); return { t: 'The burner is working', x: `${npcName(n)}'s comments are a mess and nobody knows it's you. Your burner even got a juicy DM.`, fx: { fp: 0.01, heat: 3 } }; },
+    lose: (n) => { S.stats.cancels++; return { t: 'Your burner got unmasked', x: `An internet detective matched your burner's typos to yours. Screenshots side by side. ${npcName(n)}'s fans are furious.`, fx: { rep: -12, heat: 35, fp: -0.04, rel: { [n]: -25 } } }; } },
+  diss: { name: 'Drop a diss track on a rival', e: 25, risk: 0.35, pay: '+10% followers, streaming money',
+    desc: 'Three minutes of bars about your rival. Producer charges in exposure.',
+    win: (n) => ({ t: 'The diss track is #1 on Chirp', x: `"${npcName(n).split(' ')[0]} Fell Off" is the song of the week. Streams are paying out.`, fx: { fp: 0.1, money: Math.round(Math.max(800, T() * 0.015)), heat: 15, rel: { [n]: -20 } } }),
+    lose: (n) => ({ t: 'The diss track is cringe', x: `People are reacting to it like a horror movie. ${npcName(n)} replied with one emoji: 😐.`, fx: { rep: -4, heat: 12, fp: 0.02, rel: { [n]: -8 } } }) },
+  breakup: { name: 'Stage a public breakup', e: 15, risk: 0.3, pay: '+6% followers, sympathy tips',
+    desc: 'A tearful "we\'ve decided to go our separate ways" video. Ring light, slow piano.',
+    win: () => ({ t: 'The breakup video made everyone cry', x: 'Fans are sending love, tips and soup recipes. The algorithm loves heartbreak.', fx: { fp: 0.06, money: Math.round(Math.max(500, T() * 0.008)), stress: -5 } }),
+    lose: () => ({ t: 'You were spotted together the next day', x: 'Paparazzi caught you two laughing at brunch 18 hours later. "Separate ways" is now a meme.', fx: { rep: -6, heat: 18, fp: 0.01 } }) },
+  stage: { name: 'Crash an award show stage', e: 30, risk: 0.45, pay: '+15% followers, headlines worldwide',
+    desc: 'Grab the mic mid-speech: "I\'mma let you finish, but…"',
+    win: (n) => ({ t: 'The stage crash is the moment of the night', x: `You took ${npcName(n)}'s mic and the crowd ROARED. Half the internet hates you. All of it knows your name.`, fx: { fp: 0.15, heat: 30, rep: -3, rel: { [n]: -15 } } }),
+    lose: () => { S.day += 1; S.lastPostDay = S.day; return { t: 'Security tackled you on live TV', x: 'Escorted out, banned from the venue, a night in a holding cell and a mugshot meme. You lost a day.', fx: { rep: -8, heat: 25, fp: 0.02, money: -Math.round(Math.max(1500, S.money * 0.04)), legal: true } }; } },
+  villa: { name: 'Join Love Villa (reality dating show)', e: 60, risk: 0.4, pay: '+20% followers, appearance fee', min: 5000,
+    desc: 'Five weeks in a villa with 12 singles, cameras everywhere, and a host who loves drama.',
+    win: () => ({ t: 'You were the fan favorite on Love Villa', x: 'You won hearts, got a catchphrase, and walked out with an appearance fee and a book deal offer.', fx: { fp: 0.2, money: Math.round(Math.max(5000, T() * 0.03)), rep: 3, stress: 15 } }),
+    lose: () => ({ t: 'You got the villain edit', x: 'The show cut you to look like a scheming monster. Villains still trend though.', fx: { fp: 0.09, money: Math.round(Math.max(2500, T() * 0.015)), rep: -10, heat: 30, stress: 25 } }) },
+  paidbeef: { name: 'Get paid to start a fake feud', e: 12, risk: 0.3, pay: 'Big brand cash, +5% followers',
+    desc: 'A soda brand pays you to pick a fight with a rival brand\'s ambassador. Scripted, of course.',
+    win: (n) => ({ t: 'The soda war is ON', x: `You and ${npcName(n)} traded shots all week. Both brands' sales spiked and your check cleared.`, fx: { money: Math.round(Math.max(3000, T() * 0.05)), fp: 0.05, heat: 15, rel: { [n]: -5 } } }),
+    lose: (n) => ({ t: 'The fake feud script leaked', x: `"Line 12: act genuinely offended." Both brands dropped you and ${npcName(n)}.`, fx: { rep: -10, heat: 25, money: Math.round(Math.max(1000, T() * 0.01)) } }) },
+};
+const spicyOdds = (id) => clamp(SPICY[id].risk * (1 + Math.max(0, S.stress - 50) / 120) * (S.team.pr ? 0.8 : 1) * (id === 'villa' || id === 'stage' ? 1 : (1 - skillLvl('charisma') * 0.02)), 0.05, 0.85);
+function doSpicy(id) {
+  const sp = SPICY[id];
+  S.stats.spicy = (S.stats.spicy || 0) + 1;
+  S.stress = clamp(S.stress + 6, 0, 100);
+  const n = id === 'burner' || id === 'diss' ? spicyRival() : spicyStar();
+  const fail = chance(spicyOdds(id));
+  const o = fail ? sp.lose(n) : sp.win(n);
+  if (!fail) { news(`@${S.handle}: ${o.t}`, true); if (typeof celebrate === 'function' && (o.fx.fp || 0) >= 0.08) celebrate('viral'); sound('viral'); }
+  else { news(`@${S.handle}: ${o.t}`, true); sound('bad'); }
+  S.queue.unshift({ ev: '_dz', ctx: { title: o.t, text: o.x, fx: o.fx, eyebrow: `Spicy move · ${sp.name}` } });
+}

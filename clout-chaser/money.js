@@ -59,7 +59,7 @@ const MARKET_NEWS = [
 ];
 const TIPSTERS = ['@WallStBets_Wendy', '@ChartWizard', '@DiamondHandsDan', '@Finfluencer_Fiona', '@InsiderIvy', '@TheCandleGuy'];
 /* Tomorrow's whisper: a tip about a big move. Reliability grows with business skill and a talent manager. */
-const tipAccuracy = () => clamp(0.6 + skillLvl('business') * 0.03 + (S.team.manager ? 0.08 : 0), 0.6, 0.92);
+const tipAccuracy = () => clamp(0.6 + skillLvl('business') * 0.03 + (S.team.manager ? 0.08 : 0) + (S.team.investor ? 0.1 : 0), 0.6, 0.95);
 function newTip() {
   const k = pick(Object.keys(ASSETS)), up = chance(0.6);
   S.market.tip = { k, up, who: pick(TIPSTERS), size: k === 'clt' ? rnd(0.25, 0.6) : rnd(0.07, 0.18) };
@@ -132,7 +132,7 @@ function makeGig(kind, extra = {}) {
     license:    { subject: 'License your viral clip', body: 'A media company wants to license your viral clip for a compilation.', pay: Math.max(200, extra.views ? extra.views * 0.0006 : t * 0.01), e: 0 },
     cameo:      { subject: 'Movie cameo', body: 'A director wants you for a 10-second cameo as "influencer #2".', pay: Math.max(5000, t * 0.05), e: 35, stress: 10, rep: 1, fp: 0.02 },
   }[kind];
-  mail({ type: 'gig', kind, from: kind === 'license' ? 'ClipVault Media' : kind === 'cameo' ? 'Paramountain Pictures' : kind === 'keynote' ? 'GrowthCon' : kind === 'appearance' ? 'Club Neon' : '@' + fanHandle(), subject: G.subject, body: G.body, pay: Math.round(G.pay / 5) * 5, e: G.e, stress: G.stress || 0, rep: G.rep || 0, fp: G.fp || 0 });
+  mail({ type: 'gig', kind, from: kind === 'license' ? 'ClipVault Media' : kind === 'cameo' ? 'Paramountain Pictures' : kind === 'keynote' ? 'GrowthCon' : kind === 'appearance' ? 'Club Neon' : '@' + fanHandle(), subject: G.subject, body: G.body, pay: Math.round(G.pay * (S.team.agent ? 1.3 : 1) / 5) * 5, e: G.e, stress: G.stress || 0, rep: G.rep || 0, fp: G.fp || 0 });
 }
 function acceptGig(m) {
   if (S.energy < m.e) { toast(`You need ${m.e} energy for this gig.`, 'bad'); return false; }
@@ -158,14 +158,16 @@ function moneyTick(lines) {
   // pet
   if (S.owned.pet) S.stress = clamp(S.stress - 3, 0, 100);
   // markets
+  if (S.team.investor) investorTick(lines);
   const h = marketTick(lines);
   if (h && Object.values(S.market.q).some((q) => q > 0)) lines.push([`Markets: ${h}`, 0]);
   // gigs
   const t = totalFollowers(), ti = tierIndex();
-  if (t >= 800 && chance(0.25 + ti * 0.05)) makeGig('shoutout');
-  if (t >= 10000 && chance(0.12 + ti * 0.03)) makeGig('appearance');
-  if (t >= 100000 && chance(0.08)) makeGig('keynote');
-  if (t >= 1e6 && chance(0.05)) makeGig('cameo');
+  const gx = S.team.agent ? 1.6 : 1;
+  if (t >= 800 && chance((0.25 + ti * 0.05) * gx)) makeGig('shoutout');
+  if (t >= 10000 && chance((0.12 + ti * 0.03) * gx)) makeGig('appearance');
+  if (t >= 100000 && chance(0.08 * gx)) makeGig('keynote');
+  if (t >= 1e6 && chance(0.05 * gx)) makeGig('cameo');
   S.lastIncome = lines.filter(([, v]) => v > 0);
 }
 function consumeSpecial(k) {
@@ -294,3 +296,25 @@ Object.assign(MONEY_ACT, {
   mgrStyle: (a) => { mgrInit().style = a; },
   mgrPosts: (a) => { mgrInit().posts = +a; },
 });
+
+/* ---------- money manager: invests for you every night ---------- */
+function invInit() { if (!S.inv) S.inv = { pct: 0.25, reserve: 1000, made: 0 }; return S.inv; }
+function investorTick(lines) {
+  marketInit();
+  const v = invInit(), m = S.market, tip = m.tip;
+  // dodge a predicted drop
+  if (tip && !tip.up && m.q[tip.k] > 0) { sellAsset(tip.k, 1); lines.push([`Money manager sold ${ASSETS[tip.k].tick} ahead of a predicted drop`, 0]); }
+  const spare = Math.floor((S.money - v.reserve) * v.pct);
+  if (spare >= 50) {
+    const k = tip && tip.up ? tip.k : 'wld';
+    buyAsset(k, spare);
+    lines.push([`Money manager invested ${money(spare)} in ${ASSETS[k].tick}${tip && tip.up ? ' (hot tip)' : ' (index)'}`, 0]);
+  }
+}
+function invPanel() {
+  const v = invInit();
+  return `<div class="mgr"><span class="opt-lbl">Invest each night</span><div class="scroller">${[0, 0.1, 0.25, 0.5].map((p) => chip(p ? `${p * 100}% of spare cash` : 'Pause', 'invPct', p, v.pct === p)).join('')}</div>
+    <span class="opt-lbl">Always keep in cash</span><div class="scroller">${[500, 1000, 5000, 25000].map((r) => chip(money(r), 'invRes', r, v.reserve === r)).join('')}</div>
+    <span class="small muted">Portfolio ${money(holdingsValue())} · tips ${Math.round(tipAccuracy() * 100)}% reliable. They buy the stock from tonight's tip if it's a rise, otherwise the index, and sell ahead of predicted drops.</span></div>`;
+}
+Object.assign(MONEY_ACT, { invPct: (a) => { invInit().pct = +a; }, invRes: (a) => { invInit().reserve = +a; } });

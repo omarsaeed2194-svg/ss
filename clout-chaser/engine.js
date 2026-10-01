@@ -133,9 +133,10 @@ function gearQ(pid) {
   for (const it of SHOP) if (S.owned[it.id] && it.q && (!it.plats || it.plats.includes(pid))) q += it.q;
   if (S.owned.drone && S.niche === 'travel' && (pid === 'tube' || pid === 'clipz')) q += 0.1;
   if (S.team.editor && (pid === 'clipz' || pid === 'tube' || pid === 'pix')) q += 0.1;
+  if (S.team.stylist && pid !== 'chirp') q += 0.06;
   return Math.min(q, 0.45); // gear helps, but talent still matters
 }
-function reachBonus() { let r = 0; for (const it of SHOP) if (S.owned[it.id] && it.reach) r += it.reach; return r; }
+function reachBonus() { let r = S.team.analyst ? 0.08 : 0; for (const it of SHOP) if (S.owned[it.id] && it.reach) r += it.reach; return r; }
 function repLabel(r = S.rep) { return r >= 85 ? 'Beloved' : r >= 68 ? 'Respected' : r >= 50 ? 'Liked' : r >= 35 ? 'Mixed' : r >= 20 ? 'Sketchy' : 'Toxic'; }
 function repClass(r = S.rep) { return r >= 60 ? 'good' : r >= 35 ? 'warn' : 'bad'; }
 function heatLabel(h = S.heat) { return h >= 85 ? 'Imploding' : h >= 60 ? 'Scorching' : h >= 35 ? 'Heated' : h >= 12 ? 'Buzzing' : 'Calm'; }
@@ -308,7 +309,7 @@ function computePost(o, det = false) {
   const FL = hasLook(o.format) && o.filter && FILTERS[o.filter] ? FILTERS[o.filter] : null;
   const lookMatch = !!FL && o.filter === S.aesthetic;
   const energy = Math.max(2, Math.round(F.e * E.e * (S.team.editor && F.video ? 0.8 : 1)) + (FL && FL.e ? FL.e : 0));
-  const orig = Math.min(100, originality(o.caption) + (o.img ? 8 : 0)); // your own photo counts as original
+  const orig = Math.min(100, originality(o.caption) + (o.img ? 8 : 0) + (S.team.ghostwriter && (o.caption || '').trim() ? 12 : 0)); // your own photo counts as original
   let q = E.q * (1 + 0.07 * (skillLvl(F.skill) - 1)) * (1 + gearQ(o.platform));
   if (T.skill) q *= 1 + 0.03 * (skillLvl(T.skill) - 1);
   if (S.stress > 70) q *= 0.85;
@@ -796,7 +797,7 @@ function endDay() {
   let upkeep = 0; for (const it of SHOP) if (S.owned[it.id] && it.upkeep) upkeep += it.upkeep;
   if (salaries) { S.money -= salaries; lines.push(['Team payday (monthly salaries)', -salaries]); }
   if (upkeep) { S.money -= upkeep; lines.push(['Lifestyle upkeep', -upkeep]); }
-  const fameTax = [0, 10, 45, 160, 550, 1600, 6500, 26000][tierIndex()];
+  const fameTax = Math.round([0, 10, 45, 160, 550, 1600, 6500, 26000][tierIndex()] * (S.team.accountant ? 0.5 : 1));
   if (fameTax) { S.money -= fameTax; lines.push(['Cost of fame (rent, stylist, security)', -fameTax]); }
   // Passive businesses
   const t = totalFollowers(); const repF = clamp(S.rep / 60, 0.2, 1.6);
@@ -812,7 +813,7 @@ function endDay() {
     S.product.hype = Math.max(1, (S.product.hype || 1) * 0.9); S.product.sold += units;
     S.money += profit; S.stats.earned += profit; if (profit) lines.push([`${S.product.name} sales`, profit]);
   }
-  if (S.savings > 0) { const i = Math.round(S.savings * 0.0006); S.savings += i; if (i) lines.push(['Savings interest', i]); }
+  if (S.savings > 0) { const i = Math.round(S.savings * 0.0006 * (S.team.accountant ? 2 : 1)); S.savings += i; if (i) lines.push(['Savings interest', i]); }
   // Tube passive ad revenue from the back catalog
   const tube = S.platforms.tube;
   if (tube.unlocked && tube.followers >= 1000) { const ad = Math.round(tube.followers * 0.02 * PLATFORMS.tube.cpm / 10 * realRatio()); if (ad) { S.money += ad; S.stats.earned += ad; lines.push(['ViewTube back-catalog ads', ad]); } }
@@ -865,6 +866,11 @@ function endDay() {
   S.trends = S.trends.filter((tr) => S.day - tr.born < tr.life);
   while (S.trends.length < 5) addTrend();
   rollAlgo();
+  if (S.team.analyst) {
+    const best = postIds().sort((a, b) => (S.algo[b] || 1) - (S.algo[a] || 1))[0], tr = S.trends.find((x) => x.niches.includes(S.niche)) || S.trends[0];
+    if (best) notify('system', null, `Analyst: ${PLATFORMS[best].name} is hottest today (×${(S.algo[best] || 1).toFixed(2)}). Ride ${tr ? tr.tag : 'a trend'} before it peaks.`);
+  }
+  if (S.team.stylist) changeRep(0.15);
   S.energy = Math.round(maxEnergy() * (S.stress >= 80 ? 0.7 : 1)) + streakBonus;
   generateInbox();
   // Burnout

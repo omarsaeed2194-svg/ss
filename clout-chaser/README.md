@@ -105,6 +105,11 @@ A sixth platform, unlocked at 1K followers. Fans pay monthly for exclusive drops
 - Subscriptions pay every night (you keep 80%, or 92% with your own app). No drop for 3+ days and subscribers start cancelling.
 - Events: leaked sets, whale tippers, brands reviewing your deal, your aunt subscribing, copycat resellers, platform policy panics.
 
+## More team and spicy moves
+
+- New hires: **Data analyst** (+8% reach, a daily tip on the hottest platform and trend), **Ghostwriter** (+12 originality), **Money manager** (auto-invests part of your spare cash every night, follows tips, sells ahead of predicted drops, tips +10% reliable), **Stylist** (+6% photo/video quality, small daily reputation boost), **Booking agent** (60% more gigs, 30% more pay), **Accountant** (half the cost of fame, double savings interest).
+- **Spicy moves** in the Danger Zone: fake a showmance with a star, troll rivals with a burner account, drop a diss track, stage a public breakup, crash an award show stage, join the Love Villa reality dating show, or get paid to start a fake feud. Each has odds, a payoff and a messy way to fail.
+
 ## Danger Zone
 
 - **Stunts** (rooftop selfie, public prank, world's hottest pepper, filming while speeding, posing with a "tame" tiger, urban exploring, a 48-hour no-sleep stream, faking your own disappearance) can go hugely viral, or go wrong. You can get injured (hospital bill, max energy cut by 40% for days), arrested (fine, a lost day, a mugshot meme), collapse from burnout, or face public outrage. Stress raises the odds of failure; a bodyguard and a lawyer lower them. Afterwards you can post a "hospital update" or "own the mugshot" for sympathy and reach.
