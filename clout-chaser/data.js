@@ -226,15 +226,15 @@ const COURSES = {
 
 /* pay is a MONTHLY salary, paid every 30 days from the hire date */
 const TEAM = {
-  assistant: { name: 'Personal assistant', pay: 400,  req: 1000,  desc: '+20 max energy every day.' },
-  editor:    { name: 'Video editor',       pay: 800, req: 5000,  desc: 'Video posts cost 20% less energy and get +10% quality.' },
-  manager:   { name: 'Talent manager',     pay: 600,  req: 10000, desc: 'Deals pay 25% more and arrive more often.' },
-  socialmgr: { name: 'Social media manager', pay: 900, req: 2000, desc: 'Runs your accounts on autopilot: films and posts for you every day, replies to comments, and books small paid promos. Posts, money and achievements roll in while you sleep.' },
-  smm:       { name: 'Community manager',  pay: 500,  req: 20000, desc: 'Replies to fans daily. Engagement drifts up.' },
-  pr:        { name: 'PR agent',           pay: 1000, req: 50000, desc: 'Heat cools twice as fast. Scandal damage cut by 40%.' },
-  therapist: { name: 'On-call therapist',  pay: 600,  req: 20000, desc: '−12 stress every day.' },
-  lawyer:    { name: 'Entertainment lawyer', pay: 1400, req: 100000, desc: 'Halves fines, wins most copyright disputes.' },
-  bodyguard: { name: 'Bodyguard',          pay: 700, req: 250000, desc: 'Handles stalkers and paparazzi scuffles.' },
+  assistant: { name: 'Personal assistant', pay: 130,  req: 1000,  desc: '+20 max energy every day.' },
+  editor:    { name: 'Video editor',       pay: 270, req: 5000,  desc: 'Video posts cost 20% less energy and get +10% quality.' },
+  manager:   { name: 'Talent manager',     pay: 200,  req: 10000, desc: 'Deals pay 25% more and arrive more often.' },
+  socialmgr: { name: 'Social media manager', pay: 300, req: 2000, desc: 'Runs your accounts on autopilot: films and posts for you every day, replies to comments, and books small paid promos. Posts, money and achievements roll in while you sleep.' },
+  smm:       { name: 'Community manager',  pay: 170,  req: 20000, desc: 'Replies to fans daily. Engagement drifts up.' },
+  pr:        { name: 'PR agent',           pay: 330, req: 50000, desc: 'Heat cools twice as fast. Scandal damage cut by 40%.' },
+  therapist: { name: 'On-call therapist',  pay: 200,  req: 20000, desc: '−12 stress every day.' },
+  lawyer:    { name: 'Entertainment lawyer', pay: 470, req: 100000, desc: 'Halves fines, wins most copyright disputes.' },
+  bodyguard: { name: 'Bodyguard',          pay: 230, req: 250000, desc: 'Handles stalkers and paparazzi scuffles.' },
 };
 
 const TIERS = [
