@@ -164,7 +164,7 @@ function cashOut(bid) {
 function liveBox(f) {
   const bets = S.book.bets.filter((b) => b.fid === f.id && b.status === 'open');
   return `<div class="livebox" id="live-${f.id}"><div class="score"><span>${esc(teamName(f.h))}</span><b>${f.hg} – ${f.ag}</b><span>${esc(teamName(f.a))}</span></div>
-    <div class="row between"><span class="pill like">● LIVE ${Math.min(f.min, 90)}'${f.min > 90 ? ` +${f.min - 90}` : ''}</span><div class="minbar"><i style="width:${Math.min(100, f.min / 0.9)}%"></i></div></div>
+    ${typeof pitchSvg === 'function' ? pitchSvg(f) : ''}<div class="row between"><span class="pill like">● LIVE ${Math.min(f.min, 90)}'${f.min > 90 ? ` +${f.min - 90}` : ''}</span><div class="minbar"><i style="width:${Math.min(100, f.min / 0.9)}%"></i></div></div>
     <div class="feedlines">${(f.feed || []).map((l) => `<span class="small">${esc(l)}</span>`).join('') || '<span class="small muted">Kick-off!</span>'}</div>
     ${bets.map((b) => `<div class="row between"><span class="small">${esc(PICK_LABEL(f, b.pick))} · ${money(b.stake)} @ ${b.odds}</span>${btn(`Cash out ${money(cashoutValue(b, f))}`, 'betCash', b.id, 'sm primary')}</div>`).join('')}</div>`;
 }
@@ -191,7 +191,8 @@ function playSlots(bet) {
   else if (r.some((s) => s[0] === '🍒')) mult = 0.4;
   const won = Math.round(bet * mult);
   S.money += won;
-  ui.slot = { reels: r.map((s) => s[0]), won, bet };
+  ui.slot = { reels: r.map((s) => s[0]), won, bet, fresh: true };
+  setTimeout(() => { if (ui.slot) ui.slot.fresh = false; }, 1200);
   casinoResult(bet, won, 'slots');
 }
 const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
@@ -202,7 +203,8 @@ function playRoulette(kind, bet) {
   const mult = { red: 2, black: 2, even: 2, odd: 2, low: 2, high: 2, zero: 36, lucky: 36 }[kind] * (kind === 'zero' || kind === 'lucky' ? worldMult('casino') : 1);
   const won = hit ? Math.round(bet * mult) : 0;
   S.money += won;
-  ui.wheel = { n, color: n === 0 ? 'green' : RED.has(n) ? 'red' : 'black', won, bet };
+  ui.wheel = { n, color: n === 0 ? 'green' : RED.has(n) ? 'red' : 'black', won, bet, fresh: true };
+  setTimeout(() => { if (ui.wheel) ui.wheel.fresh = false; }, 1600);
   casinoResult(bet, won, 'roulette');
 }
 let crashTimer = null;
@@ -323,7 +325,7 @@ function vArena() {
   else if (tabK === 'casino') body = casinoBody();
   else body = passBody();
   return `<div class="col-head">${head('Arena', 'Bets, casino and your season pass. Game money only.')}${tabsBar([['book', '⚽ Sportsbook'], ['casino', '🎰 Casino'], ['pass', '🎟️ Clout Pass']], tabK, 'arenaTab')}</div>
-    <div class="sect">${top}</div>${body}`;
+    ${top ? `<div class="sect">${top}</div>` : ''}${body}`;
 }
 function stakeBtns(act, arg) {
   const v = [10, 100, 1000, 10000, 100000].filter((x) => x <= Math.max(10, S.money));
@@ -354,11 +356,11 @@ function casinoBody() {
   const C = S.casino || { wagered: 0, net: 0, today: 0, best: 0 };
   const s = ui.slot, w = ui.wheel;
   return `<div class="sect"><div class="row between"><h3>🎰 Clout Slots</h3><span class="small muted">👑👑👑 pays 500×${worldMult('casino') > 1 ? ' (×2 this week!)' : ''}</span></div>
-      <div class="reels">${(s ? s.reels : ['❔', '❔', '❔']).map((r) => `<span>${r}</span>`).join('')}</div>
+      <div class="reels ${s && s.fresh ? 'spin' : ''}">${(s ? s.reels : ['❔', '❔', '❔']).map((r, i) => `<span style="--d:${i * 0.18}s"><b>${r}</b></span>`).join('')}</div>
       ${s ? `<span class="small ${s.won > s.bet ? 'good' : s.won ? 'warn' : 'bad'}">${s.won ? `Won ${money(s.won)}` : 'No win'} on a ${money(s.bet)} spin</span>` : '<span class="small muted">Three of a kind pays big. Cherries give a little back.</span>'}
       ${stakeBtns('slots', '')}</div>
     <div class="sect"><h3>🎡 Roulette</h3>
-      <div class="row">${w ? `<span class="rball ${w.color}">${w.n}</span><span class="small ${w.won ? 'good' : 'bad'}">${w.won ? `Won ${money(w.won)}` : `Lost ${money(w.bet)}`}</span>` : '<span class="small muted">Pick a bet type and a stake.</span>'}</div>
+      <div class="row">${typeof rouletteSvg === 'function' ? rouletteSvg(w ? w.n : 0, w && w.fresh) : ''}${w ? `<span class="rball ${w.color}">${w.n}</span><span class="small ${w.won ? 'good' : 'bad'}">${w.won ? `Won ${money(w.won)}` : `Lost ${money(w.bet)}`}</span>` : '<span class="small muted">Pick a bet type and a stake.</span>'}</div>
       <div class="scroller">${[['red', 'Red 2×'], ['black', 'Black 2×'], ['even', 'Even 2×'], ['odd', 'Odd 2×'], ['low', '1–18 2×'], ['high', '19–36 2×'], ['zero', 'Zero 36×'], ['lucky', 'Lucky 7 36×']].map(([k, l]) => chip(l, 'rouletteKind', k, (ui.rKind || 'red') === k)).join('')}</div>
       ${stakeBtns('roulette', '')}</div>
     <div class="sect"><h3>🚀 Viral Rocket</h3>${crashBox()}${!ui.crash || ui.crash.state !== 'flying' ? stakeBtns('crash', '') : ''}</div>

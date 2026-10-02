@@ -739,7 +739,8 @@ function showEvent(ev, ctx) {
   const title = ev.title(ctx), text = ev.text(ctx);
   const choices = ev.choices(ctx);
   const box = $('#modalBox');
-  box.innerHTML = `<div class="eyebrow">${eyebrow}</div><h3>${title}</h3><div class="body">${text}</div>
+  const art = typeof eventArt === 'function' ? eventArt(String(title).replace(/<[^>]+>/g, ''), String(eyebrow)) : '';
+  box.innerHTML = `${ev === EVENTS._summary || ev === EVENTS._weekly ? '' : art}<div class="eyebrow">${eyebrow}</div><h3>${title}</h3><div class="body">${text}</div>
     <div class="choices">${choices.map((ch, i) => `<button class="choice" data-i="${i}" ${ch.disabled && ch.disabled() ? 'disabled' : ''}><b>${esc(ch.label)}</b>${ch.sub ? `<span>${esc(ch.sub)}</span>` : ''}</button>`).join('')}</div>`;
   $('#modal').hidden = false;
   renderAll();

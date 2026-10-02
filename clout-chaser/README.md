@@ -116,6 +116,13 @@ A sixth platform, unlocked at 1K followers. Fans pay monthly for exclusive drops
 - **Milestones panel** in the right sidebar (on phones, on your profile): progress bars toward your next follower milestone, next tier, bank balance goal, posting streak and stamina boost, plus your next trophies. Money milestones give +10 energy; streak milestones (3, 7, 14, 30, 60, 100 days) give +3 max energy.
 - **Stream themes**: Just chatting, Gaming, Cooking, IRL city walk, Karaoke night, Q&A, Charity stream and Collab stream. Each changes payouts and brings its own chat moments (clutch plays, kitchen fires, street battles, power ballads, salary questions, donation matching, co-streamers going off-script), and no two streams in a row repeat the same moments. A hype meter builds during the stream and boosts gifts and followers.
 
+## Visuals
+
+- **Animated posts**: every post illustration has niche scenery (steaming plates, drifting clouds and planes, spinning vinyl, neon grids, spotlights, sparkles). Video posts autoplay when on screen with a progress bar and sound-bars.
+- **Stories**: a row of stars at the top of Home. Tap one to watch their auto-playing story clips, tap sides to skip, and send emoji reactions (stars may like them back).
+- **Illustrated event pop-ups**: an animated banner on every event, picked by what's happening: coins raining for money, sirens for scandals, hearts for romance, hazard stripes for stunts, spotlights for awards, a stage with your face, floating hearts and chat for livestreams, a pitch for football.
+- **Reaction bursts** when you like, repost, post, spin, bet or claim rewards; spinning slot reels and roulette wheel; a live pitch with a moving ball and GOAL flashes; colorful menu icons.
+
 ## The long game (Arena, Legacy, seasons)
 
 - **Arena → Sportsbook**: four Clout League football matches a day (six during Clout Cup week) between parody clubs. Bet game money on 1 / X / 2 or over/under 2.5 goals with real odds, watch any match live minute by minute (goals, red cards, VAR) and cash out mid-match, or let it settle when you sleep. League table and results.
@@ -194,6 +201,7 @@ Doing well gives you a second wind, shown as a gold energy pop-up:
 - `index.html` – layout and styles
 - `data.js` – platforms, formats, tones, trends, stars, brands, shop, team
 - `engine.js` – simulation: posting math, day cycle, NPCs, deals, achievements, saving
+- `visuals.js` – animated scenery, stories, event art, reaction bursts, casino and match animations
 - `art.js` – generated faces, logos, post illustrations, photo resizing
 - `events.js` – random and triggered events, livestream chat, modal queue
 - `clash.js` – celebrity clashes and clash battles

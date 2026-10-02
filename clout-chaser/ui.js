@@ -340,7 +340,7 @@ function media(format, label, color, seed, look, x = {}) {
   const L = look && FILTERS[look];
   const art = x.img ? `<img class="scene" src="${x.img}" alt="" style="filter:${look ? LOOK_CSS[look] : 'none'}">` : sceneSvg({ seed, format, niche: x.niche || S.niche, look, caption: x.caption, label, color });
   const dur = F.video ? `${Math.floor(r() * (F.p === 'tube' ? 20 : 1)) + (F.p === 'tube' ? 8 : 0)}:${String(Math.floor(r() * 60)).padStart(2, '0')}` : '';
-  return `<div class="tw-media">${art}${L ? `<span class="dur" style="left:auto;right:10px;top:10px;bottom:auto">${L.name}</span>` : ''}${F.video ? `<span class="play">${ico('live')}</span><span class="dur">${dur}</span>` : ''}${format === 'carousel' ? '<span class="dur">1/5</span>' : ''}</div>`;
+  return `<div class="tw-media">${art}${L ? `<span class="dur" style="left:auto;right:10px;top:10px;bottom:auto">${L.name}</span>` : ''}${F.video ? `<span class="play">${ico('live')}</span><span class="dur">${dur}</span><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="vprog" aria-hidden="true"><i></i></span>` : ''}${format === 'carousel' ? '<span class="dur">1/5</span>' : ''}</div>`;
 }
 function actions(o) {
   const c = (v, fresh) => fresh ? `<span data-count="${v}">0</span>` : fmt(v);
@@ -455,6 +455,7 @@ function vHome() {
     : `<div class="empty"><h3>Nothing yet</h3><p>Your posts show up here. Write your first one.</p>${btn('Post', 'compose', '', 'blue')}</div>`;
   return `<div class="col-head">${head('Home', `Day ${S.day} · ${weekday()} · ${tier().name} creator${S.streak ? ` · <span class="gold">${S.streak}-day streak</span>` : ''}`, false, `<button class="btn sm" data-act="endDay" title="Sleep to end the day">${ico('moon')} Sleep</button>`)}
     ${tabsBar([['foryou', 'For you'], ['following', 'Following'], ['mine', 'Your posts']], ui.feedTab, 'feedTab')}</div>
+    ${ui.feedTab !== 'mine' ? storiesBar() : ''}
     ${statusStrip()}${ui.feedTab !== 'mine' ? heroCard() + (S.world && WORLD_EVENTS[S.world.id] ? `<button class="world-banner" data-act="go" data-arg="arena">${WORLD_EVENTS[S.world.id].icon} <b>${WORLD_EVENTS[S.world.id].name}</b> <span>${WORLD_EVENTS[S.world.id].desc}</span></button>` : '') : ''}${prompt}${ui.feedTab !== 'mine' ? spinCard() + challengeCard() + activeClashes().map(clashCard).join('') : ''}
     ${items.length ? items.slice(0, 50).map((it) => it.k === 'me' ? myPostCard(it.p) : npcPostCard(it.f)).join('') : empty}`;
 }
@@ -1105,6 +1106,7 @@ const ACT = {
   dzSpicy: (a) => { const sp = SPICY[a]; if ((sp.min && totalFollowers() < sp.min) || !needEnergy(sp.e)) return 'norender'; doSpicy(a); checkAll(); processQueue(); },
   dzScheme: (a) => { if (!needEnergy(SCHEMES[a].e)) return 'norender'; doScheme(a); checkAll(); processQueue(); },
   rerollChallenge: () => { if (S.flags.rerollDay === S.day || !needEnergy(5)) return 'norender'; S.flags.rerollDay = S.day; const old = S.challenge.text; for (let i = 0; i < 8 && S.challenge.text === old; i++) newChallenge(); toast('New challenge rolled.'); },
+  storyOpen: (a) => { openStory(a); return 'norender'; },
   cAff: () => { ui.c.aff = !ui.c.aff; renderCompose(false); return 'norender'; },
   cPoll: () => { ui.c.pollOn = !ui.c.pollOn; renderCompose(false); return 'norender'; },
   cCross: () => { ui.c.cross = !ui.c.cross; renderCompose(false); return 'norender'; },
@@ -1389,7 +1391,7 @@ const ACT = {
 Object.assign(ACT, MONEY_ACT, VAULT_ACT, ENDGAME_ACT);
 
 const NO_FLASH = new Set(['go', 'back', 'open', 'openDm', 'endDay', 'dmSend', 'noop']);
-const SHEET_ONLY = new Set(['cTheme', 'vPrice', 'vLink', 'vDrop', 'cAff', 'cPoll', 'cCross', 'duet', 'spin', 'cIntent', 'dmChip', 'postAbout', 'cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);
+const SHEET_ONLY = new Set(['storyOpen', 'cTheme', 'vPrice', 'vLink', 'vDrop', 'cAff', 'cPoll', 'cCross', 'duet', 'spin', 'cIntent', 'dmChip', 'postAbout', 'cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);
 function ACT_RUN(act, arg = '') {
   if (!S || !ACT[act]) return;
   const before = statSnap();

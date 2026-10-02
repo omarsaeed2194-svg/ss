@@ -68,7 +68,7 @@ function sceneSvg({ seed, format, niche, look, caption, label, color }) {
   } else {
     fg = `<rect x="128" y="22" width="144" height="181" rx="6" fill="#fff" opacity=".92" transform="rotate(${(r() * 8 - 4).toFixed(1)} 200 112)"/><rect x="138" y="32" width="124" height="128" rx="3" fill="${g0}" transform="rotate(${(r() * 8 - 4).toFixed(1)} 200 112)"/><text x="200" y="118" text-anchor="middle" font-size="64">${main}</text><text x="296" y="70" font-size="28">${side}</text>`;
   }
-  return `<svg class="scene" viewBox="0 0 400 225" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><linearGradient id="g${seed}" gradientTransform="rotate(${ang} .5 .5)"><stop offset="0" stop-color="${g0}"/><stop offset="1" stop-color="${g1}"/></linearGradient></defs><rect width="400" height="225" fill="url(#g${seed})"/>${blob}${sparkles}${fg}</svg>`;
+  return `<svg class="scene" viewBox="0 0 400 225" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><linearGradient id="g${seed}" gradientTransform="rotate(${ang} .5 .5)"><stop offset="0" stop-color="${g0}"/><stop offset="1" stop-color="${g1}"/></linearGradient></defs><rect width="400" height="225" fill="url(#g${seed})"/>${blob}${sparkles}${typeof scenery === 'function' ? scenery(niche, r, !!(FORMATS[format] && FORMATS[format].video)) : ''}<g class="v-fg${FORMATS[format] && FORMATS[format].video ? ' v-anim' : ''}">${fg}</g></svg>`;
 }
 
 /* CSS filters that mimic each look on uploaded photos */
