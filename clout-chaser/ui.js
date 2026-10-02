@@ -50,9 +50,9 @@ const ui = {
 };
 const MAIN_TABS = [['home', 'Home', 'home'], ['explore', 'Explore', 'search'], ['notifs', 'Notifications', 'bell'], ['messages', 'Messages', 'mail'], ['profile', 'Profile', 'user']];
 const CAREER = [['money', 'Money', 'cash'], ['arena', 'Arena', 'dice'], ['legacy', 'Legacy', 'star'], ['deals', 'Brand deals', 'brief'], ['shop', 'Shop', 'bag'], ['team', 'Team', 'team'], ['empire', 'Empire', 'crown'], ['life', 'Life & skills', 'heartp'], ['stats', 'Analytics', 'chart'], ['tea', 'The Tea', 'tea'], ['trophies', 'Trophies', 'trophy'], ['danger', 'Danger Zone', 'fire'], ['account', 'Settings', 'gear']];
-CAREER.push(['hq', 'Headquarters', 'home']);
+CAREER.push(['hq', 'Headquarters', 'home'], ['friends', 'Friends', 'user'], ['quests', 'Daily quests', 'star']);
 /* The sidebar shows five hubs; each hub holds several screens with a tab row on top */
-const HUBS = [['biz', 'Business', 'cash', ['money', 'deals', 'shop', 'empire']], ['play', 'Play', 'dice', ['arena', 'danger']], ['crew', 'Team & HQ', 'team', ['team', 'hq', 'legacy']], ['me', 'Me', 'heartp', ['life', 'stats', 'trophies', 'tea']], ['account', 'Settings', 'gear', ['account']]];
+const HUBS = [['biz', 'Business', 'cash', ['money', 'deals', 'shop', 'empire']], ['play', 'Play', 'dice', ['arena', 'danger']], ['crew', 'Team & HQ', 'team', ['team', 'hq', 'legacy']], ['social', 'Friends', 'user', ['friends', 'quests']], ['me', 'Me', 'heartp', ['life', 'stats', 'trophies', 'tea']], ['account', 'Settings', 'gear', ['account']]];
 const hubOf = (t) => HUBS.find((h) => h[3].includes(t));
 const careerName = (id) => (CAREER.find((c) => c[0] === id) || [id, id])[1];
 function hubBadge(h, b) { return h[3].reduce((a, t) => a + (b[t] || 0), 0); }
@@ -317,7 +317,7 @@ function renderCol() {
   if (v && v.type === 'post') html = vThread(v.id, v.npc);
   else if (v && v.type === 'star') html = vStar(v.id);
   else if (v && v.type === 'dm') html = vDm(v.key);
-  else html = ({ home: vHome, explore: vExplore, notifs: vNotifs, messages: vMessages, profile: vProfile, danger: vDanger, deals: vDeals, shop: vShop, money: vMoney, arena: vArena, legacy: vLegacy, hq: vHQ, team: vTeam, empire: vEmpire, life: vLife, stats: vStats, tea: vTea, trophies: vTrophies, account: vAccount }[tab] || vHome)();
+  else html = ({ home: vHome, explore: vExplore, notifs: vNotifs, messages: vMessages, profile: vProfile, danger: vDanger, deals: vDeals, shop: vShop, money: vMoney, arena: vArena, legacy: vLegacy, hq: vHQ, friends: vFriends, quests: () => `<div class="col-head">${head('Daily quests', 'Three new quests every game day, plus a bonus chest')}</div><div class="sect">${questsCard(true)}</div>`, team: vTeam, empire: vEmpire, life: vLife, stats: vStats, tea: vTea, trophies: vTrophies, account: vAccount }[tab] || vHome)();
   $('#col').innerHTML = html.replace('<div class="col-head">', '<div class="col-head">' + hubBar());
   if ((tab === 'stats' || (tab === 'profile' && ui.profTab === 'analytics')) && !v) drawChart();
   animateFresh();
@@ -466,7 +466,7 @@ function vHome() {
     : `<div class="empty"><h3>Nothing yet</h3><p>Your posts show up here. Write your first one.</p>${btn('Post', 'compose', '', 'blue')}</div>`;
   return `<div class="col-head">${head('Home', `Day ${S.day} · ${weekday()} · ${tier().name} creator${S.streak ? ` · <span class="gold">${S.streak}-day streak</span>` : ''}`, false, `<button class="btn sm" data-act="endDay" title="Sleep to end the day">${ico('moon')} Sleep</button>`)}
     ${tabsBar([['foryou', 'For you'], ['following', 'Following'], ['mine', 'Your posts']], ui.feedTab, 'feedTab')}</div>
-    ${ui.feedTab !== 'mine' ? storiesBar() + loginCard() : ''}
+    ${ui.feedTab !== 'mine' ? storiesBar() + loginCard() + questsCard() : ''}
     ${statusStrip()}${ui.feedTab !== 'mine' ? heroCard() + (S.world && WORLD_EVENTS[S.world.id] ? `<button class="world-banner" data-act="go" data-arg="arena">${WORLD_EVENTS[S.world.id].icon} <b>${WORLD_EVENTS[S.world.id].name}</b> <span>${WORLD_EVENTS[S.world.id].desc}</span></button>` : '') : ''}${prompt}${ui.feedTab !== 'mine' ? spinCard() + challengeCard() + activeClashes().map(clashCard).join('') : ''}
     ${items.length ? items.slice(0, 50).map((it) => it.k === 'me' ? myPostCard(it.p) : npcPostCard(it.f)).join('') : empty}`;
 }
@@ -1129,6 +1129,7 @@ const ACT = {
     return 'norender';
   },
   spin: () => {
+    if (S.flags.spinDay !== S.day) if (typeof questEvent === 'function') questEvent('spin');
     if (S.flags.spinDay === S.day) return 'norender';
     S.flags.spinDay = S.day;
     const w = $('#wheel'); if (w) w.classList.add('spinning');
@@ -1376,7 +1377,7 @@ const ACT = {
       case 'gym': S.stress = clamp(S.stress - 8, 0, 100); addXp('charisma', 8); msg = 'Pump achieved.'; break;
       case 'meditate': S.stress = clamp(S.stress - 8, 0, 100); msg = 'Ommm.'; break;
       case 'family': S.stress = clamp(S.stress - 15, 0, 100); msg = 'Grandma asked what you do for work again.'; break;
-      case 'replies': { const n = replyToComments(10); msg = n.n ? `You replied to ${n.n} comment${n.n > 1 ? 's' : ''}${n.neg ? ` (clapped back at ${n.neg} hater${n.neg > 1 ? 's' : ''})` : ''}. Fans feel seen.` : 'No new comments to answer. Post something first.'; if (n.n >= 8) gainEnergy(4, 'Fans loved the replies'); break; }
+      case 'replies': { const n = replyToComments(10); if (n.n) if (typeof questEvent === 'function') questEvent('reply'); msg = n.n ? `You replied to ${n.n} comment${n.n > 1 ? 's' : ''}${n.neg ? ` (clapped back at ${n.neg} hater${n.neg > 1 ? 's' : ''})` : ''}. Fans feel seen.` : 'No new comments to answer. Post something first.'; if (n.n >= 8) gainEnergy(4, 'Fans loved the replies'); break; }
       case 'giveaway': { const cost = Math.round(Math.max(100, totalFollowers() * 0.01)); S.money -= cost; const g = Math.max(80, totalFollowers() * 0.04) * diffM(); addFollowers(g); S.fake += g * 0.3; S.stats.giveaways++; msg = 'Some of the new followers are clearly bots.'; break; }
       case 'meetup': S.money -= 1000; changeRep(3); addFollowersPct(0.01); S.stats.meetups++; msg = 'Hugs, selfies, and one fan who cried.'; if (!S.team.bodyguard && chance(0.12)) S.queue.push({ ev: 'stalker', ctx: {} }); break;
       case 'party': { S.money -= 500; const id = randomNpc((x) => !S.npcs[x].feud); changeRel(id, 8); S.stress = clamp(S.stress - 10, 0, 100); msg = `You hit it off with ${npcName(id)}.`; if (chance(0.5)) gainTea(randomNpc((x) => x !== id), `from ${npcName(id).split(' ')[0]} at the party`); if (chance(0.15)) S.queue.push({ ev: 'paparazzi', ctx: {} }); break; }
@@ -1399,7 +1400,7 @@ const ACT = {
   },
   restart: (a) => { if (a === 'yes') { wipeSave(); S = null; ui.confirmRestart = false; showStart(); return 'norender'; } ui.confirmRestart = a !== 'no'; },
 };
-Object.assign(ACT, MONEY_ACT, VAULT_ACT, ENDGAME_ACT, EXTRA_ACT);
+Object.assign(ACT, MONEY_ACT, VAULT_ACT, ENDGAME_ACT, EXTRA_ACT, QUEST_ACT, SOCIAL_ACT);
 
 const NO_FLASH = new Set(['go', 'back', 'open', 'openDm', 'endDay', 'dmSend', 'noop']);
 const SHEET_ONLY = new Set(['storyOpen', 'cTheme', 'vPrice', 'vLink', 'vDrop', 'cAff', 'cPoll', 'cCross', 'duet', 'spin', 'cIntent', 'dmChip', 'postAbout', 'cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);

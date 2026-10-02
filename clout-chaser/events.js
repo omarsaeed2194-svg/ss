@@ -494,6 +494,7 @@ const EVENTS = {
       for (const id of unlockedIds()) if (id !== 'live' && id !== 'vault') S.platforms[id].followers += c.gain * 0.1;
       S.money += c.don; S.stats.earned += c.don; S.stats.streams++;
       if (typeof passXP === 'function') passXP(30);
+      if (typeof questEvent === 'function') questEvent('stream');
       gainEnergy(Math.round(clamp(Math.log10(c.viewers + 1) * 4, 3, 25)), 'Chat hyped you up');
       if (c.len === 's12') S.stats.subathons++;
       S.platforms.live.eng = clamp(S.platforms.live.eng * 0.8 + 14 * 0.2, 0.5, 30);

@@ -95,7 +95,7 @@ function settleFixture(f) {
       S.money += pay; S.stats.earned += pay - b.stake; S.book.won += pay - b.stake; net += pay - b.stake;
       b.status = 'won'; b.pay = pay;
       S.stats.betWins = (S.stats.betWins || 0) + 1;
-      passXP(15);
+      passXP(15); if (typeof questEvent === 'function') questEvent('betwin');
       if (b.odds >= 5) { S.stats.longshots = (S.stats.longshots || 0) + 1; news(`@${S.handle} hits a ${b.odds}× longshot on ${teamName(f.h)} vs ${teamName(f.a)}`, true); }
     } else { b.status = 'lost'; S.book.lost += b.stake; net -= b.stake; }
   }
@@ -173,6 +173,7 @@ function liveBox(f) {
 const SLOT_SYMS = [['🍒', 30, 4], ['🍋', 26, 8], ['🔔', 18, 15], ['⭐', 12, 30], ['💎', 8, 60], ['7️⃣', 5, 150], ['👑', 1, 500]]; // ~93% return
 function slotRoll() { const tot = SLOT_SYMS.reduce((a, s) => a + s[1], 0); let r = Math.random() * tot; for (const s of SLOT_SYMS) { r -= s[1]; if (r <= 0) return s; } return SLOT_SYMS[0]; }
 function casinoResult(bet, won, label) {
+  if (typeof questEvent === 'function') questEvent('casino');
   S.casino = S.casino || { wagered: 0, net: 0, today: 0, day: S.day, best: 0 };
   if (S.casino.day !== S.day) { S.casino.day = S.day; S.casino.today = 0; }
   S.casino.wagered += bet; S.casino.net += won - bet; S.casino.today += won - bet;

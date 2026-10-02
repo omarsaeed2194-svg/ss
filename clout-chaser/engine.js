@@ -37,6 +37,7 @@ const SAVE_KEY = 'clout-chaser-save-v1';
 
 function newGame(o) {
   S = {
+    gameId: Math.random().toString(36).slice(2, 10) + Date.now().toString(36),
     v: 1, name: o.name, handle: o.handle, niche: o.niche, diff: o.diff, color: o.color,
     day: 1, energy: 100, money: 250, rep: 50, heat: 0, stress: 10,
     platforms: {}, skills: {}, owned: {}, team: {}, fake: 0,
@@ -80,13 +81,14 @@ function pushHistory() {
   if (S.history.length > 400) S.history.splice(0, S.history.length - 400);
 }
 
-function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { /* storage unavailable */ } }
+function save() { if (S) S.savedAt = Date.now(); if (typeof cloudSaveSoon === 'function') cloudSaveSoon(); try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { /* storage unavailable */ } }
 function loadSave() {
   try { const raw = localStorage.getItem(SAVE_KEY); if (!raw) return null; const s = JSON.parse(raw); return s && s.v === 1 ? migrate(s) : null; } catch (e) { return null; }
 }
 /* Fill in fields added after a save was made */
 function migrate(s) {
   s.notifs = s.notifs || [];
+  s.gameId = s.gameId || Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
   s.bio = s.bio || `${NICHES[s.niche].name} creator. Posting my way to the top.`;
   (s.feed || []).forEach((f) => { if (!f.views) f.views = Math.round(f.likes * 25); if (!f.reposts) f.reposts = Math.round(f.likes * 0.04); });
   (s.posts || []).forEach((p) => (p.comms || []).forEach((c) => { if (c.likes === undefined) c.likes = 0; }));
@@ -599,6 +601,7 @@ function doPost(o) {
   if (r.viral) notify('viral', null, `Your post is going viral: ${fmt(r.views)} views and counting.`, { post: post.id });
   S.stats.posts++; S.lastPostDay = S.day;
   if (typeof passXP === 'function') passXP(r.viral ? 50 : 10);
+  if (typeof questEvent === 'function') questEvent('post'); if (r.viral) if (typeof questEvent === 'function') questEvent('viral');
   if (o.tone === 'ragebait') S.stats.ragebait++;
   if (o.tone === 'wholesome') S.stats.wholesome++;
   if (r.views > S.stats.bestViews) S.stats.bestViews = r.views;
@@ -703,6 +706,7 @@ function completeChallenge() {
   const rw = challengeReward(ch);
   ch.done = true; S.stats.challenges = (S.stats.challenges || 0) + 1;
   if (typeof passXP === 'function') passXP(40);
+  if (typeof questEvent === 'function') questEvent('challenge');
   if (ch.food) S.stats.foodChallenges = (S.stats.foodChallenges || 0) + 1;
   addFollowersPct(rw.fp * diffM());
   if (rw.cash) { S.money += rw.cash; S.stats.earned += rw.cash; }
@@ -751,6 +755,7 @@ function completeDeal(d) {
   d.status = 'done';
   S.money += d.pay; S.stats.earned += d.pay; S.stats.deals++;
   if (typeof passXP === 'function') passXP(30);
+  if (typeof questEvent === 'function') questEvent('deal');
   gainEnergy(10, `${b.name} paid you`);
   if (b.shady) { S.flags.shadyDeal = d.brand; }
   log(`Deal complete: ${b.name} paid ${money(d.pay)}.`, 'good');

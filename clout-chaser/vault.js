@@ -80,6 +80,7 @@ function vaultDrop(kind) {
   if (S.challenge && !S.challenge.done && S.challenge.req.vault) completeChallenge();
   S.stats.vaultDrops = (S.stats.vaultDrops || 0) + 1;
   if (typeof passXP === 'function') passXP(15);
+  if (typeof questEvent === 'function') questEvent('vault');
   addXp('creativity', 8);
   if (D.leak && chance(D.leak) && !S.queue.some((q) => q.ev === 'vault_leak')) S.queue.push({ ev: 'vault_leak', ctx: {} });
   vaultRecord(kind, D.name, cash, dsubs);

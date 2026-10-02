@@ -56,6 +56,7 @@ function storySlides(id) {
   return [0, 1, 2].map((i) => ({ seed: hashStr(id) + S.day * 7 + i, niche: N.niche || 'lifestyle', text: posts[i] ? posts[i].text : STORY_TEXT[Math.floor(r() * STORY_TEXT.length)].replace('{d}', S.day), format: STORY_FMT[(i + Math.floor(r() * 5)) % STORY_FMT.length], look: pick(Object.keys(FILTERS)) }));
 }
 function openStory(id, slide = 0) {
+  if (slide === 0 && id !== 'me') if (typeof questEvent === 'function') questEvent('story');
   closeStory(false);
   const slides = storySlides(id); if (!slides.length) return;
   const queue = id === 'me' ? ['me'] : storyStars();

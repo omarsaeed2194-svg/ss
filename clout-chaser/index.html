@@ -560,7 +560,7 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100
 .hubtab { flex: none; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--bg); border-radius: 99px; padding: 6px 12px; font-size: 13px; font-weight: 700; color: var(--muted); }
 .hubtab .ico { width: 16px; height: 16px; }
 .hubtab[aria-current="true"] { color: var(--btn-ink); background: var(--btn); border-color: var(--btn); }
-.nav-sub.hub-biz .ico { color: #00BA7C; } .nav-sub.hub-play .ico { color: #FFD400; } .nav-sub.hub-crew .ico { color: #21D4FD; } .nav-sub.hub-me .ico { color: #F91880; }
+.nav-sub.hub-biz .ico { color: #00BA7C; } .nav-sub.hub-play .ico { color: #FFD400; } .nav-sub.hub-crew .ico { color: #21D4FD; } .nav-sub.hub-me .ico { color: #F91880; } .nav-sub.hub-social .ico { color: #1D9BF0; }
 .nav-sub { font-size: 16px; padding-block: 10px; }
 .hq-art { width: 100%; height: auto; border-radius: 14px; display: block; }
 .hq-win { animation: twinkle 3s ease-in-out infinite; }
@@ -569,6 +569,16 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100
 .lday { border-radius: 10px; background: var(--surface); padding: 6px 2px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; }
 .lday .li { font-size: 20px; }
 .lday.got { opacity: .45; } .lday.today { outline: 2px solid var(--gold); background: color-mix(in srgb, var(--gold) 18%, var(--surface)); animation: evpop 1.6s ease-in-out infinite; }
+.quests { margin: 12px 16px 0; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); display: flex; flex-direction: column; gap: 10px; }
+.quests.full { margin: 0; border: 0; background: none; padding: 0; }
+.quest { display: flex; gap: 10px; align-items: center; }
+.quest.done .small:first-child { color: var(--good); }
+.friend { border: 1px solid var(--line); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 8px; position: relative; }
+.friend-row, .gift-row { gap: 10px; flex-wrap: nowrap; padding: 6px 0; }
+.online-dot { position: absolute; left: 40px; top: 38px; width: 11px; height: 11px; border-radius: 50%; background: var(--good); border: 2px solid var(--bg); }
+.auth { max-width: 420px; }
+.lb-me { color: var(--accent); font-weight: 700; }
+.cloud-offer { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 60; background: var(--surface); border: 1px solid var(--accent); border-radius: 14px; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; align-items: center; width: min(360px, calc(100vw - 32px)); }
 .mgr { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--line); }
 .tier-h { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; padding-left: 10px; border-left: 3px solid var(--good); }
 .tier-h.mid { border-color: var(--warn); } .tier-h.extreme { border-color: var(--bad); }
@@ -695,4 +705,7 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100
 <script src="vault.js"></script>
 <script src="endgame.js"></script>
 <script src="extra.js"></script>
+<script src="quests.js"></script>
+<script src="cloud-config.js"></script>
+<script src="social.js"></script>
 <script src="ui.js"></script>

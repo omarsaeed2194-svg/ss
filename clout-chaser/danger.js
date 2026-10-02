@@ -84,6 +84,7 @@ function doStunt(id) {
     if (S.challenge && !S.challenge.done && S.challenge.req.stunt && (S.challenge.req.stunt === st.tier)) completeChallenge();
     S.stats.stuntWins = (S.stats.stuntWins || 0) + 1;
     if (typeof passXP === 'function') passXP(25);
+    if (typeof questEvent === 'function') questEvent('stunt');
     S.stats.stuntCash = (S.stats.stuntCash || 0) + cash;
     title = jackpot ? `${st.name}: JACKPOT` : viral ? `${st.name}: it went VIRAL` : `${st.name}: you pulled it off`;
     text = viral ? 'The clip is everywhere. Reaction channels are reacting to the reaction channels.' : 'Hands shaking, but the footage is incredible.';

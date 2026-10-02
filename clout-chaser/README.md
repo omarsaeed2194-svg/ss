@@ -116,6 +116,15 @@ A sixth platform, unlocked at 1K followers. Fans pay monthly for exclusive drops
 - **Milestones panel** in the right sidebar (on phones, on your profile): progress bars toward your next follower milestone, next tier, bank balance goal, posting streak and stamina boost, plus your next trophies. Money milestones give +10 energy; streak milestones (3, 7, 14, 30, 60, 100 days) give +3 max energy.
 - **Stream themes**: Just chatting, Gaming, Cooking, IRL city walk, Karaoke night, Q&A, Charity stream and Collab stream. Each changes payouts and brings its own chat moments (clutch plays, kitchen fires, street battles, power ballads, salary questions, donation matching, co-streamers going off-script), and no two streams in a row repeat the same moments. A hype meter builds during the stream and boosts gifts and followers.
 
+## Accounts, cloud saves, friends, quests
+
+- **Daily quests**: three new quests every game day (posts, viral hits, streams, bets, casino, stunts, followers or money targets, gifts, stories…) with cash, energy and Pass XP rewards, plus a bonus chest for finishing all three. On Home and under Friends → Daily quests.
+- **13 new random events**: becoming a meme, a fan tattoo, an AI clone of you, airport paparazzi, a star sliding into your DMs, ripped pants on camera, a fake death rumor, a fan naming their baby after you, your old teacher, a podcast invite, the Glitz Gala, accidentally starting a trend, and a salary leak.
+- **Accounts and cloud saves**: progress syncs automatically a few seconds after every save. On a new device, sign in and the game offers your cloud save; it never overwrites a different cloud game without asking.
+  - On the claude.ai page you're signed in with your Claude account automatically (works for everyone the page is shared with).
+  - For the Android app or another web host, accounts are email + password via Supabase: create a free project, run `android/supabase-schema.sql`, put the URL and anon key in `cloud-config.js`, rebuild.
+- **Friends**: find players by @handle, add friends, see their stats and a friends leaderboard (and who's online on claude.ai), send one gift of each kind per day (⚡ energy, 💵 cash, 🎟️ Pass XP) and do a daily 🤝 duo collab that boosts both of you.
+
 ## Menus, HQ and more team
 
 - **Merged menu**: the sidebar has five hubs (Business, Play, Team & HQ, Me, Settings). Each hub opens its screens with a tab row on top (e.g. Business: Money · Brand deals · Shop · Empire) and remembers the last one you used.
@@ -210,6 +219,10 @@ Doing well gives you a second wind, shown as a gold energy pop-up:
 - `data.js` – platforms, formats, tones, trends, stars, brands, shop, team
 - `engine.js` – simulation: posting math, day cycle, NPCs, deals, achievements, saving
 - `faces.js` – detailed cartoon faces, celeb caricature traits, designed brand logos
+- `quests.js` – daily quests and extra random events
+- `social.js` – accounts, cloud saves, friends, gifts (claude.ai and Supabase backends)
+- `cloud-config.js` – Supabase URL/key for email accounts (empty = local only)
+- `android/supabase-schema.sql` – database tables and security rules for Supabase
 - `extra.js` – new team members, Headquarters, daily login calendar
 - `visuals.js` – animated scenery, stories, event art, reaction bursts, casino and match animations
 - `art.js` – generated faces, logos, post illustrations, photo resizing
