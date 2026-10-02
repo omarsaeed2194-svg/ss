@@ -418,6 +418,42 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100
 .ms { display: flex; flex-direction: column; gap: 3px; }
 .ms-n { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ms .meter { margin-top: 2px; }
+/* ---------- Arena: sportsbook, casino, pass ---------- */
+.world { border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line)); }
+.world-banner { display: block; width: calc(100% - 32px); margin: 10px 16px 0; text-align: left; border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line)); background: var(--accent-soft); border-radius: 14px; padding: 9px 12px; font-size: 13px; }
+.world-banner span { color: var(--muted); }
+.match { border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.match.done { opacity: .7; }
+.teams { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; text-align: center; }
+.teams b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.odds { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.odd { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 6px 2px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.odd span { font-size: 11px; color: var(--muted); } .odd b { font-variant-numeric: tabular-nums; }
+.odd.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.betslip { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: 10px; background: var(--surface); }
+.mybets { display: flex; flex-wrap: wrap; gap: 6px; }
+.livebox { border: 1px solid color-mix(in srgb, var(--like) 45%, var(--line)); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: color-mix(in srgb, var(--like) 5%, var(--bg)); }
+.score { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; text-align: center; font-weight: 700; }
+.score b { font-family: var(--f-display); font-size: 28px; font-variant-numeric: tabular-nums; }
+.minbar { flex: 1; height: 4px; border-radius: 99px; background: var(--surface-2); margin-left: 10px; overflow: hidden; } .minbar i { display: block; height: 100%; background: var(--like); }
+.feedlines { display: flex; flex-direction: column; gap: 3px; min-height: 60px; }
+.lgt { display: flex; flex-direction: column; gap: 4px; }
+.reels { display: flex; gap: 10px; justify-content: center; }
+.reels span { width: 72px; height: 72px; border-radius: 16px; background: var(--surface-2); display: grid; place-items: center; font-size: 38px; }
+.rball { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; color: #fff; }
+.rball.red { background: #D7263D; } .rball.black { background: #222; border: 1px solid var(--line); } .rball.green { background: #00A86B; }
+.crash { border-radius: 14px; background: var(--surface); padding: 14px; display: flex; flex-direction: column; gap: 8px; align-items: center; text-align: center; }
+.crash .cm { font-family: var(--f-display); font-size: 44px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.crash.crashed { background: color-mix(in srgb, var(--bad) 12%, var(--surface)); }
+.pass-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
+.pass-tier { font-size: 14px; } .pass-tier b { font-family: var(--f-display); font-size: 24px; }
+.pass-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.ptier { border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 4px; position: relative; opacity: .6; }
+.ptier.open { opacity: 1; border-color: var(--gold); } .ptier.got { opacity: 1; border-color: color-mix(in srgb, var(--good) 50%, var(--line)); }
+.ptier.big { background: color-mix(in srgb, var(--gold) 8%, var(--bg)); }
+.pt-n { font-size: 11px; color: var(--muted); font-weight: 700; } .pt-i { font-size: 22px; } .pt-t { font-size: 12px; font-weight: 600; }
+.qt.arenaq { color: var(--gold); }
+@media (max-width: 700px) { .odds { gap: 4px; } .reels span { width: 60px; height: 60px; font-size: 32px; } .pass-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .mgr { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--line); }
 .tier-h { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; padding-left: 10px; border-left: 3px solid var(--good); }
 .tier-h.mid { border-color: var(--warn); } .tier-h.extreme { border-color: var(--bad); }
@@ -540,4 +576,5 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100
 <script src="danger.js"></script>
 <script src="money.js"></script>
 <script src="vault.js"></script>
+<script src="endgame.js"></script>
 <script src="ui.js"></script>

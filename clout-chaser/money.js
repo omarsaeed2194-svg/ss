@@ -87,7 +87,7 @@ function marketTick(lines) {
     // momentum: bull and bear runs last a few days
     if (m.trend[k] == null || chance(0.18)) m.trend[k] = +(rnd(-1, 1) + 0.25).toFixed(2);
     const g = (Math.random() + Math.random() + Math.random() - 1.5) * 1.4;
-    m.p[k] = Math.max(0.01, m.p[k] * (1 + a.drift + a.vol * (g * 0.8 + m.trend[k] * 0.6)));
+    m.p[k] = Math.max(0.01, m.p[k] * (1 + a.drift + a.vol * (k === 'clt' && typeof worldMult === 'function' ? worldMult('crypto') : 1) * (g * 0.8 + m.trend[k] * 0.6)));
     m.h[k].push(+m.p[k].toFixed(4)); if (m.h[k].length > 40) m.h[k].shift();
   }
   // dividends
@@ -128,11 +128,14 @@ function makeGig(kind, extra = {}) {
   const G = {
     shoutout:   { subject: 'Paid shoutout request', body: `A small creator, @${fanHandle()}, will pay you to shout them out. Quick money, fans may roll their eyes.`, pay: Math.max(60, t * 0.004), e: 5, rep: -0.3 },
     appearance: { subject: 'Club appearance', body: `A nightclub wants you to "host" Saturday night. Show up, wave, take photos.`, pay: Math.max(400, t * 0.02), e: 30, stress: 12 },
+    movie:      { subject: 'Lead role in a movie', body: 'A studio wants you to star in "Influenced", a thriller about a creator who goes too far. Three weeks of filming.', pay: Math.max(250000, t * 0.12), e: 60, stress: 25, rep: 3, fp: 0.06 },
+    halftime:   { subject: 'Halftime show guest', body: 'The Clout Bowl wants you on stage at halftime. 120 million people watching.', pay: Math.max(500000, t * 0.08), e: 50, stress: 20, rep: 2, fp: 0.08 },
+    reality:    { subject: 'Your own reality show', body: 'A streaming service wants a docuseries about your life. Cameras everywhere for a month.', pay: Math.max(120000, t * 0.06), e: 45, stress: 30, rep: -1, fp: 0.07 },
     keynote:    { subject: 'Speaking gig', body: 'A marketing conference wants you on stage for 20 minutes about "authenticity".', pay: Math.max(1500, t * 0.03), e: 25, stress: 6, rep: 1 },
     license:    { subject: 'License your viral clip', body: 'A media company wants to license your viral clip for a compilation.', pay: Math.max(200, extra.views ? extra.views * 0.0006 : t * 0.01), e: 0 },
     cameo:      { subject: 'Movie cameo', body: 'A director wants you for a 10-second cameo as "influencer #2".', pay: Math.max(5000, t * 0.05), e: 35, stress: 10, rep: 1, fp: 0.02 },
   }[kind];
-  mail({ type: 'gig', kind, from: kind === 'license' ? 'ClipVault Media' : kind === 'cameo' ? 'Paramountain Pictures' : kind === 'keynote' ? 'GrowthCon' : kind === 'appearance' ? 'Club Neon' : '@' + fanHandle(), subject: G.subject, body: G.body, pay: Math.round(G.pay * (1 + 0.3 * tm('agent')) / 5) * 5, e: G.e, stress: G.stress || 0, rep: G.rep || 0, fp: G.fp || 0 });
+  mail({ type: 'gig', kind, from: kind === 'movie' ? 'Paramountain Pictures' : kind === 'halftime' ? 'The Clout Bowl' : kind === 'reality' ? 'Netflux Originals' : kind === 'license' ? 'ClipVault Media' : kind === 'cameo' ? 'Paramountain Pictures' : kind === 'keynote' ? 'GrowthCon' : kind === 'appearance' ? 'Club Neon' : '@' + fanHandle(), subject: G.subject, body: G.body, pay: Math.round(G.pay * (1 + 0.3 * tm('agent')) / 5) * 5, e: G.e, stress: G.stress || 0, rep: G.rep || 0, fp: G.fp || 0 });
 }
 function acceptGig(m) {
   if (S.energy < m.e) { toast(`You need ${m.e} energy for this gig.`, 'bad'); return false; }

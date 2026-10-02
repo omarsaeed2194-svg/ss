@@ -134,7 +134,7 @@ const teamPay = (k) => Math.round(TEAM[k].pay * (1 + ((S.teamLvl && S.teamLvl[k]
 const teamUpCost = (k) => Math.round(TEAM[k].pay * 4 * teamLvl(k) / 10) * 10;
 const teamSize = () => Object.keys(S.team).filter((k) => S.team[k]).length;
 const stamina = () => Math.min(150, Math.floor((((S && S.day) || 1) - 1) / 5) * 5); // +5 max energy every 5 days, up to +150
-function maxEnergy() { const m = 100 + stamina() + (S.bonusMaxE || 0) + Math.round(20 * tm('assistant')) + (S.owned.mansion ? 10 : 0) + (S.owned.island ? 10 : 0); return S.injuredUntil && S.injuredUntil >= S.day ? Math.round(m * 0.6) : m; }
+function maxEnergy() { const m = 100 + (typeof legacyLvl === 'function' ? 10 * legacyLvl('energy') : 0) + stamina() + (S.bonusMaxE || 0) + Math.round(20 * tm('assistant')) + (S.owned.mansion ? 10 : 0) + (S.owned.island ? 10 : 0); return S.injuredUntil && S.injuredUntil >= S.day ? Math.round(m * 0.6) : m; }
 const energyCap = () => maxEnergy() + 60; // rewards can overcharge you past your normal max
 function gearQ(pid) {
   let q = 0;
@@ -350,9 +350,10 @@ function computePost(o, det = false) {
   if (ints.includes('beef')) mult *= 1.3; // drama travels
   if (ints.includes('collab')) mult *= 1.08;
   mult = Math.pow(Math.max(mult, 0.01), 0.6); // stacked bonuses have diminishing returns
+  if (typeof worldMult === 'function') mult *= worldMult('reach');
   const today = S.posts.filter((p) => p.day === S.day);
   mult *= Math.pow(0.72, today.filter((p) => p.platform === o.platform).length) * Math.pow(0.86, today.length); // followers tire of spam
-  const viralP = clamp(0.01 + clamp(q - 1, 0, 0.4) * 0.04 + (topic.viral || 0) + (F.viral || 0) + (TM.viral || 0) + (T.viral || 0) + orig / 2500 + (FL && FL.viral ? FL.viral : 0) + (lookMatch ? 0.01 : 0) + (S.flags.luckyDay === S.day ? 0.04 : 0), 0, 0.4);
+  const viralP = clamp((typeof worldEv === 'function' ? (worldEv().viral || 0) + 0.005 * legacyLvl('luck') : 0) + 0.01 + clamp(q - 1, 0, 0.4) * 0.04 + (topic.viral || 0) + (F.viral || 0) + (TM.viral || 0) + (T.viral || 0) + orig / 2500 + (FL && FL.viral ? FL.viral : 0) + (lookMatch ? 0.01 : 0) + (S.flags.luckyDay === S.day ? 0.04 : 0), 0, 0.4);
   let viral = false, flop = false;
   if (!det) {
     if (chance(viralP)) { viral = true; mult *= rnd(3, 8); }
@@ -372,7 +373,7 @@ function computePost(o, det = false) {
   const shares = Math.round(likes * R(0.02, 0.07) * (viral ? 2.5 : 1));
   const conv = 0.045 / (1 + Math.log10(Math.max(ps.followers, 100) / 100) * 1.15);
   const repF = 0.4 + S.rep / 100;
-  const gain = Math.min(views * conv * clamp(q, 0.4, 1.5) * T.follow * repF * (viral ? 1.3 : 1) * (topic.collab ? 1.3 : 1), ps.followers * 0.8 + 800);
+  const gain = (typeof legacyLvl === 'function' ? 1 + 0.1 * legacyLvl('growth') : 1) * Math.min(views * conv * clamp(q, 0.4, 1.5) * T.follow * repF * (viral ? 1.3 : 1) * (topic.collab ? 1.3 : 1), ps.followers * 0.8 + 800);
   let loss = 0;
   if (spicy && S.rep < 45) loss += ps.followers * R(0.005, 0.02);
   if (sellout) loss += ps.followers * 0.01;
@@ -385,6 +386,7 @@ function computePost(o, det = false) {
   const tips = likes * 0.0015 * clamp(S.rep / 50, 0.3, 1.6) * (1 + (S.superfans || []).filter((f) => f.count > 2).length * 0.15);
   const aff = o.affiliate ? views * 0.0012 * (1 + 0.05 * skillLvl('business')) : 0;
   cash += tips + aff;
+  if (typeof legacyLvl === 'function') cash *= 1 + 0.1 * legacyLvl('money');
   return { energy, refund, orig, lookMatch, q, views, er, likes, comments, shares, gain: Math.round(gain), loss: Math.round(loss), rep, heat, cash, tips: Math.round(tips), aff: Math.round(aff), viral, flop, topic, viralP, sellout };
 }
 
@@ -594,6 +596,7 @@ function doPost(o) {
   if (post.gain > 0) notify('follow', fanHandle(), post.gain > 1 ? `and ${fmt(post.gain - 1)} others followed you` : 'followed you');
   if (r.viral) notify('viral', null, `Your post is going viral: ${fmt(r.views)} views and counting.`, { post: post.id });
   S.stats.posts++; S.lastPostDay = S.day;
+  if (typeof passXP === 'function') passXP(r.viral ? 50 : 10);
   if (o.tone === 'ragebait') S.stats.ragebait++;
   if (o.tone === 'wholesome') S.stats.wholesome++;
   if (r.views > S.stats.bestViews) S.stats.bestViews = r.views;
@@ -697,6 +700,7 @@ function completeChallenge() {
   const ch = S.challenge; if (!ch || ch.done) return;
   const rw = challengeReward(ch);
   ch.done = true; S.stats.challenges = (S.stats.challenges || 0) + 1;
+  if (typeof passXP === 'function') passXP(40);
   if (ch.food) S.stats.foodChallenges = (S.stats.foodChallenges || 0) + 1;
   addFollowersPct(rw.fp * diffM());
   if (rw.cash) { S.money += rw.cash; S.stats.earned += rw.cash; }
@@ -727,6 +731,7 @@ function dealPay(b) {
   const t = Math.max(totalFollowers(), 300);
   let pay = b.base * Math.pow(t / 1000, 0.85) * clamp(engRate() / 5, 0.4, 2.2) * (1 + 0.25 * tm('manager')) * (1 + 0.04 * (skillLvl('business') - 1));
   if (b.shady) pay *= 1.6;
+  if (typeof worldMult === 'function') pay *= worldMult('deals') * (1 + 0.1 * legacyLvl('money'));
   return Math.max(25, Math.round(pay / 5) * 5);
 }
 function makeOffer() {
@@ -743,6 +748,7 @@ function completeDeal(d) {
   const b = BRANDS[d.brand];
   d.status = 'done';
   S.money += d.pay; S.stats.earned += d.pay; S.stats.deals++;
+  if (typeof passXP === 'function') passXP(30);
   gainEnergy(10, `${b.name} paid you`);
   if (b.shady) { S.flags.shadyDeal = d.brand; }
   log(`Deal complete: ${b.name} paid ${money(d.pay)}.`, 'good');
@@ -808,7 +814,7 @@ function endDay() {
   let upkeep = 0; for (const it of SHOP) if (S.owned[it.id] && it.upkeep) upkeep += it.upkeep;
   if (salaries) { S.money -= salaries; lines.push(['Team payday (monthly salaries)', -salaries]); }
   if (upkeep) { S.money -= upkeep; lines.push(['Lifestyle upkeep', -upkeep]); }
-  const fameTax = Math.round([0, 10, 45, 160, 550, 1600, 6500, 26000][tierIndex()] * (S.team.accountant ? Math.max(0.1, 1 - 0.5 * tm('accountant')) : 1));
+  const fameTax = Math.round([0, 10, 45, 160, 550, 1600, 6500, 26000, 90000, 250000][tierIndex()] * (S.team.accountant ? Math.max(0.1, 1 - 0.5 * tm('accountant')) : 1));
   if (fameTax) { S.money -= fameTax; lines.push(['Cost of fame (rent, stylist, security)', -fameTax]); }
   // Passive businesses
   const t = totalFollowers(); const repF = clamp(S.rep / 60, 0.2, 1.6);
@@ -831,6 +837,7 @@ function endDay() {
   if (typeof mgrTick === 'function') mgrTick(lines);
   if (typeof vaultTick === 'function') vaultTick(lines);
   if (typeof moneyTick === 'function') moneyTick(lines);
+  if (typeof endgameTick === 'function') endgameTick(lines);
   // Organic growth / decay
   const idle = S.day - S.lastPostDay;
   for (const id of unlockedIds()) {

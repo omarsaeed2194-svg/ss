@@ -49,7 +49,7 @@ const ui = {
   onb: { step: 0, name: 'Jordan Vale', handle: 'jordanvale', niche: 'lifestyle', diff: 'normal', color: AVATAR_COLORS[0], handleTouched: false },
 };
 const MAIN_TABS = [['home', 'Home', 'home'], ['explore', 'Explore', 'search'], ['notifs', 'Notifications', 'bell'], ['messages', 'Messages', 'mail'], ['profile', 'Profile', 'user']];
-const CAREER = [['money', 'Money', 'cash'], ['deals', 'Brand deals', 'brief'], ['shop', 'Shop', 'bag'], ['team', 'Team', 'team'], ['empire', 'Empire', 'crown'], ['life', 'Life & skills', 'heartp'], ['stats', 'Analytics', 'chart'], ['tea', 'The Tea', 'tea'], ['trophies', 'Trophies', 'trophy'], ['danger', 'Danger Zone', 'fire'], ['account', 'Settings', 'gear']];
+const CAREER = [['money', 'Money', 'cash'], ['arena', 'Arena', 'dice'], ['legacy', 'Legacy', 'star'], ['deals', 'Brand deals', 'brief'], ['shop', 'Shop', 'bag'], ['team', 'Team', 'team'], ['empire', 'Empire', 'crown'], ['life', 'Life & skills', 'heartp'], ['stats', 'Analytics', 'chart'], ['tea', 'The Tea', 'tea'], ['trophies', 'Trophies', 'trophy'], ['danger', 'Danger Zone', 'fire'], ['account', 'Settings', 'gear']];
 const NICHE_DESC = { beauty: 'Skincare, makeup, dupes', gaming: 'Clutches, speedruns, rage', fitness: 'Gains, routines, discipline', comedy: 'Skits, bits, chaos', tech: 'Reviews, setups, hot takes', food: 'Recipes, taste tests', music: 'Covers, hooks, studio life', fashion: 'Fits, thrift flips, trends', travel: 'Hidden gems, packing hacks', lifestyle: 'Routines, resets, vibes' };
 
 /* ---------- small helpers ---------- */
@@ -267,6 +267,8 @@ function milestonesPanel() {
     ${nt ? row('👑', `${nt.name} tier`, t, nt.min, 'Energy refill, +5 max energy, confetti', fmt, true) : ''}
     ${mm ? row('💰', 'Bank balance', S.money, mm, '+10 energy', money, true) : ''}
     ${sm ? row('🔥', 'Posting streak', S.streak || 0, sm, '+3 max energy, +12 energy', (v) => v + 'd') : ''}
+    ${S.pass ? row('🎟️', `Clout Pass S${S.pass.n}`, S.pass.tier, PASS_TIERS, `Tier rewards in Arena · ${S.pass.ends - S.day}d left`, (v) => 'T' + v) : ''}
+    ${totalFollowers() >= 1e7 ? row('♾️', 'Legacy rebrand', totalFollowers(), LEGACY_MIN, `${legacyPoints()} Legacy points if you rebrand now`, fmt, true) : ''}
     ${stamina() < 150 ? row('⚡', 'Stamina', 5 - nextStam, 5, `+5 max energy in ${nextStam} day${nextStam > 1 ? 's' : ''}`, (v) => v + 'd') : ''}
     ${locked.length ? `<div class="ms"><span class="ms-n">🏆 Next trophies</span>${locked.map(([, n, d]) => `<span class="small"><b>${esc(n)}</b> <span class="muted">· ${esc(d)}</span></span>`).join('')}</div>` : ''}
   </div><button class="panel-foot" data-act="go" data-arg="trophies">All trophies</button></div>`;
@@ -304,7 +306,7 @@ function renderCol() {
   if (v && v.type === 'post') html = vThread(v.id, v.npc);
   else if (v && v.type === 'star') html = vStar(v.id);
   else if (v && v.type === 'dm') html = vDm(v.key);
-  else html = ({ home: vHome, explore: vExplore, notifs: vNotifs, messages: vMessages, profile: vProfile, danger: vDanger, deals: vDeals, shop: vShop, money: vMoney, team: vTeam, empire: vEmpire, life: vLife, stats: vStats, tea: vTea, trophies: vTrophies, account: vAccount }[tab] || vHome)();
+  else html = ({ home: vHome, explore: vExplore, notifs: vNotifs, messages: vMessages, profile: vProfile, danger: vDanger, deals: vDeals, shop: vShop, money: vMoney, arena: vArena, legacy: vLegacy, team: vTeam, empire: vEmpire, life: vLife, stats: vStats, tea: vTea, trophies: vTrophies, account: vAccount }[tab] || vHome)();
   $('#col').innerHTML = html;
   if ((tab === 'stats' || (tab === 'profile' && ui.profTab === 'analytics')) && !v) drawChart();
   animateFresh();
@@ -410,7 +412,7 @@ function heroCard() {
       <div class="hero-n"><span class="num">${fmt(t)}</span>${nx ? `<span class="small muted num"> / ${fmt(nx.min)}</span>` : ''}<span class="small ${df >= 0 ? 'good' : 'bad'} num"> ${signed(df)} today</span></div></div>
       <div class="hero-cash"><span class="small muted">Cash</span><b class="num gold">${money(S.money)}</b></div></div>
     <div class="tierbar" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100" aria-label="Progress to next tier"><i style="width:${pct}%"></i></div>
-    <div class="quick">${tile('feather', 'Post', 'compose', '', 'hot')}${S.platforms.live.unlocked ? tile('live', 'Go live', 'compose', 'live') : ''}${vaultOn() ? tile('lock', 'FanVault', 'compose', 'vault', 'vaultq') : ''}${tile('cash', 'Money', 'go', 'money', '', gigs || '')}${tile('mail', 'DMs', 'go', 'messages', '', b.messages || '')}${tile('bag', 'Shop', 'go', 'shop')}${tile('fire', 'Danger', 'go', 'danger')}</div></div>`;
+    <div class="quick">${tile('feather', 'Post', 'compose', '', 'hot')}${S.platforms.live.unlocked ? tile('live', 'Go live', 'compose', 'live') : ''}${vaultOn() ? tile('lock', 'FanVault', 'compose', 'vault', 'vaultq') : ''}${tile('cash', 'Money', 'go', 'money', '', gigs || '')}${tile('dice', 'Arena', 'go', 'arena', 'arenaq', S.pass && S.pass.tier > S.pass.claimed.length ? S.pass.tier - S.pass.claimed.length : '')}${tile('mail', 'DMs', 'go', 'messages', '', b.messages || '')}${tile('bag', 'Shop', 'go', 'shop')}${tile('fire', 'Danger', 'go', 'danger')}</div></div>`;
 }
 /* Confetti for the big moments */
 function celebrate(kind = 'gold') {
@@ -453,7 +455,7 @@ function vHome() {
     : `<div class="empty"><h3>Nothing yet</h3><p>Your posts show up here. Write your first one.</p>${btn('Post', 'compose', '', 'blue')}</div>`;
   return `<div class="col-head">${head('Home', `Day ${S.day} · ${weekday()} · ${tier().name} creator${S.streak ? ` · <span class="gold">${S.streak}-day streak</span>` : ''}`, false, `<button class="btn sm" data-act="endDay" title="Sleep to end the day">${ico('moon')} Sleep</button>`)}
     ${tabsBar([['foryou', 'For you'], ['following', 'Following'], ['mine', 'Your posts']], ui.feedTab, 'feedTab')}</div>
-    ${statusStrip()}${ui.feedTab !== 'mine' ? heroCard() : ''}${prompt}${ui.feedTab !== 'mine' ? spinCard() + challengeCard() + activeClashes().map(clashCard).join('') : ''}
+    ${statusStrip()}${ui.feedTab !== 'mine' ? heroCard() + (S.world && WORLD_EVENTS[S.world.id] ? `<button class="world-banner" data-act="go" data-arg="arena">${WORLD_EVENTS[S.world.id].icon} <b>${WORLD_EVENTS[S.world.id].name}</b> <span>${WORLD_EVENTS[S.world.id].desc}</span></button>` : '') : ''}${prompt}${ui.feedTab !== 'mine' ? spinCard() + challengeCard() + activeClashes().map(clashCard).join('') : ''}
     ${items.length ? items.slice(0, 50).map((it) => it.k === 'me' ? myPostCard(it.p) : npcPostCard(it.f)).join('') : empty}`;
 }
 
@@ -710,7 +712,7 @@ function vShop() {
     <div class="sect"><h3>Gear</h3><div class="cards">${SHOP.filter((i) => i.cat === 'Gear').map(item).join('')}</div></div>
     <div class="sect"><h3>Lifestyle</h3><div class="cards">${SHOP.filter((i) => i.cat === 'Lifestyle').map(item).join('')}</div></div>
     <div class="sect"><h3>Property <span class="small muted">· pays rent every night</span></h3><div class="cards">${SHOP.filter((i) => i.cat === 'Property').map(item).join('')}</div></div>
-    <div class="sect"><h3>Style <span class="small muted">· avatar frames and profile banners</span></h3><div class="cards">${Object.entries(FRAMES).map(([k, f]) => style('frame', k, f, `<span class="av sm" style="border:3px solid transparent;background:linear-gradient(${S.color}, ${S.color}) padding-box, ${f.css} border-box">${faceSvg(S.faceSeed || S.name)}</span>`)).join('')}${Object.entries(BANNERS).map(([k, b]) => style('banner', k, b, `<span class="swatch" style="background:${b.css}"></span>`)).join('')}</div></div>
+    <div class="sect"><h3>Style <span class="small muted">· avatar frames and profile banners</span></h3><div class="cards">${Object.entries(FRAMES).filter(([k, f]) => !f.pass || (S.frames || []).includes(k)).map(([k, f]) => style('frame', k, f, `<span class="av sm" style="border:3px solid transparent;background:linear-gradient(${S.color}, ${S.color}) padding-box, ${f.css} border-box">${faceSvg(S.faceSeed || S.name)}</span>`)).join('')}${Object.entries(BANNERS).filter(([k, b]) => !b.pass || (S.banners || []).includes(k)).map(([k, b]) => style('banner', k, b, `<span class="swatch" style="background:${b.css}"></span>`)).join('')}</div></div>
     <div class="sect"><h3>Courses</h3><div class="cards">${courses}</div></div>
     <div class="sect"><h3>Boosts & recovery</h3><div class="cards">${cons}</div></div>
     <div class="sect"><h3>Growth hacks</h3><div class="cards">${growth}</div></div>`;
@@ -1384,7 +1386,7 @@ const ACT = {
   },
   restart: (a) => { if (a === 'yes') { wipeSave(); S = null; ui.confirmRestart = false; showStart(); return 'norender'; } ui.confirmRestart = a !== 'no'; },
 };
-Object.assign(ACT, MONEY_ACT, VAULT_ACT);
+Object.assign(ACT, MONEY_ACT, VAULT_ACT, ENDGAME_ACT);
 
 const NO_FLASH = new Set(['go', 'back', 'open', 'openDm', 'endDay', 'dmSend', 'noop']);
 const SHEET_ONLY = new Set(['cTheme', 'vPrice', 'vLink', 'vDrop', 'cAff', 'cPoll', 'cCross', 'duet', 'spin', 'cIntent', 'dmChip', 'postAbout', 'cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);

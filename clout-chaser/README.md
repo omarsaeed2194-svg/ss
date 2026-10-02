@@ -116,6 +116,15 @@ A sixth platform, unlocked at 1K followers. Fans pay monthly for exclusive drops
 - **Milestones panel** in the right sidebar (on phones, on your profile): progress bars toward your next follower milestone, next tier, bank balance goal, posting streak and stamina boost, plus your next trophies. Money milestones give +10 energy; streak milestones (3, 7, 14, 30, 60, 100 days) give +3 max energy.
 - **Stream themes**: Just chatting, Gaming, Cooking, IRL city walk, Karaoke night, Q&A, Charity stream and Collab stream. Each changes payouts and brings its own chat moments (clutch plays, kitchen fires, street battles, power ballads, salary questions, donation matching, co-streamers going off-script), and no two streams in a row repeat the same moments. A hype meter builds during the stream and boosts gifts and followers.
 
+## The long game (Arena, Legacy, seasons)
+
+- **Arena → Sportsbook**: four Clout League football matches a day (six during Clout Cup week) between parody clubs. Bet game money on 1 / X / 2 or over/under 2.5 goals with real odds, watch any match live minute by minute (goals, red cards, VAR) and cash out mid-match, or let it settle when you sleep. League table and results.
+- **Arena → Casino** (game money only, small house edge): Clout Slots (👑👑👑 pays 500×), Roulette (colors, odd/even, halves, zero and lucky 7 at 36×), and the Viral Rocket crash game where you cash out before it crashes.
+- **Arena → Clout Pass**: a 30-tier season that resets every 30 days with a new theme. Earn XP from posting, streaming, challenges, deals, stunts, FanVault drops and winning bets; claim cash, energy, boosts, max energy, an exclusive avatar frame (tier 10), a stadium banner (tier 20) and a champion crown (tier 30).
+- **Weekly world events**: Clout Cup week, Fashion Week, Brand budget season, StreamFest, Vegas Week, Crypto mania and Algorithm chaos, each changing one part of the game for 7 days.
+- **Legacy**: at 100M followers, rebrand into a new era. Followers reset and you keep 15% of your cash, but you earn Legacy points for permanent perks (more followers per post, more money, more max energy, more viral luck, bigger head start). Repeat forever.
+- **New tiers and goals**: Legend (1B) and Mythic (5B) tiers, milestones up to 10B followers and $100B, mega brands (Nyke, Maison Lumière, Galactic Airlines, Pear Inc. global) and mega contracts (movie lead, halftime show, your own reality series), plus new trophies.
+
 ## Danger Zone
 
 - **Stunts** (rooftop selfie, public prank, world's hottest pepper, filming while speeding, posing with a "tame" tiger, urban exploring, a 48-hour no-sleep stream, faking your own disappearance) can go hugely viral, or go wrong. You can get injured (hospital bill, max energy cut by 40% for days), arrested (fine, a lost day, a mugshot meme), collapse from burnout, or face public outrage. Stress raises the odds of failure; a bodyguard and a lawyer lower them. Afterwards you can post a "hospital update" or "own the mugshot" for sympathy and reach.
@@ -191,6 +200,7 @@ Doing well gives you a second wind, shown as a gold energy pop-up:
 - `spicy.js` – scandal events, hot seat, tea fallout, world tour
 - `behavior.js` – personalities, memory, mood, decisions, mind games, mention intents
 - `danger.js` – risky stunts, shady schemes, investigations, injuries
+- `endgame.js` – sportsbook, casino, Clout Pass, world events, Legacy, mega deals
 - `vault.js` – FanVault paid-subscription platform, drops, events
 - `money.js` – gigs, markets, property, course, extra shop items, cosmetics, Money screen
 - `ui.js` – rendering, player actions, start screen

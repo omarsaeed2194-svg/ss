@@ -493,6 +493,7 @@ const EVENTS = {
       S.platforms.live.followers += c.gain;
       for (const id of unlockedIds()) if (id !== 'live' && id !== 'vault') S.platforms[id].followers += c.gain * 0.1;
       S.money += c.don; S.stats.earned += c.don; S.stats.streams++;
+      if (typeof passXP === 'function') passXP(30);
       gainEnergy(Math.round(clamp(Math.log10(c.viewers + 1) * 4, 3, 25)), 'Chat hyped you up');
       if (c.len === 's12') S.stats.subathons++;
       S.platforms.live.eng = clamp(S.platforms.live.eng * 0.8 + 14 * 0.2, 0.5, 30);
@@ -532,7 +533,7 @@ const LIVE_GIFTS = [
 function rollGifts(c) {
   const L = STREAMS[c.len];
   const ch = 1 + (skillLvl('charisma') - 1) * 0.08;
-  const budget = c.viewers * Math.pow(L.hours, 0.85) * rnd(0.25, 0.5) * ch * clamp(S.rep / 55, 0.4, 1.6) * (c.giftX || 1) * (S.team.smm ? 1.15 : 1) + 8;
+  const budget = (typeof worldMult === 'function' ? worldMult('gift') : 1) * c.viewers * Math.pow(L.hours, 0.85) * rnd(0.25, 0.5) * ch * clamp(S.rep / 55, 0.4, 1.6) * (c.giftX || 1) * (S.team.smm ? 1.15 : 1) + 8;
   const out = [];
   for (const g of LIVE_GIFTS) {
     const exp = (budget * g.share) / g.v * rnd(0.6, 1.4);
