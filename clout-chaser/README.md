@@ -149,6 +149,30 @@ A sixth platform, unlocked at 1K followers. Fans pay monthly for exclusive drops
 - **Legacy**: at 100M followers, rebrand into a new era. Followers reset and you keep 15% of your cash, but you earn Legacy points for permanent perks (more followers per post, more money, more max energy, more viral luck, bigger head start). Repeat forever.
 - **New tiers and goals**: Legend (1B) and Mythic (5B) tiers, milestones up to 10B followers and $100B, mega brands (Nyke, Maison Lumière, Galactic Airlines, Pear Inc. global) and mega contracts (movie lead, halftime show, your own reality series), plus new trophies.
 
+## Finance: bank, mortgages, investing, acquisitions
+- **Money hub** now has four screens: Money, Investing, Bank and Acquisitions. Net worth includes stocks, shorts, property, company stakes and debt.
+- **Clout Bank**: a credit score from 300 to 850. Personal loans (30/90/180 days) are paid automatically every night. Missed payments cost credit and a late fee, and after four misses collectors take your savings and stocks. Better credit means lower rates and bigger limits.
+- **Real estate with mortgages**: seven properties, from a starter loft to a skyscraper. Buy for cash, or with a 360-day mortgage at 10–35% down depending on credit. Rent pays nightly and values follow a housing index. Five missed payments and the bank repossesses the property.
+- **Investing desk**: 17 assets in stocks, ETFs, bonds, commodities, a REIT and crypto. It has an allocation bar, unrealized and realized profit and loss, and **short selling** with margin, a borrow fee and margin calls.
+- **Acquisitions**: buy 10–100% stakes in 13 fictional companies, from a coffee chain to a media group. Each pays its share of profit nightly. Owning 51% gives you control: a perk, plus Expand, Cut costs and IPO actions. Acquisition loans need 40% down. Events cover buyout offers, booms, scandals, mergers and strikes.
+
+## Enterprise org chart
+- Over 60 roles across 9 departments: Executive (CEO, COO, CFO, CMO, CTO, Chief of Staff), Creative, Growth, Business, Commerce, Finance & investing (fund manager, quant, advisor, tax attorney, realtor, M&A banker, risk officer), Legal & safety, Operations and Personal care.
+- Each role lists its effects. These stack through `staffBonus()` and cover reach, quality, deal pay, sales, energy, stress, heat, gifts, FanVault, taxes, payroll, loan rates, portfolio alpha, stop-loss and more. You can hire a whole department in one tap.
+
+## FanVault creator dashboard
+- A dedicated screen with Grow, Earn and Fans tabs, plus revenue and subscriber charts and a creator rank.
+- Grow:
+  - VIP and Inner Circle tiers; the Inner Circle needs a weekly call.
+  - Promotions: free trial, flash sale and a 3-month bundle.
+- Earn:
+  - Pay-to-unlock mass messages.
+  - A custom request queue with deadlines.
+- Fans: a top-fan leaderboard with thank-you tips.
+
+## More Arena
+- Sportsbook **parlays** (up to 6 legs, with a bonus on 3+), influencer **Fight Night** (winner or KO), animated **horse racing**, **blackjack**, **scratch cards**, and a full **bet history** across every game.
+
 ## Danger Zone
 
 - **Stunts** (rooftop selfie, public prank, world's hottest pepper, filming while speeding, posing with a "tame" tiger, urban exploring, a 48-hour no-sleep stream, faking your own disappearance) can go hugely viral, or go wrong. You can get injured (hospital bill, max energy cut by 40% for days), arrested (fine, a lost day, a mugshot meme), collapse from burnout, or face public outrage. Stress raises the odds of failure; a bodyguard and a lawyer lower them. Afterwards you can post a "hospital update" or "own the mugshot" for sympathy and reach.
@@ -224,6 +248,8 @@ Doing well gives you a second wind, shown as a gold energy pop-up:
 - `cloud-config.js` – Supabase URL/key for email accounts (empty = local only)
 - `android/supabase-schema.sql` – database tables and security rules for Supabase
 - `extra.js` – new team members, Headquarters, daily login calendar
+- `finance.js` – bank, loans, mortgages, real estate, investing desk, short selling, acquisitions, enterprise org chart
+- `arena.js` – parlays, Fight Night, horse racing, blackjack, scratch cards, bet history
 - `visuals.js` – animated scenery, stories, event art, reaction bursts, casino and match animations
 - `art.js` – generated faces, logos, post illustrations, photo resizing
 - `events.js` – random and triggered events, livestream chat, modal queue

@@ -132,11 +132,13 @@ const skillLvl = (k) => S.skills[k].lvl;
 const TEAM_LEVELS = ['Junior', 'Pro', 'Senior', 'Elite', 'Legend'];
 const teamLvl = (k) => (S.team[k] ? (S.teamLvl && S.teamLvl[k]) || 1 : 0);
 const tm = (k) => (S.team[k] ? 1 + (teamLvl(k) - 1) * 0.25 : 0);
-const teamPay = (k) => Math.round(TEAM[k].pay * (1 + ((S.teamLvl && S.teamLvl[k]) || 1) * 0.4 - 0.4));
+/* staff bonuses from the enterprise org chart (finance.js) */
+const SB = (k) => (typeof staffBonus === 'function' ? staffBonus(k) : 0);
+const teamPay = (k) => Math.round(TEAM[k].pay * (1 + ((S.teamLvl && S.teamLvl[k]) || 1) * 0.4 - 0.4) * (1 - Math.min(0.3, SB('payroll'))));
 const teamUpCost = (k) => Math.round(TEAM[k].pay * 4 * teamLvl(k) / 10) * 10;
 const teamSize = () => Object.keys(S.team).filter((k) => S.team[k]).length;
 const stamina = () => Math.min(150, Math.floor((((S && S.day) || 1) - 1) / 5) * 5); // +5 max energy every 5 days, up to +150
-function maxEnergy() { const m = 100 + 10 * tm('trainer') + 5 * (typeof hqLvl === 'function' ? hqLvl('gym') : 0) + (typeof legacyLvl === 'function' ? 10 * legacyLvl('energy') : 0) + stamina() + (S.bonusMaxE || 0) + Math.round(20 * tm('assistant')) + (S.owned.mansion ? 10 : 0) + (S.owned.island ? 10 : 0); return S.injuredUntil && S.injuredUntil >= S.day ? Math.round(m * 0.6) : m; }
+function maxEnergy() { const m = 100 + 10 * tm('trainer') + 5 * (typeof hqLvl === 'function' ? hqLvl('gym') : 0) + (typeof legacyLvl === 'function' ? 10 * legacyLvl('energy') : 0) + stamina() + (S.bonusMaxE || 0) + Math.round(20 * tm('assistant')) + (S.owned.mansion ? 10 : 0) + (S.owned.island ? 10 : 0) + Math.round(SB('energy')); return S.injuredUntil && S.injuredUntil >= S.day ? Math.round(m * 0.6) : m; }
 const energyCap = () => maxEnergy() + 60; // rewards can overcharge you past your normal max
 function gearQ(pid) {
   let q = 0;
@@ -147,9 +149,9 @@ function gearQ(pid) {
   q += 0.04 * (typeof hqLvl === 'function' ? hqLvl('studio') : 0);
   if (pid === 'clipz' || pid === 'tube' || pid === 'pix') q += 0.1 * tm('editor');
   if (pid !== 'chirp') q += 0.06 * tm('stylist');
-  return q;
+  return q + SB('quality');
 }
-function reachBonus() { let r = 0.03 * (typeof hqLvl === 'function' ? hqLvl('server') : 0) + 0.08 * tm('analyst') + Math.min(0.1, Math.max(0, teamSize() - 3) * 0.01); /* dream-team synergy */ for (const it of SHOP) if (S.owned[it.id] && it.reach) r += it.reach; return r; }
+function reachBonus() { let r = 0.03 * (typeof hqLvl === 'function' ? hqLvl('server') : 0) + 0.08 * tm('analyst') + Math.min(0.1, Math.max(0, teamSize() - 3) * 0.01); /* dream-team synergy */ for (const it of SHOP) if (S.owned[it.id] && it.reach) r += it.reach; return r + SB('reach'); }
 function repLabel(r = S.rep) { return r >= 85 ? 'Beloved' : r >= 68 ? 'Respected' : r >= 50 ? 'Liked' : r >= 35 ? 'Mixed' : r >= 20 ? 'Sketchy' : 'Toxic'; }
 function repClass(r = S.rep) { return r >= 60 ? 'good' : r >= 35 ? 'warn' : 'bad'; }
 function heatLabel(h = S.heat) { return h >= 85 ? 'Imploding' : h >= 60 ? 'Scorching' : h >= 35 ? 'Heated' : h >= 12 ? 'Buzzing' : 'Calm'; }
@@ -210,7 +212,7 @@ function applyFx(e = {}) {
   if (df) out.push(['Followers', signed(df), df > 0]);
   if (e.rep) {
     let d = e.rep;
-    if (d < 0) { d *= sev(); if (S.team.pr) d *= Math.max(0.25, 1 - 0.4 * tm('pr')); }
+    if (d < 0) { d *= sev(); if (S.team.pr) d *= Math.max(0.25, 1 - 0.4 * tm('pr')); d *= Math.max(0.3, 1 - SB('crisis')); }
     const r0 = S.rep; changeRep(d); const dd = S.rep - r0;
     if (Math.abs(dd) >= 0.05) out.push(['Reputation', signed1(dd), dd > 0]);
   }
@@ -221,6 +223,7 @@ function applyFx(e = {}) {
   }
   if (e.money) {
     let d = e.money; if (d < 0 && e.legal && S.team.lawyer) d *= Math.max(0.1, 1 - 0.5 * tm('lawyer'));
+    if (d < 0 && e.legal) d *= Math.max(0.2, 1 - SB('legal'));
     S.money += d; if (d > 0) S.stats.earned += d;
     out.push(['Money', signedMoney(d), d > 0]);
   }
@@ -391,6 +394,7 @@ function computePost(o, det = false) {
   const aff = o.affiliate ? views * 0.0012 * (1 + 0.05 * skillLvl('business')) : 0;
   cash += tips + aff;
   if (typeof legacyLvl === 'function') cash *= 1 + 0.1 * legacyLvl('money');
+  cash *= 1 + SB('cash');
   return { energy, refund, orig, lookMatch, q, views, er, likes, comments, shares, gain: Math.round(gain), loss: Math.round(loss), rep, heat, cash, tips: Math.round(tips), aff: Math.round(aff), viral, flop, topic, viralP, sellout };
 }
 
@@ -735,7 +739,7 @@ function challengeMet(q, o, r, post) {
 /* ---------- deals ---------- */
 function dealPay(b) {
   const t = Math.max(totalFollowers(), 300);
-  let pay = b.base * Math.pow(t / 1000, 0.85) * clamp(engRate() / 5, 0.4, 2.2) * (1 + 0.25 * tm('manager')) * (1 + 0.04 * (skillLvl('business') - 1));
+  let pay = b.base * Math.pow(t / 1000, 0.85) * clamp(engRate() / 5, 0.4, 2.2) * (1 + 0.25 * tm('manager')) * (1 + 0.04 * (skillLvl('business') - 1)) * (1 + SB('deal'));
   if (b.shady) pay *= 1.6;
   if (typeof worldMult === 'function') pay *= worldMult('deals') * (1 + 0.1 * legacyLvl('money'));
   return Math.max(25, Math.round(pay / 5) * 5);
@@ -821,19 +825,19 @@ function endDay() {
   let upkeep = 0; for (const it of SHOP) if (S.owned[it.id] && it.upkeep) upkeep += it.upkeep;
   if (salaries) { S.money -= salaries; lines.push(['Team payday (monthly salaries)', -salaries]); }
   if (upkeep) { S.money -= upkeep; lines.push(['Lifestyle upkeep', -upkeep]); }
-  const fameTax = Math.round([0, 10, 45, 160, 550, 1600, 6500, 26000, 90000, 250000][tierIndex()] * (S.team.accountant ? Math.max(0.1, 1 - 0.5 * tm('accountant')) : 1));
+  const fameTax = Math.round([0, 10, 45, 160, 550, 1600, 6500, 26000, 90000, 250000][tierIndex()] * (S.team.accountant ? Math.max(0.1, 1 - 0.5 * tm('accountant')) : 1) * (1 - Math.min(0.6, SB('tax'))));
   if (fameTax) { S.money -= fameTax; lines.push(['Cost of fame (rent, stylist, security)', -fameTax]); }
   // Passive businesses
   const t = totalFollowers(); const repF = clamp(S.rep / 60, 0.2, 1.6);
   if (S.merch) {
     const units = Math.round(t * realRatio() * 0.00012 * repF * S.merch.lvl * (1 + (S.merch.boost || 0) * 0.8) * rnd(0.7, 1.3));
-    const profit = Math.round(units * (10 + S.merch.lvl * 3) * (1 + 0.04 * skillLvl('business')));
+    const profit = Math.round(units * (10 + S.merch.lvl * 3) * (1 + 0.04 * skillLvl('business')) * (1 + SB('sales')));
     S.merch.boost = 0; S.merch.sold += units;
     S.money += profit; S.stats.earned += profit; if (profit) lines.push([`Merch (${fmt(units)} sold)`, profit]);
   }
   if (S.product) {
     const units = Math.round(t * realRatio() * 0.0003 * repF * rnd(0.6, 1.4) * (S.product.hype || 1));
-    const profit = Math.round(units * 14 * (1 + 0.05 * skillLvl('business')));
+    const profit = Math.round(units * 14 * (1 + 0.05 * skillLvl('business')) * (1 + SB('sales')));
     S.product.hype = Math.max(1, (S.product.hype || 1) * 0.9); S.product.sold += units;
     S.money += profit; S.stats.earned += profit; if (profit) lines.push([`${S.product.name} sales`, profit]);
   }
@@ -846,6 +850,7 @@ function endDay() {
   if (typeof moneyTick === 'function') moneyTick(lines);
   if (typeof endgameTick === 'function') endgameTick(lines);
   if (typeof extraTick === 'function') extraTick(lines);
+  if (typeof financeTick === 'function') financeTick(lines);
   // Organic growth / decay
   const idle = S.day - S.lastPostDay;
   for (const id of unlockedIds()) {

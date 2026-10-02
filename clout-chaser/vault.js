@@ -39,7 +39,7 @@ function vaultRecord(kind, text, cash, dsubs) {
 function vaultFunnel(r) {
   if (!vaultOn() || !vaultInit().link || r.gain <= 0) return 0;
   const n = (r.gain * 0.08 + r.views * 0.0004) * VAULT_PRICES[S.vault.price] * clamp(S.rep / 60, 0.3, 1.4) * realRatio();
-  S.platforms.vault.followers += n;
+  S.platforms.vault.followers += n * promoGrowth();
   return n;
 }
 
@@ -52,6 +52,7 @@ function vaultDrop(kind) {
   let dsubs = 0, cash = 0, msg = '';
   if (D.subs) {
     dsubs = (ps.followers * D.subs + free * D.subs * 0.03 * (v.link ? 1.5 : 1)) * demand * rnd(0.7, 1.3) + 2;
+    dsubs *= promoGrowth();
     ps.followers += dsubs;
     msg = `${D.name} is up. ${signed(Math.round(dsubs))} subscribers.`;
   }
@@ -96,13 +97,14 @@ function vaultTick(lines) {
   if (!vaultOn()) return;
   const v = vaultInit(), ps = S.platforms.vault;
   const idle = S.day - (v.lastDrop || 0);
-  const churn = idle > 3 ? Math.min(0.12, 0.03 + (idle - 3) * 0.015) : 0.008;
+  const churn = (idle > 3 ? Math.min(0.12, 0.03 + (idle - 3) * 0.015) : 0.008) * (v.promo && v.promo.k === 'bundle' && S.day <= v.promo.until ? 0.5 : 1);
   const lost = ps.followers * churn;
   ps.followers = Math.max(0, ps.followers - lost);
-  if (v.link) ps.followers += Math.max(0, totalFollowers() - ps.followers) * 0.0003 * VAULT_PRICES[v.price] * clamp(S.rep / 60, 0.3, 1.4);
-  const inc = vaultEarn(ps.followers * v.price * vaultCut() / 30);
+  if (v.link) ps.followers += Math.max(0, totalFollowers() - ps.followers) * 0.0003 * VAULT_PRICES[v.price] * clamp(S.rep / 60, 0.3, 1.4) * promoGrowth();
+  const inc = vaultEarn(ps.followers * v.price * vaultCut() / 30 * vaultArpu() * promoIncome() * (1 + SB('vault')));
   if (inc) lines.push([`FanVault (${fmt(ps.followers)} subscribers)`, inc]);
   if (idle > 3 && ps.followers > 10) lines.push([`FanVault: no new drop in ${idle} days, ${fmt(lost)} cancelled`, 0]);
+  vaultTick2(lines);
 }
 
 /* Composer body for FanVault */
@@ -122,10 +124,12 @@ function vaultBody() {
   </div>`;
 }
 
+/* redraw whichever surface is showing: the composer sheet or the FanVault dashboard */
+const vaultRedraw = () => { const w = document.getElementById('composeWrap'); if (w && !w.hidden) { renderCompose(false); return 'norender'; } };
 const VAULT_ACT = {
-  vPrice: (a) => { const v = vaultInit(); const old = v.price; v.price = +a; if (v.price > old) { const lost = S.platforms.vault.followers * 0.1; S.platforms.vault.followers -= lost; toast(`Price up. ${fmt(lost)} fans cancelled.`, 'bad'); } renderCompose(false); return 'norender'; },
-  vLink: () => { const v = vaultInit(); v.link = !v.link; if (v.link) { changeRep(-1); toast('Link in bio. Your free posts now funnel fans to FanVault.'); } renderCompose(false); return 'norender'; },
-  vDrop: (a) => { if (!vaultDrop(a)) return 'norender'; renderCompose(false); return 'norender'; },
+  vPrice: (a) => { const v = vaultInit(); const old = v.price; v.price = +a; if (v.price > old) { const lost = S.platforms.vault.followers * 0.1; S.platforms.vault.followers -= lost; toast(`Price up. ${fmt(lost)} fans cancelled.`, 'bad'); } return vaultRedraw(); },
+  vLink: () => { const v = vaultInit(); v.link = !v.link; if (v.link) { changeRep(-1); toast('Link in bio. Your free posts now funnel fans to FanVault.'); } return vaultRedraw(); },
+  vDrop: (a) => { if (!vaultDrop(a)) return 'norender'; return vaultRedraw(); },
 };
 
 const VS = () => S.platforms.vault;
@@ -186,4 +190,117 @@ Object.assign(EVENTS, {
       { label: 'Rant about it on Chirp', fn: () => { vaultLose(0.05); return R('Your thread became the official creator anthem.', { fp: 0.015, heat: 8 }); } },
     ],
   },
+});
+
+
+/* ======================================================================
+   FanVault creator dashboard: tiers, promos, mass messages, top fans,
+   custom requests and analytics
+   ====================================================================== */
+const VAULT_TIERS = {
+  vip:   { name: 'VIP',          icon: '💎', mult: 3,  share: 0.12,  cost: 2000,  req: 100,  desc: '12% of subscribers pay 3× for early drops and a badge.' },
+  inner: { name: 'Inner Circle', icon: '👑', mult: 10, share: 0.025, cost: 15000, req: 1000, desc: '2.5% pay 10× for a weekly group call. Skip the call and half of them downgrade.' },
+};
+const VAULT_PROMOS = {
+  trial:  { name: 'Free trial week', icon: '🎁', days: 7, cd: 10, desc: 'New subscribers ×3 for a week. 40% of the trial crowd leaves when it ends.' },
+  sale:   { name: '50% off flash sale', icon: '🏷️', days: 3, cd: 8, desc: 'New subscribers ×2.5 for 3 days, but income from everyone −25% while it runs.' },
+  bundle: { name: '3-month bundle', icon: '📦', days: 5, cd: 14, desc: '20% of fans prepay 3 months at 15% off: instant cash, and half the usual cancellations.' },
+};
+const MASS_PPV = [[5, 'Teaser clip', 0.35], [15, 'Exclusive set', 0.18], [40, 'Premium bundle', 0.07]];
+const REQ_KINDS = [['birthday shoutout', 8], ['pep talk video', 10], ['outfit rating', 6], ['cook-along video', 14], ['gaming session', 16], ['custom workout plan', 12], ['voice message', 5], ['signed polaroid', 6], ['song cover request', 14], ['study-with-me stream', 12]];
+function vaultX() {
+  const v = vaultInit();
+  v.tiers = v.tiers || {}; v.fans = v.fans || []; v.reqs = v.reqs || []; v.hist = v.hist || []; v.innerCall = v.innerCall || 0;
+  if (v.lastEarned == null) v.lastEarned = v.earned;
+  return v;
+}
+const promoOn = (k) => { const v = vaultInit(); return v.promo && v.promo.k === k && S.day <= v.promo.until; };
+const promoGrowth = () => (promoOn('trial') ? 3 : promoOn('sale') ? 2.5 : 1);
+const promoIncome = () => (promoOn('sale') ? 0.75 : 1);
+function vaultArpu() {
+  const v = vaultX(); let m = 1;
+  for (const [k, T] of Object.entries(VAULT_TIERS)) if (v.tiers[k]) m += T.share * (k === 'inner' && S.day - v.innerCall > 7 ? 0.5 : 1) * (T.mult - 1);
+  return m;
+}
+const vaultPerDay = () => vaultSubs() * vaultInit().price * vaultCut() / 30 * vaultArpu() * promoIncome() * (1 + SB('vault'));
+function vaultRank(perDay) { return perDay >= 50000 ? 'Top 0.1%' : perDay >= 5000 ? 'Top 1%' : perDay >= 500 ? 'Top 5%' : perDay >= 50 ? 'Top 30%' : 'Top 80%'; }
+function vaultTick2(lines) {
+  const v = vaultX(), ps = S.platforms.vault;
+  // promos ending
+  if (v.promo && S.day === v.promo.until) {
+    if (v.promo.k === 'trial') { const gone = Math.min(ps.followers * 0.5, Math.max(0, ps.followers - v.promo.start) * 0.4); ps.followers -= gone; lines.push([`FanVault trial ended: ${fmt(gone)} trial fans left`, 0]); }
+    else lines.push([`FanVault ${VAULT_PROMOS[v.promo.k].name.toLowerCase()} ended`, 0]);
+  }
+  // top fans tip
+  if (ps.followers >= 20 && v.fans.length < 8 && chance(0.25)) v.fans.push({ h: fanHandle(), spent: 0, since: S.day });
+  let tips = 0;
+  for (const f of v.fans) { if (chance(0.45)) { const t = Math.round(rnd(5, 40) * (v.price / 9.99) * (1 + Math.log10(1 + ps.followers) * 0.4)); f.spent += t; tips += t; } }
+  v.fans.sort((a, b) => b.spent - a.spent);
+  if (tips) { const got = vaultEarn(tips * vaultCut()); lines.push([`FanVault top-fan tips`, got]); }
+  // custom requests: new ones arrive, overdue ones get refunded
+  const late = v.reqs.filter((r) => S.day > r.due);
+  if (late.length) { v.reqs = v.reqs.filter((r) => S.day <= r.due); const lost = ps.followers * 0.01 * late.length; ps.followers = Math.max(0, ps.followers - lost); changeRep(-0.4 * late.length); lines.push([`${late.length} FanVault request${late.length > 1 ? 's' : ''} expired (refunded, fans annoyed)`, 0]); }
+  if (ps.followers >= 25) { const n = chance(0.5) ? ri(1, 2) : 0; for (let i = 0; i < n && v.reqs.length < 5; i++) { const [kind, e] = pick(REQ_KINDS); v.reqs.push({ id: uid(), from: fanHandle(), kind, e, due: S.day + ri(2, 4), pay: Math.round(rnd(30, 110) * (v.price / 9.99) * Math.sqrt(1 + ps.followers / 500)) }); } }
+  // analytics
+  v.hist.push({ d: S.day, rev: Math.round(v.earned - v.lastEarned), subs: Math.round(ps.followers) }); if (v.hist.length > 30) v.hist.shift();
+  v.lastEarned = v.earned;
+}
+function massPpv(i) {
+  const [price, name, share] = MASS_PPV[i], v = vaultX(), ps = S.platforms.vault;
+  if (!needEnergy(6)) return false;
+  const tired = S.day - v.lastPpv <= 1;
+  const buyers = ps.followers * share * rnd(0.8, 1.2) * (tired ? 0.4 : 1) * clamp(S.rep / 60, 0.4, 1.3);
+  const cash = vaultEarn(buyers * price * vaultCut() * (1 + SB('vault')));
+  v.ppvSold += Math.round(buyers); v.lastPpv = S.day;
+  if (tired) { const lost = ps.followers * 0.02; ps.followers -= lost; }
+  vaultRecord('mass', `Mass message: ${name} $${price}`, cash, 0);
+  toast(`${fmt(buyers)} fans unlocked your ${name.toLowerCase()}: ${money(cash)}${tired ? '. Inbox fatigue: a few cancelled.' : ''}`, 'gold');
+  if (cash) sound('cash');
+  if (typeof questEvent === 'function') questEvent('vault');
+  return true;
+}
+function vFanVault() {
+  if (!vaultOn()) {
+    const t = totalFollowers();
+    return `<div class="col-head">${head('FanVault', 'Paid subscriptions')}</div><div class="sect"><p class="small muted">A paid-subscription platform: fans pay monthly for exclusive drops. Big money, nervous brands. Kept PG-13.</p>
+      ${t >= PLATFORMS.vault.unlock ? btn('Join FanVault', 'unlock', 'vault', 'primary') : `<span class="small muted">${ico('lock')} Unlocks at ${fmt(PLATFORMS.vault.unlock)} followers.</span>`}</div>`;
+  }
+  const v = vaultX(), ps = S.platforms.vault, pd = vaultPerDay(), idle = S.day - (v.lastDrop || 0);
+  const tab = ui.fvTab || 'grow';
+  const rev = v.hist.map((h) => h.rev), subs = v.hist.map((h) => h.subs);
+  let body = '';
+  if (tab === 'grow') body = `
+    <div class="sect"><h3>Price & link</h3><div class="scroller">${Object.keys(VAULT_PRICES).map((p) => chip(`$${p}/mo`, 'vPrice', p, String(v.price) === p)).join('')}</div>
+      <label class="row small"><input type="checkbox" data-act="vLink" ${v.link ? 'checked' : ''}> Link FanVault in my bio <span class="muted">(free posts funnel fans here)</span></label></div>
+    <div class="sect"><h3>Subscription tiers</h3><div class="cards">${Object.entries(VAULT_TIERS).map(([k, T]) => `<div class="card ${v.tiers[k] ? 'owned' : ''}"><div class="t"><span>${T.icon} ${T.name}</span><span class="pill">$${(v.price * T.mult).toFixed(2)}/mo</span></div><span class="small muted">${T.desc}</span>
+      ${v.tiers[k] ? (k === 'inner' ? `<div class="row"><span class="pill ${S.day - v.innerCall > 7 ? 'bad' : 'good'}">${S.day - v.innerCall > 7 ? 'Call overdue: half downgraded' : `Next call due in ${7 - (S.day - v.innerCall)}d`}</span>${btn('Host the call · 15', 'fvCall', '', 'sm blue', S.energy < 15)}</div>` : '<span class="pill good">Live</span>')
+        : ps.followers < T.req ? `<span class="small muted">${ico('lock')} Needs ${fmt(T.req)} subscribers</span>` : btn(`Launch · ${money(T.cost)}`, 'fvTier', k, 'sm primary', S.money < T.cost)}</div>`).join('')}</div>
+      <span class="small muted">Tiers raise what an average fan pays: now ×${vaultArpu().toFixed(2)}.</span></div>
+    <div class="sect"><h3>Promotions</h3>${v.promo && S.day <= v.promo.until ? `<div class="hint">${VAULT_PROMOS[v.promo.k].icon} <b>${VAULT_PROMOS[v.promo.k].name}</b> running · ${v.promo.until - S.day + 1} day(s) left</div>` : ''}
+      <div class="cards">${Object.entries(VAULT_PROMOS).map(([k, P]) => { const cd = (v.promoCd || {})[k] || 0; return `<div class="card"><div class="t"><span>${P.icon} ${P.name}</span><span class="pill">${P.days} days</span></div><span class="small muted">${P.desc}</span>${S.day < cd ? `<span class="small muted">Ready again in ${cd - S.day} days</span>` : btn('Start', 'fvPromo', k, 'sm primary', !!(v.promo && S.day <= v.promo.until))}</div>`; }).join('')}</div></div>`;
+  else if (tab === 'earn') body = `
+    <div class="sect"><h3>Mass message (pay-to-unlock)</h3><span class="small muted">Send a locked message to every subscriber. Cheaper unlocks sell to more fans. Two in a row tires them out.</span>
+      <div class="row">${MASS_PPV.map(([p, n], i) => btn(`${n} · $${p}`, 'fvMass', i, 'sm blue', S.energy < 6)).join('')}</div></div>
+    <div class="sect"><h3>Custom requests <span class="small muted">· ${v.reqs.length}/5</span></h3>${v.reqs.length ? v.reqs.map((r) => `<div class="card" style="flex-direction:row;align-items:center;gap:10px"><div style="flex:1;min-width:0"><b>@${esc(r.from)}</b> <span class="small">wants a ${esc(r.kind)}</span><div class="small muted">Pays ${money(r.pay)} · ${r.e} energy · due in ${r.due - S.day}d</div></div>${btn('Make it', 'fvReq', r.id, 'sm primary', S.energy < r.e)}${btn('Decline', 'fvReqNo', r.id, 'sm')}</div>`).join('') : '<p class="small muted">No requests right now. They arrive overnight once you have 25+ subscribers.</p>'}</div>
+    <div class="sect"><h3>Drops</h3><div class="cards">${Object.entries(VAULT_DROPS).map(([k, D]) => `<div class="card"><div class="t"><span>${D.name}</span><span class="pill blue">${D.e} energy${D.cost ? ` · ${money(D.cost)}` : ''}</span></div><span class="small muted">${D.desc}</span>${btn('Drop it', 'vDrop', k, 'sm blue', S.energy < D.e || (D.cost && S.money < D.cost))}</div>`).join('')}</div>
+      ${idle > 3 ? `<span class="small bad">${idle} days since your last drop: fans are cancelling.</span>` : ''}</div>`;
+  else if (tab === 'fans') body = `
+    <div class="sect"><div class="row between"><h3>Top fans</h3>${v.fans.length ? btn('Send thank-you voice notes · 5', 'fvThank', '', 'sm', S.energy < 5 || v.thanked === S.day) : ''}</div>
+      ${v.fans.length ? `<div class="lgt">${v.fans.map((f, i) => `<div class="row between"><span>${['🥇', '🥈', '🥉'][i] || `${i + 1}.`} ${avatar(f.h, '#00AFF0', 'xs')} @${esc(f.h)} <span class="small muted">since day ${f.since}</span></span><b class="gold">${money(f.spent)}</b></div>`).join('')}</div>` : '<p class="small muted">Your biggest supporters show up here once you have 20+ subscribers.</p>'}</div>
+    <div class="sect"><h3>Recent activity</h3>${v.drops.length ? `<div class="bars">${v.drops.slice(0, 8).map((x) => `<div class="small row between"><span>Day ${x.d} · ${esc(x.text)}</span><span class="${x.cash ? 'gold' : x.dsubs >= 0 ? 'good' : 'bad'}">${x.cash ? money(x.cash) : `${signed(x.dsubs)} subs`}</span></div>`).join('')}</div>` : '<p class="small muted">Nothing yet.</p>'}</div>`;
+  return `<div class="col-head">${head('FanVault', `${vaultRank(pd)} of creators`)}${tabsBar([['grow', '📈 Grow'], ['earn', '💸 Earn'], ['fans', '💙 Fans']], tab, 'fvTab')}</div>
+    <div class="sect vault"><div class="wallet">${kv('Subscribers', fmt(ps.followers))}${kv('Per day', money(pd), 'gold')}${kv('Lifetime', money(v.earned), 'good')}${kv('Avg fan pays', `$${(v.price * vaultArpu()).toFixed(2)}`)}</div>
+      ${rev.length > 1 ? `<div class="row between small"><span>Revenue (30 days) ${sparkline(rev, 140, 32)}</span><span>Subscribers ${sparkline(subs, 140, 32)}</span></div>` : '<span class="small muted">Charts appear after a couple of nights.</span>'}
+      <div class="row">${btn(`${ico('feather')} Post to FanVault`, 'compose', 'vault', 'sm blue')}<span class="small muted">You keep ${Math.round(vaultCut() * 100)}%${v.ownApp ? ' (your own app)' : ''}.</span></div></div>${body}`;
+}
+Object.assign(VAULT_ACT, {
+  fvTab: (a) => { ui.fvTab = a; },
+  fvTier: (a) => { const T = VAULT_TIERS[a], v = vaultX(); if (v.tiers[a] || !spend(T.cost)) return toast('Not enough money.', 'bad'); v.tiers[a] = true; if (a === 'inner') v.innerCall = S.day; toast(`${T.icon} ${T.name} tier launched.`, 'gold'); sound('cash'); },
+  fvCall: () => { if (!needEnergy(15)) return; const v = vaultX(); v.innerCall = S.day; const t = vaultEarn(vaultSubs() * 0.025 * rnd(2, 6)); changeRep(0.3); toast(`Inner Circle call done. They loved it${t ? ` and tipped ${money(t)}` : ''}.`, 'gold'); },
+  fvPromo: (a) => { const v = vaultX(), P = VAULT_PROMOS[a]; v.promoCd = v.promoCd || {}; if (S.day < (v.promoCd[a] || 0)) return; v.promo = { k: a, until: S.day + P.days - 1, start: vaultSubs() }; v.promoCd[a] = S.day + P.days + P.cd;
+    if (a === 'bundle') { const c = vaultEarn(vaultSubs() * 0.2 * v.price * 3 * 0.85 * vaultCut()); toast(`Bundle launched: ${money(c)} prepaid today.`, 'gold'); if (c) sound('cash'); } else toast(`${P.name} is live.`, 'gold'); },
+  fvMass: (a) => { massPpv(+a); },
+  fvReq: (a) => { const v = vaultX(), r = v.reqs.find((x) => x.id === +a); if (!r || !needEnergy(r.e)) return; v.reqs = v.reqs.filter((x) => x !== r); const c = vaultEarn(r.pay * vaultCut()); S.platforms.vault.followers += 1 + vaultSubs() * 0.002; vaultRecord('custom', `Custom ${r.kind} for @${r.from}`, c, 0); toast(`Delivered. @${r.from} paid ${money(c)} and told everyone.`, 'gold'); sound('cash'); addXp('charisma', 6); },
+  fvReqNo: (a) => { const v = vaultX(); v.reqs = v.reqs.filter((x) => x.id !== +a); },
+  fvThank: () => { const v = vaultX(); if (v.thanked === S.day || !needEnergy(5)) return; v.thanked = S.day; let t = 0; v.fans.slice(0, 5).forEach((f) => { const x = Math.round(rnd(10, 60) * (v.price / 9.99)); f.spent += x; t += x; }); const c = vaultEarn(t * vaultCut()); toast(`Your top fans melted. They tipped ${money(c)}.`, 'gold'); if (c) sound('cash'); },
 });

@@ -98,6 +98,7 @@ function settleFixture(f) {
       passXP(15); if (typeof questEvent === 'function') questEvent('betwin');
       if (b.odds >= 5) { S.stats.longshots = (S.stats.longshots || 0) + 1; news(`@${S.handle} hits a ${b.odds}× longshot on ${teamName(f.h)} vs ${teamName(f.a)}`, true); }
     } else { b.status = 'lost'; S.book.lost += b.stake; net -= b.stake; }
+    if (typeof betLog === 'function') betLog('⚽', `${PICK_LABEL(f, b.pick)} @ ${b.odds}`, b.stake, b.pay || 0);
   }
   return net;
 }
@@ -105,6 +106,7 @@ function bookTick(lines) {
   if (!S.book) return newFixtures();
   let net = 0, n = 0;
   for (const f of S.book.fx) if (!f.done) { const r = settleFixture(f); if (r) { net += r; n++; } }
+  if (typeof settleParlays === 'function') { const pn = settleParlays(); if (pn) { net += pn; n++; } }
   if (n) lines.push([`Sportsbook: ${net >= 0 ? 'won' : 'lost'} ${money(Math.abs(net))} on today's matches`, 0]);
   S.book.bets = S.book.bets.filter((b) => b.status === 'open' || S.book.fx.some((f) => f.id === b.fid)).slice(-40);
   newFixtures();
@@ -157,6 +159,7 @@ function cashOut(bid) {
   if (!b || b.status !== 'open' || !f || !f.live) return;
   const v = cashoutValue(b, f);
   S.money += v; b.status = 'cashed'; b.pay = v;
+  if (typeof betLog === 'function') betLog('⚽', `Cash-out: ${PICK_LABEL(f, b.pick)}`, b.stake, v);
   if (v > b.stake) S.stats.earned += v - b.stake;
   toast(`Cashed out for ${money(v)}`, v >= b.stake ? 'gold' : '');
   sound('cash');
@@ -180,6 +183,7 @@ function casinoResult(bet, won, label) {
   if (won - bet > S.casino.best) S.casino.best = won - bet;
   S.stats.gambles = (S.stats.gambles || 0) + 1;
   if (won > bet) { S.stats.earned += won - bet; sound('cash'); } else sound('bad');
+  if (typeof betLog === 'function') betLog('🎰', label[0].toUpperCase() + label.slice(1), bet, won);
   if (won >= bet * 20) { celebrate('gold'); news(`@${S.handle} hits a ${label} jackpot at the Clout Casino`, true); S.stats.jackpots = (S.stats.jackpots || 0) + 1; }
   if (chance(0.03)) { S.heat = clamp(S.heat + 4, 0, 100); news(`Paparazzi spot @${S.handle} at the casino at 4AM`, true); }
 }
@@ -322,10 +326,8 @@ function vArena() {
   const ev = worldEv();
   const top = `${ev.name ? `<div class="hint world">${ev.icon} <b>${ev.name}</b> · ${ev.desc} <span class="muted">(${S.world.until - S.day} days left)</span></div>` : ''}`;
   let body = '';
-  if (tabK === 'book') body = bookBody();
-  else if (tabK === 'casino') body = casinoBody();
-  else body = passBody();
-  return `<div class="col-head">${head('Arena', 'Bets, casino and your season pass. Game money only.')}${tabsBar([['book', '⚽ Sportsbook'], ['casino', '🎰 Casino'], ['pass', '🎟️ Clout Pass']], tabK, 'arenaTab')}</div>
+  body = ({ book: bookBody, fight: fightBody, race: raceBody, casino: casinoBody, tables: () => bjBody() + scratchBody(), pass: passBody, hist: historyBody }[tabK] || bookBody)();
+  return `<div class="col-head">${head('Arena', 'Sports, fights, races, casino and your season pass. Game money only.')}${tabsBar([['book', '⚽ Sports'], ['fight', '🥊 Fights'], ['race', '🏇 Races'], ['casino', '🎰 Casino'], ['tables', '🃏 Cards'], ['pass', '🎟️ Pass'], ['hist', '📜 History']], tabK, 'arenaTab').replace('class="tabs"', 'class="tabs scroll"')}</div>
     ${top ? `<div class="sect">${top}</div>` : ''}${body}`;
 }
 function stakeBtns(act, arg) {
@@ -341,12 +343,13 @@ function bookBody() {
   const table = Object.entries(B.table).sort((a, b) => b[1] - a[1]).slice(0, 6);
   return `<div class="sect"><div class="row between"><h3>Today's Clout League matches</h3><span class="small ${B.won - B.lost >= 0 ? 'good' : 'bad'}">Season P&L ${B.won - B.lost >= 0 ? '+' : '−'}${money(Math.abs(B.won - B.lost))}</span></div>
     <span class="small muted">Tap odds to pick, choose a stake, then watch it live (and cash out) or let it settle when you sleep.</span>
+    ${parlaySlip()}
     ${fx.map((f) => {
       const my = B.bets.filter((b) => b.fid === f.id);
       if (f.live && liveTimer) return liveBox(f);
       return `<div class="match ${f.done ? 'done' : ''}"><div class="teams"><b>${esc(teamName(f.h))}</b><span class="muted">${f.done ? `${f.hg} – ${f.ag}` : 'vs'}</span><b>${esc(teamName(f.a))}</b></div>
         ${f.done ? '' : `<div class="odds">${['h', 'd', 'a', 'o', 'u'].map((k) => `<button class="odd ${sel && sel.fid === f.id && sel.pick === k ? 'on' : ''}" data-act="betPick" data-arg="${f.id}:${k}"><span>${{ h: '1', d: 'X', a: '2', o: 'O2.5', u: 'U2.5' }[k]}</span><b>${f.odds[k].toFixed(2)}</b></button>`).join('')}</div>`}
-        ${sel && sel.fid === f.id && !f.done ? `<div class="betslip"><span class="small">${esc(PICK_LABEL(f, sel.pick))} @ <b>${f.odds[sel.pick]}</b>${worldMult('bets') > 1 ? ' <span class="pill gold">+15% Cup boost</span>' : ''}</span>${stakeBtns('betPlace', `${f.id}:${sel.pick}:`)}</div>` : ''}
+        ${sel && sel.fid === f.id && !f.done ? `<div class="betslip"><span class="small">${esc(PICK_LABEL(f, sel.pick))} @ <b>${f.odds[sel.pick]}</b>${worldMult('bets') > 1 ? ' <span class="pill gold">+15% Cup boost</span>' : ''}</span>${stakeBtns('betPlace', `${f.id}:${sel.pick}:`)}${btn((ui.parlay || []).some((l) => l.fid === f.id && l.pick === sel.pick) ? '− Parlay' : '+ Parlay', 'parlayAdd', `${f.id}:${sel.pick}`, 'sm blue')}</div>` : ''}
         ${my.length ? `<div class="mybets">${my.map((b) => `<span class="pill ${b.status === 'won' ? 'good' : b.status === 'lost' ? 'bad' : b.status === 'cashed' ? 'gold' : 'blue'}">${esc(PICK_LABEL(f, b.pick))} ${money(b.stake)} @ ${b.odds}${b.status === 'won' ? ` → ${money(b.pay)}` : b.status === 'cashed' ? ` → cashed ${money(b.pay)}` : b.status === 'lost' ? ' ✗' : ''}</span>`).join('')}</div>` : ''}
         ${!f.done ? btn(`${ico('live')} Watch live`, 'betLive', f.id, 'sm blue', !!liveTimer) : ''}</div>`;
     }).join('')}</div>

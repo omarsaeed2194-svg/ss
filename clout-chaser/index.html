@@ -672,6 +672,50 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100
   .tw-actions { max-width: none; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* ---------- finance, enterprise, FanVault dashboard, arena extras ---------- */
+.wallet:has(> div:nth-child(4)) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 560px) { .wallet:has(> div:nth-child(4)) { grid-template-columns: repeat(2, minmax(0, 1fr)); } .wallet:has(> div:nth-child(4)) > div:last-child { grid-column: auto; } }
+.tabs.scroll { overflow-x: auto; scrollbar-width: none; }
+.tabs.scroll::-webkit-scrollbar { display: none; }
+.tabs.scroll button { flex: 1 0 auto; padding-left: 12px; padding-right: 12px; white-space: nowrap; }
+.alloc { display: flex; height: 12px; border-radius: 99px; overflow: hidden; margin: 10px 0 6px; background: var(--surface-2); }
+.alloc i { display: block; height: 100%; }
+.meter.credit { height: 8px; background: linear-gradient(90deg, var(--bad), var(--warn) 45%, var(--good)); }
+.meter.credit > i { background: transparent; border-right: 3px solid var(--ink); border-radius: 0; }
+.orgchart { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 8px; }
+.org-dept { text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 2px; color: var(--ink); }
+.org-dept .oi { font-size: 22px; } .org-dept b { font-size: 13px; }
+.org-dept.on { border-color: var(--accent); background: var(--accent-soft); }
+.card.biz .spark { flex: none; }
+.rounds { display: flex; flex-direction: column; gap: 4px; }
+.rnd { opacity: 0; animation: rndIn .35s ease forwards; }
+@keyframes rndIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.match.fight .teams .row { gap: 6px; flex-wrap: nowrap; min-width: 0; }
+.odds.horses { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.odds.horses .odd { flex-direction: row; justify-content: space-between; padding: 8px 10px; }
+.odds.horses .odd span { color: var(--ink); font-size: 13px; text-align: left; }
+.track-race { display: flex; flex-direction: column; gap: 3px; padding: 8px; border-radius: 12px; background: linear-gradient(#2E7D32, #1B5E20); margin: 6px 0; }
+.lane { position: relative; height: 28px; border-bottom: 1px dashed #ffffff40; }
+.lane .hname { position: absolute; left: 4px; top: 6px; color: #ffffffb0; font-size: 11px; }
+.lane .finish { position: absolute; right: 26px; top: 0; bottom: 0; border-right: 3px dotted #fff; }
+.horse { position: absolute; left: 0; top: 0; font-size: 22px; transform: scaleX(-1); }
+.horse.run { animation: gallop var(--t) cubic-bezier(.3,.1,.6,1) forwards; }
+.horse.done { left: calc(100% - 30px); }
+@keyframes gallop { from { left: 0; } to { left: calc(100% - 30px); } }
+.race-res { display: block; margin-top: 6px; background: var(--bg); border-radius: 8px; padding: 6px 8px; }
+.bj { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 14px; background: radial-gradient(circle at 50% 0, #1E7B4C, #0E3B24); color: #fff; }
+.bj .muted { color: #ffffffa0; }
+.hand { display: flex; gap: 6px; flex-wrap: wrap; }
+.pcard { width: 46px; height: 64px; border-radius: 8px; background: #fff; color: #111; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; box-shadow: 0 2px 6px #0006; animation: rndIn .3s ease; }
+.pcard small { font-size: 16px; } .pcard.red { color: #D32F2F; }
+.pcard.back { background: repeating-linear-gradient(45deg, #1D4ED8 0 6px, #1E40AF 6px 12px); color: transparent; }
+.scratch { display: flex; flex-direction: column; gap: 8px; align-items: center; padding: 12px; border-radius: 14px; background: color-mix(in srgb, var(--sc) 18%, var(--surface)); border: 2px solid var(--sc); }
+.scr-grid { display: grid; grid-template-columns: repeat(3, 64px); gap: 8px; }
+.scr { width: 64px; height: 64px; border-radius: 12px; border: 0; font-size: 30px; background: repeating-linear-gradient(135deg, #B0B7BF 0 8px, #9AA2AB 8px 16px); color: #555; font-weight: 800; cursor: pointer; }
+.scr.open { background: var(--bg); animation: rndIn .3s ease; }
+.betslip.parlay { border: 1px dashed var(--accent); }
+.vault .row .spark { vertical-align: middle; }
 </style>
 
 <div id="app" hidden>
@@ -705,6 +749,8 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100
 <script src="vault.js"></script>
 <script src="endgame.js"></script>
 <script src="extra.js"></script>
+<script src="finance.js"></script>
+<script src="arena.js"></script>
 <script src="quests.js"></script>
 <script src="cloud-config.js"></script>
 <script src="social.js"></script>

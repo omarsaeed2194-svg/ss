@@ -534,7 +534,7 @@ const LIVE_GIFTS = [
 function rollGifts(c) {
   const L = STREAMS[c.len];
   const ch = 1 + (skillLvl('charisma') - 1) * 0.08;
-  const budget = (typeof worldMult === 'function' ? worldMult('gift') : 1) * (1 + 0.25 * tm('producer')) * c.viewers * Math.pow(L.hours, 0.85) * rnd(0.25, 0.5) * ch * clamp(S.rep / 55, 0.4, 1.6) * (c.giftX || 1) * (S.team.smm ? 1.15 : 1) + 8;
+  const budget = (typeof worldMult === 'function' ? worldMult('gift') : 1) * (1 + 0.25 * tm('producer')) * c.viewers * Math.pow(L.hours, 0.85) * rnd(0.25, 0.5) * ch * clamp(S.rep / 55, 0.4, 1.6) * (c.giftX || 1) * (S.team.smm ? 1.15 : 1) * (1 + SB('gift')) + 8;
   const out = [];
   for (const g of LIVE_GIFTS) {
     const exp = (budget * g.share) / g.v * rnd(0.6, 1.4);

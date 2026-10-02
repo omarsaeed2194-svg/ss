@@ -50,9 +50,9 @@ const ui = {
 };
 const MAIN_TABS = [['home', 'Home', 'home'], ['explore', 'Explore', 'search'], ['notifs', 'Notifications', 'bell'], ['messages', 'Messages', 'mail'], ['profile', 'Profile', 'user']];
 const CAREER = [['money', 'Money', 'cash'], ['arena', 'Arena', 'dice'], ['legacy', 'Legacy', 'star'], ['deals', 'Brand deals', 'brief'], ['shop', 'Shop', 'bag'], ['team', 'Team', 'team'], ['empire', 'Empire', 'crown'], ['life', 'Life & skills', 'heartp'], ['stats', 'Analytics', 'chart'], ['tea', 'The Tea', 'tea'], ['trophies', 'Trophies', 'trophy'], ['danger', 'Danger Zone', 'fire'], ['account', 'Settings', 'gear']];
-CAREER.push(['hq', 'Headquarters', 'home'], ['friends', 'Friends', 'user'], ['quests', 'Daily quests', 'star']);
+CAREER.push(['hq', 'Headquarters', 'home'], ['friends', 'Friends', 'user'], ['quests', 'Daily quests', 'star'], ['invest', 'Investing', 'chart'], ['bank', 'Bank', 'lock'], ['acquire', 'Acquisitions', 'crown'], ['fanvault', 'FanVault', 'lock']);
 /* The sidebar shows five hubs; each hub holds several screens with a tab row on top */
-const HUBS = [['biz', 'Business', 'cash', ['money', 'deals', 'shop', 'empire']], ['play', 'Play', 'dice', ['arena', 'danger']], ['crew', 'Team & HQ', 'team', ['team', 'hq', 'legacy']], ['social', 'Friends', 'user', ['friends', 'quests']], ['me', 'Me', 'heartp', ['life', 'stats', 'trophies', 'tea']], ['account', 'Settings', 'gear', ['account']]];
+const HUBS = [['fin', 'Money', 'cash', ['money', 'invest', 'bank', 'acquire']], ['biz', 'Business', 'brief', ['deals', 'fanvault', 'shop', 'empire']], ['play', 'Play', 'dice', ['arena', 'danger']], ['crew', 'Team & HQ', 'team', ['team', 'hq', 'legacy']], ['social', 'Friends', 'user', ['friends', 'quests']], ['me', 'Me', 'heartp', ['life', 'stats', 'trophies', 'tea']], ['account', 'Settings', 'gear', ['account']]];
 const hubOf = (t) => HUBS.find((h) => h[3].includes(t));
 const careerName = (id) => (CAREER.find((c) => c[0] === id) || [id, id])[1];
 function hubBadge(h, b) { return h[3].reduce((a, t) => a + (b[t] || 0), 0); }
@@ -317,7 +317,7 @@ function renderCol() {
   if (v && v.type === 'post') html = vThread(v.id, v.npc);
   else if (v && v.type === 'star') html = vStar(v.id);
   else if (v && v.type === 'dm') html = vDm(v.key);
-  else html = ({ home: vHome, explore: vExplore, notifs: vNotifs, messages: vMessages, profile: vProfile, danger: vDanger, deals: vDeals, shop: vShop, money: vMoney, arena: vArena, legacy: vLegacy, hq: vHQ, friends: vFriends, quests: () => `<div class="col-head">${head('Daily quests', 'Three new quests every game day, plus a bonus chest')}</div><div class="sect">${questsCard(true)}</div>`, team: vTeam, empire: vEmpire, life: vLife, stats: vStats, tea: vTea, trophies: vTrophies, account: vAccount }[tab] || vHome)();
+  else html = ({ home: vHome, explore: vExplore, notifs: vNotifs, messages: vMessages, profile: vProfile, danger: vDanger, deals: vDeals, shop: vShop, money: vMoney, arena: vArena, legacy: vLegacy, hq: vHQ, friends: vFriends, quests: () => `<div class="col-head">${head('Daily quests', 'Three new quests every game day, plus a bonus chest')}</div><div class="sect">${questsCard(true)}</div>`, team: vTeamOrg, invest: vInvest, bank: vBank, acquire: vAcquire, fanvault: vFanVault, empire: vEmpire, life: vLife, stats: vStats, tea: vTea, trophies: vTrophies, account: vAccount }[tab] || vHome)();
   $('#col').innerHTML = html.replace('<div class="col-head">', '<div class="col-head">' + hubBar());
   if ((tab === 'stats' || (tab === 'profile' && ui.profTab === 'analytics')) && !v) drawChart();
   animateFresh();
@@ -1339,7 +1339,7 @@ const ACT = {
     checkAll();
   },
   course: (a) => { const l = skillLvl(a); const price = Math.round(COURSES[a].base * Math.pow(l, 1.6)); if (l >= 10) return 'norender'; if (!spend(price)) { toast('Not enough money.', 'bad'); return 'norender'; } S.skills[a].lvl++; S.skills[a].xp = 0; toast(`${a[0].toUpperCase() + a.slice(1)} is now level ${l + 1}`, 'gold'); log(`Finished ${COURSES[a].name}.`, 'good'); checkAll(); },
-  hire: (a) => { const m = TEAM[a]; if (!spend(m.pay)) { toast('Not enough money.', 'bad'); return 'norender'; } S.team[a] = true; S.teamDue = S.teamDue || {}; S.teamDue[a] = S.day + 30; if (a === 'assistant') S.energy += 20; log(`Hired a ${m.name.toLowerCase()}.`, 'good'); toast(`${m.name} hired`); checkAll(); },
+  hire: (a) => { const m = TEAM[a], cost = hireCost(a); if (!spend(cost)) { toast('Not enough money.', 'bad'); return 'norender'; } S.team[a] = true; S.teamDue = S.teamDue || {}; S.teamDue[a] = S.day + 30; if (a === 'assistant') S.energy += 20; log(`Hired a ${m.name.toLowerCase()}.`, 'good'); toast(`${m.name} hired`); checkAll(); },
   teamUp: (a) => { const c = teamUpCost(a); if (teamLvl(a) >= 5) { toast('Already at Legend level.'); return 'norender'; } if (!spend(c)) { toast('Not enough money.', 'bad'); return 'norender'; } S.teamLvl = S.teamLvl || {}; S.teamLvl[a] = teamLvl(a) + 1; toast(`${TEAM[a].name} is now ${TEAM_LEVELS[S.teamLvl[a] - 1]}`, 'gold'); log(`Upgraded your ${TEAM[a].name.toLowerCase()} to ${TEAM_LEVELS[S.teamLvl[a] - 1]}.`, 'good'); sound('cash'); if (S.teamLvl[a] === 5 && typeof celebrate === 'function') celebrate('gold'); },
   fire: (a) => { S.team[a] = false; if (S.teamDue) delete S.teamDue[a]; if (S.teamLvl) delete S.teamLvl[a]; log(`Let your ${TEAM[a].name.toLowerCase()} go.`); },
   merchLaunch: () => { if (!spend(3000)) return 'norender'; S.merch = { lvl: 1, sold: 0, boost: 2 }; log('Merch line launched.', 'gold'); news(`@${S.handle} drops a merch line`, true); toast('Merch is live. Sales arrive overnight.', 'gold'); checkAll(); },
@@ -1400,7 +1400,7 @@ const ACT = {
   },
   restart: (a) => { if (a === 'yes') { wipeSave(); S = null; ui.confirmRestart = false; showStart(); return 'norender'; } ui.confirmRestart = a !== 'no'; },
 };
-Object.assign(ACT, MONEY_ACT, VAULT_ACT, ENDGAME_ACT, EXTRA_ACT, QUEST_ACT, SOCIAL_ACT);
+Object.assign(ACT, MONEY_ACT, VAULT_ACT, ENDGAME_ACT, EXTRA_ACT, QUEST_ACT, SOCIAL_ACT, FINANCE_ACT, ARENA_ACT);
 
 const NO_FLASH = new Set(['go', 'back', 'open', 'openDm', 'endDay', 'dmSend', 'noop']);
 const SHEET_ONLY = new Set(['storyOpen', 'cTheme', 'vPrice', 'vLink', 'vDrop', 'cAff', 'cPoll', 'cCross', 'duet', 'spin', 'cIntent', 'dmChip', 'postAbout', 'cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);
