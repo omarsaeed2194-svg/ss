@@ -235,9 +235,24 @@ function renderTopbar() {
     <div class="brand">Clout<em>Chaser</em></div>
     <button class="btn sm" data-act="endDay">${ico('moon')} Day ${S.day}</button>`;
 }
+/* Bottom dock on every screen size: page 1 is the social app, page 2 is your career. Swipe or tap the dots to switch. */
+const dockPageOf = (t) => (MAIN_TABS.some((m) => m[0] === t) ? 0 : 1);
 function renderTabbar() {
   const b = badges();
-  $('#tabbar').innerHTML = MAIN_TABS.map(([id, name, icon]) => `<button data-act="go" data-arg="${id}" aria-label="${name}" ${tab === id ? 'aria-current="page"' : ''} style="${tab === id ? '' : 'opacity:.65'}">${ico(icon, 'ico-lg')}${b[id] ? `<span class="dotbadge">${b[id]}</span>` : ''}</button>`).join('');
+  const page = ui.dockPage == null ? dockPageOf(tab) : ui.dockPage;
+  const btnT = (id, name, icon, on, badge) => `<button data-act="go" data-arg="${id}" aria-label="${name}" ${on ? 'aria-current="page"' : ''}>${ico(icon, 'ico-lg')}<span class="dl">${name}</span>${badge ? `<span class="dotbadge">${badge > 99 ? '99+' : badge}</span>` : ''}</button>`;
+  const social = MAIN_TABS.map(([id, name, icon]) => btnT(id, name, icon, tab === id && !ui.view, b[id])).join('');
+  const career = HUBS.filter(hubOpen).map((h) => btnT(h[0], h[1].split(' &')[0], h[2], h[3].includes(tab) && !ui.view, hubBadge(h, b))).join('');
+  const careerBadge = HUBS.filter(hubOpen).reduce((a, h) => a + hubBadge(h, b), 0), socialBadge = MAIN_TABS.reduce((a, [id]) => a + (b[id] || 0), 0);
+  $('#tabbar').innerHTML = `<div class="dock-pages" id="dockPages"><div class="dock-page" aria-label="Social">${social}<button class="dock-swap" data-act="dockPage" data-arg="1" aria-label="Show career menu">${ico('crown', 'ico-lg')}<span class="dl">Career ›</span>${careerBadge ? '<span class="dotbadge dot"></span>' : ''}</button></div>
+    <div class="dock-page" aria-label="Career"><button class="dock-swap" data-act="dockPage" data-arg="0" aria-label="Show social menu">${ico('home', 'ico-lg')}<span class="dl">‹ Social</span>${socialBadge ? '<span class="dotbadge dot"></span>' : ''}</button>${career}</div></div>
+    <div class="dock-dots">${[0, 1].map((i) => `<button data-act="dockPage" data-arg="${i}" aria-label="${i ? 'Career' : 'Social'} menu" aria-current="${page === i}"></button>`).join('')}</div>`;
+  const dp = $('#dockPages');
+  dp.scrollLeft = page * dp.clientWidth;
+  if (!dp.dataset.bound) {
+    dp.dataset.bound = '1';
+    dp.addEventListener('scroll', () => { clearTimeout(dp._t); dp._t = setTimeout(() => { const p = Math.round(dp.scrollLeft / Math.max(1, dp.clientWidth)); if (p !== ui.dockPage) { ui.dockPage = p; $$('#tabbar .dock-dots button').forEach((d, i) => d.setAttribute('aria-current', String(i === p))); } }, 80); }, { passive: true });
+  }
 }
 function head(title, sub = '', back = false, right = '') {
   return `<div class="col-title">${back ? `<button class="icon-btn" data-act="back" aria-label="Back">${ico('back')}</button>` : ''}<div style="flex:1;min-width:0"><h2 style="display:flex;align-items:center;gap:4px">${title}</h2>${sub ? `<div class="sub">${sub}</div>` : ''}</div>${right}</div>`;
@@ -321,11 +336,48 @@ function renderCol() {
   else html = ({ home: vHome, explore: vExplore, notifs: vNotifs, messages: vMessages, profile: vProfile, danger: vDanger, deals: vDeals, shop: vShop, money: vMoney, arena: vArena, legacy: vLegacy, hq: vHQ, friends: vFriends, quests: () => `<div class="col-head">${head('Daily quests', 'Three new quests every game day, plus a bonus chest')}</div><div class="sect">${questsCard(true)}</div>`, team: vTeamOrg, invest: vInvest, bank: vBank, acquire: vAcquire, fanvault: vFanVault, empire: vEmpire, life: vLife, stats: vStats, tea: vTea, trophies: vTrophies, account: vAccount }[tab] || vHome)();
   $('#col').innerHTML = safe(html).replace('<div class="col-head">', '<div class="col-head">' + hubBar());
   if ((tab === 'stats' || (tab === 'profile' && ui.profTab === 'analytics')) && !v) drawChart();
+  decorateFolds();
   animateFresh();
   const bio = $('#bioEdit'); if (bio) bio.addEventListener('input', () => { S.bio = bio.value.slice(0, 160); save(); });
   const rt = $('#replyText'); if (rt) attachMentions(rt);
   const dm = $('#dmInput'); if (dm) attachMentions(dm); if (dm) dm.addEventListener('keydown', (e) => { if (e.key === 'Enter' && dm.value.trim()) { e.preventDefault(); ACT_RUN('dmSend', dm.dataset.npc); } });
   const q = $('#exploreSearch'); if (q) q.addEventListener('input', () => { ui.q = q.value; const r = $('#exploreResults'); if (r) r.innerHTML = exploreResults(); });
+}
+
+/* ---------- accordions ---------- */
+const FOLDED_BY_DEFAULT = new Set(['home:today']);
+const isFolded = (k) => (S.folds && k in S.folds ? !!S.folds[k] : FOLDED_BY_DEFAULT.has(k));
+/* every section with a title gets a collapse arrow; what you fold stays folded */
+function decorateFolds() {
+  $$('#col .sect').forEach((sec) => {
+    if (sec.dataset.fold) return;
+    const first = sec.firstElementChild; if (!first) return;
+    let headEl = null, h3 = null;
+    if (first.tagName === 'H3') { headEl = first; h3 = first; }
+    else if (first.classList.contains('row') && first.firstElementChild && first.firstElementChild.tagName === 'H3') { headEl = first; h3 = first.firstElementChild; }
+    if (!h3 || sec.children.length < 2) return;
+    const name = (h3.childNodes[0] && h3.childNodes[0].textContent || h3.textContent).replace(/[0-9.,$%·]+/g, '').trim().slice(0, 40) || h3.textContent.trim().slice(0, 40);
+    const key = `${tab}:${name}`;
+    sec.dataset.fold = key; headEl.classList.add('fold-head');
+    const b = document.createElement('button');
+    b.className = 'fold-btn'; b.dataset.act = 'fold'; b.dataset.arg = key; b.setAttribute('aria-label', `Show or hide ${name}`); b.setAttribute('aria-expanded', String(!isFolded(key)));
+    b.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+    headEl.appendChild(b);
+    if (isFolded(key)) sec.classList.add('folded');
+  });
+}
+/* Home: goal, login reward and quests live in one panel that folds to a single line */
+function todayPanel() {
+  const g = careerGoal(), Q = questsInit();
+  const qClaim = Q.list.filter((q) => q.done && !q.claimed).length + (!Q.chest && Q.list.every((q) => q.claimed) ? 1 : 0);
+  const chips = [
+    g ? (g.ok() ? '<span class="pill gold">🎯 Goal reward ready</span>' : `<span class="pill">🎯 ${esc(g.t)}</span>`) : '',
+    typeof loginReady === 'function' && loginReady() ? '<span class="pill gold">🎁 Login reward</span>' : '',
+    qClaim ? `<span class="pill gold">📋 ${qClaim} to claim</span>` : `<span class="pill">📋 Quests ${Q.list.filter((q) => q.done).length}/3</span>`,
+  ].join('');
+  const folded = isFolded('home:today');
+  return `<div class="sect today ${folded ? 'folded' : ''}" data-fold="home:today"><button class="today-head fold-head" data-act="fold" data-arg="home:today" aria-expanded="${!folded}"><b>Today</b><span class="today-chips">${chips}</span><svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+    ${folded ? '' : `<div class="today-body">${careerCard()}${loginCard()}${questsCard()}</div>`}</div>`;
 }
 
 /* animate counters on a freshly published post so engagement "rolls in" */
@@ -467,7 +519,7 @@ function vHome() {
     : `<div class="empty"><h3>Nothing yet</h3><p>Your posts show up here. Write your first one.</p>${btn('Post', 'compose', '', 'blue')}</div>`;
   return `<div class="col-head">${head('Home', `Day ${S.day} · ${weekday()} · ${tier().name} creator${S.streak ? ` · <span class="gold">${S.streak}-day streak</span>` : ''}`, false, `<button class="btn sm" data-act="endDay" title="Sleep to end the day">${ico('moon')} Sleep</button>`)}
     ${tabsBar([['foryou', 'For you'], ['following', 'Following'], ['mine', 'Your posts']], ui.feedTab, 'feedTab')}</div>
-    ${ui.feedTab !== 'mine' ? storiesBar() + `<div class="sect goal-sect">${careerCard()}</div>` + loginCard() + questsCard() : ''}
+    ${ui.feedTab !== 'mine' ? todayPanel() : ''}
     ${statusStrip()}${ui.feedTab !== 'mine' ? heroCard() + (S.world && WORLD_EVENTS[S.world.id] ? `<button class="world-banner" data-act="go" data-arg="arena">${WORLD_EVENTS[S.world.id].icon} <b>${WORLD_EVENTS[S.world.id].name}</b> <span>${WORLD_EVENTS[S.world.id].desc}</span></button>` : '') : ''}${prompt}${ui.feedTab !== 'mine' ? spinCard() + challengeCard() + activeClashes().map(clashCard).join('') : ''}
     ${items.length ? items.slice(0, 50).map((it) => it.k === 'me' ? myPostCard(it.p) : npcPostCard(it.f)).join('') : empty}`;
 }
@@ -1042,7 +1094,9 @@ function openView(v) { ui.hist.push({ tab, view: ui.view }); ui.view = v; window
 
 const ACT = {
   noop: () => 'norender',
-  go: (a) => { const hb = HUBS.find((h) => h[0] === a); if (hb) a = (ui.hubLast && ui.hubLast[hb[0]]) || hb[3].find(featureOn) || hb[3][0]; tab = a; ui.view = null; ui.hist = []; $('#drawer').hidden = true; window.scrollTo({ top: 0 }); if (a === 'notifs') setTimeout(() => { if (!S) return; S.notifs.forEach((n) => { n.read = true; }); renderSidebar(); renderTabbar(); save(); }, 1500); },
+  dockPage: (a) => { ui.dockPage = +a; const dp = $('#dockPages'); if (dp) dp.scrollTo({ left: +a * dp.clientWidth, behavior: 'smooth' }); $$('#tabbar .dock-dots button').forEach((d, i) => d.setAttribute('aria-current', String(i === +a))); return 'norender'; },
+  fold: (a) => { S.folds = S.folds || {}; S.folds[a] = !isFolded(a); const el = document.querySelector(`[data-fold="${CSS.escape(a)}"]`); if (el) { el.classList.toggle('folded', isFolded(a)); const bt = el.querySelector('.fold-btn'); if (bt) bt.setAttribute('aria-expanded', String(!isFolded(a))); } if (a === 'home:today') renderCol(); return 'norender'; },
+  go: (a) => { const hb = HUBS.find((h) => h[0] === a); if (hb) a = (ui.hubLast && ui.hubLast[hb[0]]) || hb[3].find(featureOn) || hb[3][0]; tab = a; ui.dockPage = dockPageOf(a); ui.view = null; ui.hist = []; $('#drawer').hidden = true; window.scrollTo({ top: 0 }); if (a === 'notifs') setTimeout(() => { if (!S) return; S.notifs.forEach((n) => { n.read = true; }); renderSidebar(); renderTabbar(); save(); }, 1500); },
   back: () => { const h = ui.hist.pop(); if (h) { tab = h.tab; ui.view = h.view; } else ui.view = null; },
   open: (a) => {
     const i = a.indexOf(':'); if (i < 0) return 'norender';
@@ -1407,7 +1461,7 @@ const ACT = {
 Object.assign(ACT, MONEY_ACT, VAULT_ACT, ENDGAME_ACT, EXTRA_ACT, QUEST_ACT, SOCIAL_ACT, FINANCE_ACT, ARENA_ACT, PROG_ACT);
 
 const NO_FLASH = new Set(['go', 'back', 'open', 'openDm', 'endDay', 'dmSend', 'noop']);
-const SHEET_ONLY = new Set(['storyOpen', 'cTheme', 'vPrice', 'vLink', 'vDrop', 'cAff', 'cPoll', 'cCross', 'duet', 'spin', 'cIntent', 'dmChip', 'postAbout', 'cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);
+const SHEET_ONLY = new Set(['fold', 'dockPage', 'storyOpen', 'cTheme', 'vPrice', 'vLink', 'vDrop', 'cAff', 'cPoll', 'cCross', 'duet', 'spin', 'cIntent', 'dmChip', 'postAbout', 'cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);
 function ACT_RUN(act, arg = '') {
   if (!S || !ACT[act]) return;
   const before = statSnap();

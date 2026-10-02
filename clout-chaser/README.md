@@ -149,6 +149,11 @@ A sixth platform, unlocked at 1K followers. Fans pay monthly for exclusive drops
 - **Legacy**: at 100M followers, rebrand into a new era. Followers reset and you keep 15% of your cash, but you earn Legacy points for permanent perks (more followers per post, more money, more max energy, more viral luck, bigger head start). Repeat forever.
 - **New tiers and goals**: Legend (1B) and Mythic (5B) tiers, milestones up to 10B followers and $100B, mega brands (Nyke, Maison Lumière, Galactic Airlines, Pear Inc. global) and mega contracts (movie lead, halftime show, your own reality series), plus new trophies.
 
+## Navigation and layout
+- **Bottom menu on every screen size.** Page 1 is the social app: Home, Explore, Notifications, Messages, Profile. Page 2 is your career: Money, Business, Play, Team, Friends, Me, Settings. Swipe sideways, or tap the dots or the "Career ›" and "‹ Social" buttons. The left sidebar is gone, so the feed gets the space.
+- **Accordions.** Every titled section on every screen has a collapse arrow, and what you fold stays folded. On Home, the career goal, login reward and daily quests share one **Today** panel. It folds to a single line with chips that light up when something is ready to claim.
+- The stories row was removed.
+
 ## Progression and balance
 - **Career path:** 25 goals, one at a time, shown on Home. Each has a "Show me" button and a reward, leading a new player from their first post to their first rebrand. Old saves skip goals they already finished.
 - **Screens unlock as you grow:** Investing at 500 followers; Team, Arena and FanVault at 1K; Bank and Danger Zone at 2K; HQ at 3K; Empire and Acquisitions at 5K; Tea at 10K; Legacy at 1M. Locked screens say what opens them, and a toast announces each unlock.
