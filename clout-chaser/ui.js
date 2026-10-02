@@ -59,7 +59,7 @@ function hubBadge(h, b) { return h[3].reduce((a, t) => a + (b[t] || 0), 0); }
 function hubBar() {
   const h = hubOf(tab); if (!h || h[3].length < 2 || ui.view) return '';
   ui.hubLast = ui.hubLast || {}; ui.hubLast[h[0]] = tab;
-  return `<div class="hubbar">${h[3].map((t) => `<button class="hubtab" data-act="go" data-arg="${t}" aria-current="${t === tab}">${ico((CAREER.find((c) => c[0] === t) || [])[2] || 'star', 'ico')}<span>${careerName(t)}</span></button>`).join('')}</div>`;
+  return `<div class="hubbar">${h[3].map((t) => `<button class="hubtab ${featureOn(t) ? '' : 'locked'}" data-act="go" data-arg="${t}" aria-current="${t === tab}">${ico(featureOn(t) ? (CAREER.find((c) => c[0] === t) || [])[2] || 'star' : 'lock', 'ico')}<span>${careerName(t)}</span></button>`).join('')}</div>`;
 }
 const NICHE_DESC = { beauty: 'Skincare, makeup, dupes', gaming: 'Clutches, speedruns, rage', fitness: 'Gains, routines, discipline', comedy: 'Skits, bits, chaos', tech: 'Reviews, setups, hot takes', food: 'Recipes, taste tests', music: 'Covers, hooks, studio life', fashion: 'Fits, thrift flips, trends', travel: 'Hidden gems, packing hacks', lifestyle: 'Routines, resets, vibes' };
 
@@ -106,7 +106,7 @@ function classifyReply(t) {
 }
 
 function toast(msg, cls = '') {
-  const t = document.createElement('div'); t.className = 'toast ' + cls; t.textContent = msg;
+  const t = document.createElement('div'); t.className = 'toast ' + cls; t.textContent = safe(msg);
   $('#toasts').appendChild(t); setTimeout(() => t.remove(), 3000);
   while ($('#toasts').children.length > 3) $('#toasts').firstChild.remove();
 }
@@ -225,7 +225,7 @@ function renderSidebar() {
   const b = badges();
   const item = ([id, name, icon], sub) => `<button class="nav-item ${sub ? 'nav-sub' : ''}" data-act="go" data-arg="${id}" ${tab === id && !ui.view ? 'aria-current="page"' : ''} title="${name}">${ico(icon, sub ? 'ico' : 'ico-lg')}${b[id] ? `<span class="dotbadge">${b[id]}</span>` : ''}<span class="lbl">${name}</span></button>`;
   $('#sidebar').innerHTML = `<div class="brand">C<span class="full">lout</span><em>C<span class="full">haser</span></em></div>
-    ${MAIN_TABS.map((t) => item(t)).join('')}<div class="nav-sep"></div>${HUBS.map((h) => { const bb = hubBadge(h, b); const on = h[3].includes(tab) && !ui.view; return `<button class="nav-item nav-sub hub-${h[0]}" data-act="go" data-arg="${h[0]}" ${on ? 'aria-current="page"' : ''} title="${h[1]}">${ico(h[2], 'ico')}${bb ? `<span class="dotbadge">${bb}</span>` : ''}<span class="lbl">${h[1]}</span></button>`; }).join('')}
+    ${MAIN_TABS.map((t) => item(t)).join('')}<div class="nav-sep"></div>${HUBS.filter(hubOpen).map((h) => { const bb = hubBadge(h, b); const on = h[3].includes(tab) && !ui.view; return `<button class="nav-item nav-sub hub-${h[0]}" data-act="go" data-arg="${h[0]}" ${on ? 'aria-current="page"' : ''} title="${h[1]}">${ico(h[2], 'ico')}${bb ? `<span class="dotbadge">${bb}</span>` : ''}<span class="lbl">${h[1]}</span></button>`; }).join('')}
     <button class="post-btn" data-act="compose" title="Post">${ico('feather')}<span class="lbl"> Post</span></button>
     <button class="btn big" data-act="endDay" title="Sleep to end the day">${ico('moon')}<span class="lbl">Sleep · Day ${S.day}</span></button>
     <button class="me-chip" data-act="go" data-arg="profile">${meAv()}<span class="grow" style="min-width:0"><b style="display:flex;gap:4px;align-items:center">${esc(S.name)} ${meBadge()}</b><span class="muted small">@${esc(S.handle)}</span></span></button>`;
@@ -287,14 +287,14 @@ function milestonesPanel() {
 function renderRail() {
   if (window.innerWidth <= 1060) { $('#rail').innerHTML = ''; return; }
   const follow = Object.entries(S.npcs).filter(([, n]) => !n.following).sort((a, b) => b[1].rel - a[1].rel || b[1].followers - a[1].followers).slice(0, 3);
-  $('#rail').innerHTML = `
+  $('#rail').innerHTML = safe(`
     <label class="search">${ico('search')}<input id="railSearch" placeholder="Search stars and trends" value="${esc(ui.q)}" aria-label="Search"></label>
     <div class="panel"><h3>Your status</h3>${statGrid()}<button class="panel-foot" data-act="go" data-arg="profile">Open profile</button></div>
     ${milestonesPanel()}
     <div class="panel"><h3>What's happening</h3>${S.trends.slice(0, 5).map((t, i) => trendRow(t, i)).join('')}<button class="panel-foot" data-act="go" data-arg="explore">Show more</button></div>
     <div class="panel"><h3>Who to follow</h3>${follow.map(([id]) => personRow(id)).join('')}<button class="panel-foot" data-act="go" data-arg="explore">Show more</button></div>
     <div class="panel"><h3>Algorithm today</h3>${unlockedIds().map((id) => { const a = S.algo[id] || 1; const [l, c] = algoLabel(a); return `<div class="panel-row row between" style="cursor:default">${pdot(id)}<span style="flex:1">${PLATFORMS[id].name}</span><span class="pill ${c}">${l} ×${a.toFixed(2)}</span></div>`; }).join('')}</div>
-    <div class="panel"><h3>Activity</h3>${S.log.slice(0, 8).map((l) => `<div class="panel-row small" style="cursor:default"><span class="muted">Day ${l.d} · </span><span class="${l.c}">${esc(l.m)}</span></div>`).join('')}</div>`;
+    <div class="panel"><h3>Activity</h3>${S.log.slice(0, 8).map((l) => `<div class="panel-row small" style="cursor:default"><span class="muted">Day ${l.d} · </span><span class="${l.c}">${esc(l.m)}</span></div>`).join('')}</div>`);
   const rs = $('#railSearch');
   rs.addEventListener('keydown', (e) => { if (e.key === 'Enter') { ui.q = rs.value; tab = 'explore'; ui.view = null; renderAll(); } });
 }
@@ -317,8 +317,9 @@ function renderCol() {
   if (v && v.type === 'post') html = vThread(v.id, v.npc);
   else if (v && v.type === 'star') html = vStar(v.id);
   else if (v && v.type === 'dm') html = vDm(v.key);
+  else if (!featureOn(tab)) html = vLocked(tab);
   else html = ({ home: vHome, explore: vExplore, notifs: vNotifs, messages: vMessages, profile: vProfile, danger: vDanger, deals: vDeals, shop: vShop, money: vMoney, arena: vArena, legacy: vLegacy, hq: vHQ, friends: vFriends, quests: () => `<div class="col-head">${head('Daily quests', 'Three new quests every game day, plus a bonus chest')}</div><div class="sect">${questsCard(true)}</div>`, team: vTeamOrg, invest: vInvest, bank: vBank, acquire: vAcquire, fanvault: vFanVault, empire: vEmpire, life: vLife, stats: vStats, tea: vTea, trophies: vTrophies, account: vAccount }[tab] || vHome)();
-  $('#col').innerHTML = html.replace('<div class="col-head">', '<div class="col-head">' + hubBar());
+  $('#col').innerHTML = safe(html).replace('<div class="col-head">', '<div class="col-head">' + hubBar());
   if ((tab === 'stats' || (tab === 'profile' && ui.profTab === 'analytics')) && !v) drawChart();
   animateFresh();
   const bio = $('#bioEdit'); if (bio) bio.addEventListener('input', () => { S.bio = bio.value.slice(0, 160); save(); });
@@ -466,7 +467,7 @@ function vHome() {
     : `<div class="empty"><h3>Nothing yet</h3><p>Your posts show up here. Write your first one.</p>${btn('Post', 'compose', '', 'blue')}</div>`;
   return `<div class="col-head">${head('Home', `Day ${S.day} · ${weekday()} · ${tier().name} creator${S.streak ? ` · <span class="gold">${S.streak}-day streak</span>` : ''}`, false, `<button class="btn sm" data-act="endDay" title="Sleep to end the day">${ico('moon')} Sleep</button>`)}
     ${tabsBar([['foryou', 'For you'], ['following', 'Following'], ['mine', 'Your posts']], ui.feedTab, 'feedTab')}</div>
-    ${ui.feedTab !== 'mine' ? storiesBar() + loginCard() + questsCard() : ''}
+    ${ui.feedTab !== 'mine' ? storiesBar() + `<div class="sect goal-sect">${careerCard()}</div>` + loginCard() + questsCard() : ''}
     ${statusStrip()}${ui.feedTab !== 'mine' ? heroCard() + (S.world && WORLD_EVENTS[S.world.id] ? `<button class="world-banner" data-act="go" data-arg="arena">${WORLD_EVENTS[S.world.id].icon} <b>${WORLD_EVENTS[S.world.id].name}</b> <span>${WORLD_EVENTS[S.world.id].desc}</span></button>` : '') : ''}${prompt}${ui.feedTab !== 'mine' ? spinCard() + challengeCard() + activeClashes().map(clashCard).join('') : ''}
     ${items.length ? items.slice(0, 50).map((it) => it.k === 'me' ? myPostCard(it.p) : npcPostCard(it.f)).join('') : empty}`;
 }
@@ -722,6 +723,7 @@ function vShop() {
   const style = (kind, k, f, prev) => { const own = (S[kind + 's'] || []).includes(k), on = S[kind] === k; return `<div class="card ${on ? 'owned' : ''}"><div class="t"><span class="row" style="gap:8px">${prev}${f.name}</span><span class="num">${own ? 'Owned' : money(f.price)}</span></div>${btn(on ? 'Take off' : own ? 'Wear it' : 'Buy', kind, k, 'sm' + (own ? '' : ' primary'), !own && S.money < f.price)}</div>`; };
   return `<div class="col-head">${head('Shop', `${money(S.money)} to spend`)}</div>
     <div class="sect"><h3>Gear</h3><div class="cards">${SHOP.filter((i) => i.cat === 'Gear').map(item).join('')}</div></div>
+    ${prestigeSection()}
     <div class="sect"><h3>Lifestyle</h3><div class="cards">${SHOP.filter((i) => i.cat === 'Lifestyle').map(item).join('')}</div></div>
     <div class="sect"><h3>Property <span class="small muted">· pays rent every night</span></h3><div class="cards">${SHOP.filter((i) => i.cat === 'Property').map(item).join('')}</div></div>
     <div class="sect"><h3>Style <span class="small muted">· avatar frames and profile banners</span></h3><div class="cards">${Object.entries(FRAMES).filter(([k, f]) => !f.pass || (S.frames || []).includes(k)).map(([k, f]) => style('frame', k, f, `<span class="av sm" style="border:3px solid transparent;background:linear-gradient(${S.color}, ${S.color}) padding-box, ${f.css} border-box">${faceSvg(S.faceSeed || S.name)}</span>`)).join('')}${Object.entries(BANNERS).filter(([k, b]) => !b.pass || (S.banners || []).includes(k)).map(([k, b]) => style('banner', k, b, `<span class="swatch" style="background:${b.css}"></span>`)).join('')}</div></div>
@@ -843,7 +845,8 @@ function vAccount() {
   const th = S.settings.theme || 'system';
   return `<div class="col-head">${head('Settings')}</div>
     <div class="sect"><h3>Display</h3><div class="row">${[['system', 'Match device'], ['dark', 'Dark'], ['light', 'Light']].map(([k, l]) => chip(l, 'theme', k, th === k)).join('')}</div>
-      <label class="row"><input type="checkbox" id="optSound" data-act="sound" ${S.settings.sound ? 'checked' : ''}> Sound effects</label></div>
+      <label class="row"><input type="checkbox" id="optSound" data-act="sound" ${S.settings.sound ? 'checked' : ''}> Sound effects</label>
+      <label class="row"><input type="checkbox" data-act="safeNames" ${safeNames ? 'checked' : ''}> Store-safe names <span class="small muted">(original names instead of celebrity and brand parodies; reloads the game)</span></label></div>
     <div class="sect"><h3>Save</h3><p class="small muted">The game saves automatically in this browser. Copy a save code to move your progress to another device.</p>
       <div class="row">${btn('Generate save code', 'exportSave', '', 'sm')}${ui.exportCode ? btn('Copy code', 'copySave', '', 'sm blue') : ''}</div>
       ${ui.exportCode ? `<textarea class="input small" id="exportBox" readonly rows="3" style="font-family:var(--f-mono)">${esc(ui.exportCode)}</textarea>` : ''}
@@ -1024,7 +1027,7 @@ function openDrawer() {
   $('#drawer').innerHTML = `<div class="drawer" role="dialog" aria-label="Menu">
     <div style="padding:4px 12px 12px">${meAv('lg')}<div style="margin-top:8px"><b style="display:flex;gap:4px;align-items:center;font-size:17px">${esc(S.name)} ${meBadge()}</b><span class="muted">@${esc(S.handle)}</span></div>
       <div class="row small" style="margin-top:8px"><span><b>${following}</b> <span class="muted">Following</span></span><span><b>${fmt(totalFollowers())}</b> <span class="muted">Followers</span></span></div></div>
-    ${HUBS.map(([id, name, icon, tabs]) => `<button class="nav-item" style="font-size:18px;width:100%" data-act="go" data-arg="${id}">${ico(icon, 'ico-lg')}<span>${name}<span class="small muted" style="display:block;font-size:12px">${tabs.map(careerName).join(' · ')}</span></span>${hubBadge([id, name, icon, tabs], b) ? `<span class="pill blue" style="margin-left:auto">${hubBadge([id, name, icon, tabs], b)}</span>` : ''}</button>`).join('')}
+    ${HUBS.filter(hubOpen).map(([id, name, icon, tabs]) => `<button class="nav-item" style="font-size:18px;width:100%" data-act="go" data-arg="${id}">${ico(icon, 'ico-lg')}<span>${name}<span class="small muted" style="display:block;font-size:12px">${tabs.map(careerName).join(' · ')}</span></span>${hubBadge([id, name, icon, tabs], b) ? `<span class="pill blue" style="margin-left:auto">${hubBadge([id, name, icon, tabs], b)}</span>` : ''}</button>`).join('')}
     <div class="nav-sep"></div><button class="btn big" data-act="endDay" style="margin:8px 12px">${ico('moon')} Sleep · end day ${S.day}</button></div>`;
   $('#drawer').hidden = false;
 }
@@ -1039,7 +1042,7 @@ function openView(v) { ui.hist.push({ tab, view: ui.view }); ui.view = v; window
 
 const ACT = {
   noop: () => 'norender',
-  go: (a) => { const hb = HUBS.find((h) => h[0] === a); if (hb) a = (ui.hubLast && ui.hubLast[hb[0]]) || hb[3][0]; tab = a; ui.view = null; ui.hist = []; $('#drawer').hidden = true; window.scrollTo({ top: 0 }); if (a === 'notifs') setTimeout(() => { if (!S) return; S.notifs.forEach((n) => { n.read = true; }); renderSidebar(); renderTabbar(); save(); }, 1500); },
+  go: (a) => { const hb = HUBS.find((h) => h[0] === a); if (hb) a = (ui.hubLast && ui.hubLast[hb[0]]) || hb[3].find(featureOn) || hb[3][0]; tab = a; ui.view = null; ui.hist = []; $('#drawer').hidden = true; window.scrollTo({ top: 0 }); if (a === 'notifs') setTimeout(() => { if (!S) return; S.notifs.forEach((n) => { n.read = true; }); renderSidebar(); renderTabbar(); save(); }, 1500); },
   back: () => { const h = ui.hist.pop(); if (h) { tab = h.tab; ui.view = h.view; } else ui.view = null; },
   open: (a) => {
     const i = a.indexOf(':'); if (i < 0) return 'norender';
@@ -1058,6 +1061,7 @@ const ACT = {
   editBio: () => { ui.editBio = !ui.editBio; },
   compose: (a) => { openCompose(a && S.platforms[a] && S.platforms[a].unlocked ? { platform: a } : {}); return 'norender'; },
   composeTag: (a) => { const tr = S.trends.find((t) => t.tag === a); openCompose({ text: a + ' ', topic: tr ? 'trend:' + tr.tag : 'niche' }); return 'norender'; },
+  safeNames: () => { setSafeNames(!safeNames); save(); location.reload(); return 'norender'; },
   closeCompose: () => { closeCompose(); return 'norender'; },
   cPlat: (a) => { ui.c.platform = a; ui.c.format = null; renderCompose(false); return 'norender'; },
   cFmt: (a) => { ui.c.format = a; renderCompose(false); return 'norender'; },
@@ -1400,7 +1404,7 @@ const ACT = {
   },
   restart: (a) => { if (a === 'yes') { wipeSave(); S = null; ui.confirmRestart = false; showStart(); return 'norender'; } ui.confirmRestart = a !== 'no'; },
 };
-Object.assign(ACT, MONEY_ACT, VAULT_ACT, ENDGAME_ACT, EXTRA_ACT, QUEST_ACT, SOCIAL_ACT, FINANCE_ACT, ARENA_ACT);
+Object.assign(ACT, MONEY_ACT, VAULT_ACT, ENDGAME_ACT, EXTRA_ACT, QUEST_ACT, SOCIAL_ACT, FINANCE_ACT, ARENA_ACT, PROG_ACT);
 
 const NO_FLASH = new Set(['go', 'back', 'open', 'openDm', 'endDay', 'dmSend', 'noop']);
 const SHEET_ONLY = new Set(['storyOpen', 'cTheme', 'vPrice', 'vLink', 'vDrop', 'cAff', 'cPoll', 'cCross', 'duet', 'spin', 'cIntent', 'dmChip', 'postAbout', 'cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);

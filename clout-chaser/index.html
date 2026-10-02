@@ -716,6 +716,18 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100
 .scr.open { background: var(--bg); animation: rndIn .3s ease; }
 .betslip.parlay { border: 1px dashed var(--accent); }
 .vault .row .spark { vertical-align: middle; }
+
+/* ---------- career goals, locked screens ---------- */
+.goal-sect { padding-top: 10px; padding-bottom: 10px; }
+.goal-card { display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 16px; border: 1px solid var(--line); background: linear-gradient(135deg, color-mix(in srgb, var(--gold) 12%, var(--surface)), var(--surface)); }
+.goal-card b { font-size: 17px; }
+.goal-card .eyebrow { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.goal-card.ready { border-color: var(--gold); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 25%, transparent); animation: goalPulse 1.6s ease-in-out infinite; }
+@keyframes goalPulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--gold) 12%, transparent); } }
+.hubtab.locked { opacity: .55; }
+.locked-screen { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 48px 16px; }
+.lock-big { width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .goal-card.ready { animation: none; } }
 </style>
 
 <div id="app" hidden>
@@ -751,6 +763,8 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100
 <script src="extra.js"></script>
 <script src="finance.js"></script>
 <script src="arena.js"></script>
+<script src="names.js"></script>
+<script src="progression.js"></script>
 <script src="quests.js"></script>
 <script src="cloud-config.js"></script>
 <script src="social.js"></script>

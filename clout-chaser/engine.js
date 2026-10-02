@@ -151,7 +151,7 @@ function gearQ(pid) {
   if (pid !== 'chirp') q += 0.06 * tm('stylist');
   return q + SB('quality');
 }
-function reachBonus() { let r = 0.03 * (typeof hqLvl === 'function' ? hqLvl('server') : 0) + 0.08 * tm('analyst') + Math.min(0.1, Math.max(0, teamSize() - 3) * 0.01); /* dream-team synergy */ for (const it of SHOP) if (S.owned[it.id] && it.reach) r += it.reach; return r + SB('reach'); }
+function reachBonus() { let r = 0.03 * (typeof hqLvl === 'function' ? hqLvl('server') : 0) + 0.08 * tm('analyst') + Math.min(0.1, Math.max(0, teamSize() - 3) * 0.01); /* dream-team synergy */ for (const it of SHOP) if (S.owned[it.id] && it.reach) r += it.reach; return r + SB('reach') + (typeof prestigeLvl === 'function' ? Math.min(0.2, 0.01 * prestigeLvl()) : 0); }
 function repLabel(r = S.rep) { return r >= 85 ? 'Beloved' : r >= 68 ? 'Respected' : r >= 50 ? 'Liked' : r >= 35 ? 'Mixed' : r >= 20 ? 'Sketchy' : 'Toxic'; }
 function repClass(r = S.rep) { return r >= 60 ? 'good' : r >= 35 ? 'warn' : 'bad'; }
 function heatLabel(h = S.heat) { return h >= 85 ? 'Imploding' : h >= 60 ? 'Scorching' : h >= 35 ? 'Heated' : h >= 12 ? 'Buzzing' : 'Calm'; }
@@ -1071,6 +1071,7 @@ const ACHIEVEMENTS = [
 let lastTier = null;
 function checkAll() {
   if (!S) return;
+  if (typeof unlockCheck === 'function') unlockCheck();
   const t = totalFollowers();
   const ti = tierIndex(t);
   if (S.flags.tier === undefined) S.flags.tier = ti;

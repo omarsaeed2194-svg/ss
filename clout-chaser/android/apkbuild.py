@@ -5,6 +5,7 @@ Writes the binary AndroidManifest.xml and a minimal resources.arsc (launcher ico
 then zips them with classes.dex and the game files. Signing is done by build.sh (jarsigner).
 
 usage: apkbuild.py <classes.dex> <www dir> <icon dir> <out.apk>
+       apkbuild.py --manifest-txt <out.txt>   (the same manifest as a line tree, for the AAB build)
 """
 import struct
 import sys
@@ -24,10 +25,10 @@ T_REF, T_STRING, T_INT, T_HEX, T_BOOL = 0x01, 0x03, 0x10, 0x11, 0x12
 THEME_MATERIAL_NOACTIONBAR = 16974382
 ICON_ID = 0x7F010000  # mipmap/ic_launcher in our resources.arsc
 
-VERSION_CODE, VERSION_NAME = 6, "1.5"
+VERSION_CODE, VERSION_NAME = 7, "2.0"
 MANIFEST = ('manifest', [(None, 'package', T_STRING, 'com.cloutchaser.game'),
                          ('a', 'versionCode', T_INT, VERSION_CODE), ('a', 'versionName', T_STRING, VERSION_NAME)], [
-    ('uses-sdk', [('a', 'minSdkVersion', T_INT, 24), ('a', 'targetSdkVersion', T_INT, 29)], []),
+    ('uses-sdk', [('a', 'minSdkVersion', T_INT, 24), ('a', 'targetSdkVersion', T_INT, 35)], []),
     ('uses-permission', [('a', 'name', T_STRING, 'android.permission.INTERNET')], []),
     ('application', [('a', 'label', T_STRING, 'Clout Chaser'), ('a', 'icon', T_REF, ICON_ID), ('a', 'roundIcon', T_REF, ICON_ID),
                      ('a', 'allowBackup', T_BOOL, True), ('a', 'hardwareAccelerated', T_BOOL, True),
@@ -149,7 +150,24 @@ def resources_arsc():
     return chunk(0x0002, struct.pack('<I', 1), gpool + pkg)
 
 
+def manifest_txt(path):
+    names = {T_STRING: 'str', T_INT: 'int', T_HEX: 'hex', T_BOOL: 'bool', T_REF: 'ref'}
+    out = []
+    def walk(node):
+        tag, at, kids = node
+        out.append(f'start\t{tag}')
+        for ns, name, typ, val in at:
+            out.append('\t'.join(['attr', 'a' if ns else '-', name, str(ATTR.get(name, 0) if ns else 0), names[typ], str(val).lower() if typ == T_BOOL else str(val)]))
+        for k in kids:
+            walk(k)
+        out.append(f'end\t{tag}')
+    walk(MANIFEST)
+    Path(path).write_text('\n'.join(out) + '\n')
+
+
 def main():
+    if sys.argv[1] == '--manifest-txt':
+        return manifest_txt(sys.argv[2])
     dex, www, icons, out = map(Path, sys.argv[1:5])
     with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
         z.writestr('AndroidManifest.xml', manifest_axml())

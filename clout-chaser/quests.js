@@ -29,6 +29,8 @@ function newQuests() {
 function questsInit() { if (!S.quests || S.quests.day !== S.day) newQuests(); return S.quests; }
 function questEvent(kind, amount = 1) {
   if (!S) return;
+  S.stats['n_' + kind] = (S.stats['n_' + kind] || 0) + amount; // lifetime counters for career goals
+  if (typeof onGameEvent === 'function') onGameEvent(kind, amount);
   const Q = questsInit();
   for (const q of Q.list) {
     if (q.done || q.kind !== kind) continue;

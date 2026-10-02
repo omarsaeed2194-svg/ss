@@ -149,6 +149,29 @@ A sixth platform, unlocked at 1K followers. Fans pay monthly for exclusive drops
 - **Legacy**: at 100M followers, rebrand into a new era. Followers reset and you keep 15% of your cash, but you earn Legacy points for permanent perks (more followers per post, more money, more max energy, more viral luck, bigger head start). Repeat forever.
 - **New tiers and goals**: Legend (1B) and Mythic (5B) tiers, milestones up to 10B followers and $100B, mega brands (Nyke, Maison Lumière, Galactic Airlines, Pear Inc. global) and mega contracts (movie lead, halftime show, your own reality series), plus new trophies.
 
+## Progression and balance
+- **Career path:** 25 goals, one at a time, shown on Home. Each has a "Show me" button and a reward, leading a new player from their first post to their first rebrand. Old saves skip goals they already finished.
+- **Screens unlock as you grow:** Investing at 500 followers; Team, Arena and FanVault at 1K; Bank and Danger Zone at 2K; HQ at 3K; Empire and Acquisitions at 5K; Tea at 10K; Legacy at 1M. Locked screens say what opens them, and a toast announces each unlock.
+- **Economy:**
+  - Passive yields were lowered: stocks ×0.6, companies ×0.6, rent ×0.65–0.7.
+  - Big fortunes pay a progressive nightly **wealth upkeep**: 0.02% of net worth from $1M, 0.05% from $100M, 0.08% from $1B. Tax staff reduce it.
+  - **Prestige** purchases turn money into fame: galas, ads, art, a hospital wing, stadium naming rights, a trip to space. Each gives followers and reputation, plus +1% permanent reach per level.
+- **Linked systems:**
+  - Viral posts boost the companies you own.
+  - Scandals hurt your companies but drive FanVault sign-ups.
+  - Boycotts can target your businesses; a crisis team can defuse them.
+  - Your companies can ask you to star in their ads.
+  - Stars you're close to invest in your companies or slip you stock tips.
+  - Banks review you when you're controversial; a great reputation raises your credit.
+
+## Store-safe names
+Settings → **Store-safe names** swaps every parody of a real celebrity, brand, football club or stock for an original name, and uses generic logos. The swap covers text already in old saves. It's on by default in the Android build and off on the web.
+
+## Tests
+`./tests/run.sh` runs two suites. Both need Node and Playwright with Chromium.
+- `features.js` checks the career path, unlocks, finance, staff, FanVault, Arena, house edges, the late-game economy, store-safe names and an old-save upgrade.
+- `crawl.js` clicks every button on every screen, on desktop and phone, for a new game and an old save (`tests/fixtures/old-save.json`). It fails on any JavaScript error or covered button.
+
 ## Finance: bank, mortgages, investing, acquisitions
 - **Money hub** now has four screens: Money, Investing, Bank and Acquisitions. Net worth includes stocks, shorts, property, company stakes and debt.
 - **Clout Bank**: a credit score from 300 to 850. Personal loans (30/90/180 days) are paid automatically every night. Missed payments cost credit and a late fee, and after four misses collectors take your savings and stocks. Better credit means lower rates and bigger limits.
@@ -250,6 +273,9 @@ Doing well gives you a second wind, shown as a gold energy pop-up:
 - `extra.js` – new team members, Headquarters, daily login calendar
 - `finance.js` – bank, loans, mortgages, real estate, investing desk, short selling, acquisitions, enterprise org chart
 - `arena.js` – parlays, Fight Night, horse racing, blackjack, scratch cards, bet history
+- `names.js` – store-safe original names for every parody
+- `progression.js` – career path, screen unlocks, wealth upkeep, prestige, linked-system events
+- `tests/` – browser test suites and an old-save fixture
 - `visuals.js` – animated scenery, stories, event art, reaction bursts, casino and match animations
 - `art.js` – generated faces, logos, post illustrations, photo resizing
 - `events.js` – random and triggered events, livestream chat, modal queue
@@ -266,9 +292,11 @@ All people, brands and platforms in the game are fictional or clearly marked par
 
 ## Android app
 
-`android/` turns the game into an installable APK (a full-screen WebView wrapper; saves stay on the phone).
+`android/` turns the game into an Android app (a full-screen WebView wrapper; saves stay on the phone).
 
-- Download: `android/dist/clout-chaser.apk`, copy it to your phone, open it, and allow "Install unknown apps" when asked.
-- Rebuild: `cd android && ./build.sh` (needs a JDK 17+ and Python 3 with `cryptography`; no Android SDK — the platform jar and dex compiler come from Maven Central).
-- The build signs with a local key in `android/.tools/` (not committed). A build made with a different key can't update an existing install: export your save in Settings, uninstall, install, then import.
+- **Sideload:** `android/dist/clout-chaser.apk`. Copy it to your phone, open it, and allow "Install unknown apps" when asked.
+- **Google Play:** `android/dist/clout-chaser.aab` is the App Bundle Play asks for. It targets Android 15 (API 35) and draws edge to edge with system-bar insets handled.
+- Rebuild with `cd android && ./build.sh`. It needs a JDK 17+ and Python 3 with `cryptography`, but no Android SDK: the platform jar and dex compiler come from Maven Central, and bundletool comes from GitHub.
+- **Signing:** set `KEYSTORE=/path/release.jks KS_PASS=... KS_ALIAS=upload` to sign with your release (upload) key. Without them, the build uses a throwaway key in `android/.tools/`. That's fine for testing, but it can't update an app installed with another key. Keep the release key and its password somewhere safe; the key is never committed.
+- The app-store build turns on **store-safe names** by default (see below).
 - Android 7.0+ (API 24). Back button closes sheets and pop-ups first, then goes back, then exits. "Add your photo" opens the phone's photo picker.

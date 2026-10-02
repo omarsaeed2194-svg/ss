@@ -14,10 +14,10 @@ SHOP.push(
   { id: 'penthouse',   cat: 'Lifestyle', name: 'City penthouse',  price: 6e6,   reach: 0.08, upkeep: 3000, desc: '+8% reach, skyline content. $3K/day.' },
   { id: 'yacht',       cat: 'Lifestyle', name: 'Superyacht',      price: 8e6,   reach: 0.1, upkeep: 6000, desc: '+10% reach. Monaco-ready. $6K/day.' },
   { id: 'team_owner',  cat: 'Lifestyle', name: 'Buy a sports team', price: 3e8, reach: 0.2, upkeep: 50000, desc: '+20% reach. You are now a "visionary".' },
-  { id: 'studio_apt',  cat: 'Property', name: 'Studio apartment', price: 80000,  rent: 140,   desc: 'Rent it out: +$140/day.' },
-  { id: 'condo',       cat: 'Property', name: 'Downtown condo',   price: 400000, rent: 750,   desc: 'Rent it out: +$750/day.' },
-  { id: 'villa',       cat: 'Property', name: 'Beach villa',      price: 2e6,    rent: 4200,  desc: 'Holiday rentals: +$4.2K/day.' },
-  { id: 'tower',       cat: 'Property', name: 'Office tower',     price: 1.5e7,  rent: 36000, desc: 'Corporate tenants: +$36K/day.' },
+  { id: 'studio_apt',  cat: 'Property', name: 'Studio apartment', price: 80000,  rent: 100,   desc: 'Rent it out: +$100/day.' },
+  { id: 'condo',       cat: 'Property', name: 'Downtown condo',   price: 400000, rent: 520,   desc: 'Rent it out: +$520/day.' },
+  { id: 'villa',       cat: 'Property', name: 'Beach villa',      price: 2e6,    rent: 2900,  desc: 'Holiday rentals: +$2.9K/day.' },
+  { id: 'tower',       cat: 'Property', name: 'Office tower',     price: 1.5e7,  rent: 25000, desc: 'Corporate tenants: +$25K/day.' },
 );
 CONSUMABLES.push(
   { id: 'megadrink',   name: 'Energy pack (×6)',   price: 60,   desc: '+50 energy, +12 stress.', fx: { energy: 50, stress: 12 } },
@@ -44,11 +44,11 @@ const BANNERS = {
 
 /* ---------- markets ---------- */
 const ASSETS = {
-  wld:   { name: 'World Index', tick: 'WLD',  price: 100, vol: 0.012, drift: 0.004, div: 0.0012, desc: 'Steady. Pays a daily dividend.' },
-  pear:  { name: 'Pear Inc.',   tick: 'PEAR', price: 180, vol: 0.025, drift: 0.005, div: 0.0006, desc: 'Blue chip with a dividend.' },
-  tezla: { name: 'Tezla',       tick: 'TZLA', price: 240, vol: 0.05,  drift: 0.007, desc: 'Wild swings, big runs.' },
-  nflx:  { name: 'Netflux',     tick: 'NFLX', price: 90,  vol: 0.03,  drift: 0.006, div: 0.0005, desc: 'Moves on hit shows.' },
-  clt:   { name: 'CloutCoin',   tick: 'CLT',  price: 1.2, vol: 0.12,  drift: 0.012, desc: 'Pure chaos. Can 10x or go to zero.' },
+  wld:   { name: 'World Index', tick: 'WLD',  price: 100, vol: 0.012, drift: 0.0024, div: 0.0012, desc: 'Steady. Pays a daily dividend.' },
+  pear:  { name: 'Pear Inc.',   tick: 'PEAR', price: 180, vol: 0.025, drift: 0.003, div: 0.0006, desc: 'Blue chip with a dividend.' },
+  tezla: { name: 'Tezla',       tick: 'TZLA', price: 240, vol: 0.05,  drift: 0.0042, desc: 'Wild swings, big runs.' },
+  nflx:  { name: 'Netflux',     tick: 'NFLX', price: 90,  vol: 0.03,  drift: 0.0036, div: 0.0005, desc: 'Moves on hit shows.' },
+  clt:   { name: 'CloutCoin',   tick: 'CLT',  price: 1.2, vol: 0.12,  drift: 0.0072, desc: 'Pure chaos. Can 10x or go to zero.' },
 };
 const MARKET_NEWS = [
   ['tezla', 0.14, 'Elon Tusk posts "rocket go up". Tezla rallies.'], ['tezla', -0.12, 'A Cybertruck window shatters on live TV. Tezla slides.'],

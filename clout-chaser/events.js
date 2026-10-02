@@ -741,8 +741,8 @@ function showEvent(ev, ctx) {
   const choices = ev.choices(ctx);
   const box = $('#modalBox');
   const art = typeof eventArt === 'function' ? eventArt(String(title).replace(/<[^>]+>/g, ''), String(eyebrow)) : '';
-  box.innerHTML = `${ev === EVENTS._summary || ev === EVENTS._weekly ? '' : art}<div class="eyebrow">${eyebrow}</div><h3>${title}</h3><div class="body">${text}</div>
-    <div class="choices">${choices.map((ch, i) => `<button class="choice" data-i="${i}" ${ch.disabled && ch.disabled() ? 'disabled' : ''}><b>${esc(ch.label)}</b>${ch.sub ? `<span>${esc(ch.sub)}</span>` : ''}</button>`).join('')}</div>`;
+  box.innerHTML = safe(`${ev === EVENTS._summary || ev === EVENTS._weekly ? '' : art}<div class="eyebrow">${eyebrow}</div><h3>${title}</h3><div class="body">${text}</div>
+    <div class="choices">${choices.map((ch, i) => `<button class="choice" data-i="${i}" ${ch.disabled && ch.disabled() ? 'disabled' : ''}><b>${esc(ch.label)}</b>${ch.sub ? `<span>${esc(ch.sub)}</span>` : ''}</button>`).join('')}</div>`);
   $('#modal').hidden = false;
   renderAll();
   box.querySelectorAll('.choice').forEach((b) => b.addEventListener('click', () => {
@@ -752,9 +752,9 @@ function showEvent(ev, ctx) {
     if (!res || (!res.text && !(res.fx && Object.keys(res.fx).length))) { closeModal(); checkAll(); save(); processQueue(); return; }
     const chips = applyFx(res.fx);
     checkAll(); save();
-    box.innerHTML = `<div class="eyebrow">${eyebrow}</div><h3>${esc(ch.label)}</h3><div class="body">${esc(res.text)}</div>
+    box.innerHTML = safe(`<div class="eyebrow">${eyebrow}</div><h3>${esc(ch.label)}</h3><div class="body">${esc(res.text)}</div>
       ${chips.length ? `<div class="fx">${chips.map(([k, v, g]) => `<span class="pill ${g ? 'good' : 'bad'}">${esc(k)} ${esc(v)}</span>`).join('')}</div>` : ''}
-      <div class="row" style="justify-content:flex-end"><button class="btn primary" id="modalOk">Continue</button></div>`;
+      <div class="row" style="justify-content:flex-end"><button class="btn primary" id="modalOk">Continue</button></div>`);
     renderAll();
     const ok = $('#modalOk'); ok.focus();
     ok.addEventListener('click', () => { closeModal(); processQueue(); });

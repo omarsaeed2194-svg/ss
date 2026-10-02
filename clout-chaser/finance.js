@@ -103,18 +103,18 @@ const fxText = (m) => (m.fx ? Object.entries(m.fx).map(([k, v]) => FX_LABEL[k](v
 Object.assign(ASSETS.wld, { cls: 'etf' }); Object.assign(ASSETS.pear, { cls: 'stock' }); Object.assign(ASSETS.tezla, { cls: 'stock' });
 Object.assign(ASSETS.nflx, { cls: 'stock' }); Object.assign(ASSETS.clt, { cls: 'crypto' });
 Object.assign(ASSETS, {
-  c500:  { cls: 'etf',    name: 'Clout 500 ETF',    tick: 'C500', price: 400,   vol: 0.01,  drift: 0.0035, div: 0.0004, desc: 'The 500 biggest companies in one fund.' },
-  tech:  { cls: 'etf',    name: 'Tech Titans ETF',  tick: 'TECH', price: 250,   vol: 0.022, drift: 0.006,  desc: 'Every big tech stock in one basket.' },
-  bond:  { cls: 'bond',   name: 'Treasury Bonds',   tick: 'BOND', price: 100,   vol: 0.002, drift: 0.0006, div: 0.0003, desc: 'Boring and safe. Pays a coupon every day.' },
-  hyb:   { cls: 'bond',   name: 'High-Yield Bonds', tick: 'JUNK', price: 100,   vol: 0.006, drift: 0.0004, div: 0.0008, desc: 'Fat coupons, occasional defaults.' },
-  gold:  { cls: 'commod', name: 'Gold',             tick: 'GOLD', price: 180,   vol: 0.009, drift: 0.0018, desc: 'Rises when everything else panics.' },
-  oil:   { cls: 'commod', name: 'PetroMax Oil',     tick: 'PMX',  price: 70,    vol: 0.03,  drift: 0.003,  div: 0.0008, desc: 'Moves on world news.' },
-  reit:  { cls: 'reit',   name: 'Skyline REIT',     tick: 'SKYR', price: 50,    vol: 0.012, drift: 0.0025, div: 0.0018, desc: 'Owns malls and offices. Big daily payouts.' },
-  zoomr: { cls: 'stock',  name: 'Zoomr Rides',      tick: 'ZMR',  price: 45,    vol: 0.04,  drift: 0.005,  desc: 'Ride-hailing. Profitable some quarters.' },
-  amzon: { cls: 'stock',  name: 'Amazoom',          tick: 'AMZM', price: 140,   vol: 0.022, drift: 0.0055, desc: 'Ships everything by tomorrow.' },
-  btcn:  { cls: 'crypto', name: 'Bitcorn',          tick: 'BTCN', price: 30000, vol: 0.055, drift: 0.008,  desc: 'The original. Volatile, but it keeps coming back.' },
-  ethg:  { cls: 'crypto', name: 'Ethergem',         tick: 'ETHG', price: 2000,  vol: 0.07,  drift: 0.009,  desc: 'Smart contracts and dumb apes.' },
-  dogb:  { cls: 'crypto', name: 'DogeBone',         tick: 'DOGB', price: 0.08,  vol: 0.16,  drift: 0.012,  desc: 'A meme coin. A dog. A dream.' },
+  c500:  { cls: 'etf',    name: 'Clout 500 ETF',    tick: 'C500', price: 400,   vol: 0.01,  drift: 0.0021, div: 0.0004, desc: 'The 500 biggest companies in one fund.' },
+  tech:  { cls: 'etf',    name: 'Tech Titans ETF',  tick: 'TECH', price: 250,   vol: 0.022, drift: 0.0036,  desc: 'Every big tech stock in one basket.' },
+  bond:  { cls: 'bond',   name: 'Treasury Bonds',   tick: 'BOND', price: 100,   vol: 0.002, drift: 0.00036, div: 0.0003, desc: 'Boring and safe. Pays a coupon every day.' },
+  hyb:   { cls: 'bond',   name: 'High-Yield Bonds', tick: 'JUNK', price: 100,   vol: 0.006, drift: 0.00024, div: 0.0008, desc: 'Fat coupons, occasional defaults.' },
+  gold:  { cls: 'commod', name: 'Gold',             tick: 'GOLD', price: 180,   vol: 0.009, drift: 0.00108, desc: 'Rises when everything else panics.' },
+  oil:   { cls: 'commod', name: 'PetroMax Oil',     tick: 'PMX',  price: 70,    vol: 0.03,  drift: 0.0018,  div: 0.0008, desc: 'Moves on world news.' },
+  reit:  { cls: 'reit',   name: 'Skyline REIT',     tick: 'SKYR', price: 50,    vol: 0.012, drift: 0.0015, div: 0.0018, desc: 'Owns malls and offices. Big daily payouts.' },
+  zoomr: { cls: 'stock',  name: 'Zoomr Rides',      tick: 'ZMR',  price: 45,    vol: 0.04,  drift: 0.003,  desc: 'Ride-hailing. Profitable some quarters.' },
+  amzon: { cls: 'stock',  name: 'Amazoom',          tick: 'AMZM', price: 140,   vol: 0.022, drift: 0.0033, desc: 'Ships everything by tomorrow.' },
+  btcn:  { cls: 'crypto', name: 'Bitcorn',          tick: 'BTCN', price: 30000, vol: 0.055, drift: 0.0048,  desc: 'The original. Volatile, but it keeps coming back.' },
+  ethg:  { cls: 'crypto', name: 'Ethergem',         tick: 'ETHG', price: 2000,  vol: 0.07,  drift: 0.0054,  desc: 'Smart contracts and dumb apes.' },
+  dogb:  { cls: 'crypto', name: 'DogeBone',         tick: 'DOGB', price: 0.08,  vol: 0.16,  drift: 0.0072,  desc: 'A meme coin. A dog. A dream.' },
 });
 const ASSET_CLS = { all: 'All', stock: 'Stocks', etf: 'ETFs', bond: 'Bonds', commod: 'Commodities', reit: 'Real estate', crypto: 'Crypto' };
 MARKET_NEWS.push(
@@ -187,13 +187,13 @@ function payLoan(l, amt) {
 
 /* Properties you buy with a mortgage. Prices follow a housing index; rent pays nightly. */
 const REALTY = {
-  loft:   { name: 'Starter loft',       icon: '🏠', price: 60000,  rent: 125,    desc: 'Small, bright, always rented.' },
-  duplex: { name: 'Suburban duplex',    icon: '🏡', price: 250000, rent: 540,    desc: 'Two families, two rent checks.' },
-  beach:  { name: 'Beach house',        icon: '🏖️', price: 900000, rent: 2000,   desc: 'Holiday lets. Great for content too.' },
-  block:  { name: 'Apartment block',    icon: '🏢', price: 4e6,    rent: 9000,   desc: 'Forty units, steady income.' },
-  hotel:  { name: 'Boutique hotel',     icon: '🏨', price: 1.2e7,  rent: 28000,  desc: 'Influencers stay free (for content).' },
-  plaza:  { name: 'Shopping plaza',     icon: '🛍️', price: 3e7,    rent: 70000,  desc: 'Anchor stores and a food court.' },
-  tower:  { name: 'Skyscraper',         icon: '🌆', price: 1.5e8,  rent: 340000, desc: 'Your name in lights on top.' },
+  loft:   { name: 'Starter loft',       icon: '🏠', price: 60000,  rent: 80,    desc: 'Small, bright, always rented.' },
+  duplex: { name: 'Suburban duplex',    icon: '🏡', price: 250000, rent: 350,    desc: 'Two families, two rent checks.' },
+  beach:  { name: 'Beach house',        icon: '🏖️', price: 900000, rent: 1300,   desc: 'Holiday lets. Great for content too.' },
+  block:  { name: 'Apartment block',    icon: '🏢', price: 4e6,    rent: 5800,   desc: 'Forty units, steady income.' },
+  hotel:  { name: 'Boutique hotel',     icon: '🏨', price: 1.2e7,  rent: 18200,  desc: 'Influencers stay free (for content).' },
+  plaza:  { name: 'Shopping plaza',     icon: '🛍️', price: 3e7,    rent: 45500,  desc: 'Anchor stores and a food court.' },
+  tower:  { name: 'Skyscraper',         icon: '🌆', price: 1.5e8,  rent: 221000, desc: 'Your name in lights on top.' },
 };
 const propPrice = (k) => Math.round(REALTY[k].price * bankInit().hpi * (1 - Math.min(0.3, staffBonus('realty'))));
 const propValue = (k) => Math.round(REALTY[k].price * bankInit().hpi);
@@ -272,19 +272,19 @@ function bankTick(lines) {
    Acquisitions: buy stakes in companies. They pay you a share of profit every night.
    ====================================================================== */
 const BIZ = {
-  cafe:    { name: 'Brewtopia Coffee',     icon: '☕', val: 120000, y: 0.0028, g: 0.0009, vol: 0.02,  req: 5000,   perk: ['energy', 3, '+3 morning energy (free coffee)'] },
-  salon:   { name: 'GlowUp Salons',        icon: '💇', val: 350000, y: 0.0026, g: 0.0008, vol: 0.02,  req: 20000,  perk: ['quality', 0.02, '+2% post quality'] },
-  kicks:   { name: 'HypeKicks Sneakers',   icon: '👟', val: 900000, y: 0.0024, g: 0.0012, vol: 0.03,  req: 50000,  perk: ['sales', 0.1, '+10% merch sales'] },
-  gym:     { name: 'IronPulse Gyms',       icon: '🏋️', val: 2.5e6,  y: 0.0022, g: 0.0009, vol: 0.018, req: 100000, perk: ['energy', 10, '+10 max energy'] },
-  records: { name: 'Clout Records',        icon: '🎵', val: 5e6,    y: 0.0022, g: 0.0013, vol: 0.035, req: 250000, perk: ['reach', 0.05, '+5% reach'] },
-  club:    { name: 'Club Neon Group',      icon: '🪩', val: 8e6,    y: 0.003,  g: 0.0008, vol: 0.03,  req: 400000, perk: ['gift', 0.1, '+10% live gifts'] },
-  agency:  { name: 'Starmaker Talent',     icon: '⭐', val: 1.2e7,  y: 0.0022, g: 0.001,  vol: 0.025, req: 600000, perk: ['deal', 0.1, '+10% brand deal pay'] },
-  games:   { name: 'PixelForge Games',     icon: '🎮', val: 2.5e7,  y: 0.0015, g: 0.0022, vol: 0.05,  req: 1e6,    perk: ['reach', 0.04, '+4% reach'] },
-  snack:   { name: 'SnackWave Foods',      icon: '🍿', val: 4e7,    y: 0.0021, g: 0.001,  vol: 0.015, req: 2e6,    perk: ['sales', 0.15, '+15% product sales'] },
-  stream:  { name: 'StreamNest',           icon: '📺', val: 9e7,    y: 0.0016, g: 0.002,  vol: 0.04,  req: 5e6,    perk: ['vault', 0.1, '+10% FanVault income'] },
-  fc:      { name: 'Clout City FC',        icon: '⚽', val: 2.5e8,  y: 0.0014, g: 0.0012, vol: 0.03,  req: 1e7,    perk: ['rep', 0.2, '+0.2 reputation a day'] },
-  air:     { name: 'JetSet Air',           icon: '✈️', val: 8e8,    y: 0.0012, g: 0.0009, vol: 0.03,  req: 3e7,    perk: ['stress', 4, '−4 stress a day (private jet)'] },
-  omni:    { name: 'Omni Media Group',     icon: '🌐', val: 3e9,    y: 0.0012, g: 0.0011, vol: 0.025, req: 1e8,    perk: ['reach', 0.1, '+10% reach'] },
+  cafe:    { name: 'Brewtopia Coffee',     icon: '☕', val: 120000, y: 0.00168, g: 0.0009, vol: 0.02,  req: 5000,   perk: ['energy', 3, '+3 morning energy (free coffee)'] },
+  salon:   { name: 'GlowUp Salons',        icon: '💇', val: 350000, y: 0.00156, g: 0.0008, vol: 0.02,  req: 20000,  perk: ['quality', 0.02, '+2% post quality'] },
+  kicks:   { name: 'HypeKicks Sneakers',   icon: '👟', val: 900000, y: 0.00144, g: 0.0012, vol: 0.03,  req: 50000,  perk: ['sales', 0.1, '+10% merch sales'] },
+  gym:     { name: 'IronPulse Gyms',       icon: '🏋️', val: 2.5e6,  y: 0.00132, g: 0.0009, vol: 0.018, req: 100000, perk: ['energy', 10, '+10 max energy'] },
+  records: { name: 'Clout Records',        icon: '🎵', val: 5e6,    y: 0.00132, g: 0.0013, vol: 0.035, req: 250000, perk: ['reach', 0.05, '+5% reach'] },
+  club:    { name: 'Club Neon Group',      icon: '🪩', val: 8e6,    y: 0.0018,  g: 0.0008, vol: 0.03,  req: 400000, perk: ['gift', 0.1, '+10% live gifts'] },
+  agency:  { name: 'Starmaker Talent',     icon: '⭐', val: 1.2e7,  y: 0.00132, g: 0.001,  vol: 0.025, req: 600000, perk: ['deal', 0.1, '+10% brand deal pay'] },
+  games:   { name: 'PixelForge Games',     icon: '🎮', val: 2.5e7,  y: 0.0009, g: 0.0022, vol: 0.05,  req: 1e6,    perk: ['reach', 0.04, '+4% reach'] },
+  snack:   { name: 'SnackWave Foods',      icon: '🍿', val: 4e7,    y: 0.00126, g: 0.001,  vol: 0.015, req: 2e6,    perk: ['sales', 0.15, '+15% product sales'] },
+  stream:  { name: 'StreamNest',           icon: '📺', val: 9e7,    y: 0.00096, g: 0.002,  vol: 0.04,  req: 5e6,    perk: ['vault', 0.1, '+10% FanVault income'] },
+  fc:      { name: 'Clout City FC',        icon: '⚽', val: 2.5e8,  y: 0.00084, g: 0.0012, vol: 0.03,  req: 1e7,    perk: ['rep', 0.2, '+0.2 reputation a day'] },
+  air:     { name: 'JetSet Air',           icon: '✈️', val: 8e8,    y: 0.00072, g: 0.0009, vol: 0.03,  req: 3e7,    perk: ['stress', 4, '−4 stress a day (private jet)'] },
+  omni:    { name: 'Omni Media Group',     icon: '🌐', val: 3e9,    y: 0.00072, g: 0.0011, vol: 0.025, req: 1e8,    perk: ['reach', 0.1, '+10% reach'] },
 };
 function acqInit() {
   if (!S.acq) S.acq = { own: {}, val: {}, h: {}, earned: 0 };
@@ -382,6 +382,7 @@ function financeTick(lines) {
   if (st) S.stress = clamp(S.stress - st, 0, 100);
   if (ht) S.heat = clamp(S.heat - ht, 0, 100);
   if (rp) changeRep(rp);
+  if (typeof linksTick === 'function') linksTick(lines);
   const nw = netWorth(); S.stats.bestNW = Math.max(S.stats.bestNW || 0, nw);
   S.fin = S.fin || { nw: [] }; S.fin.nw.push(Math.round(nw)); if (S.fin.nw.length > 40) S.fin.nw.shift();
   S.lastIncome = lines.filter(([, v]) => v > 0); // include everything earned tonight
