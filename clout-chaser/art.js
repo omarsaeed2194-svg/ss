@@ -7,37 +7,7 @@ const SHIRTS = ['#2E3A59', '#8A2B4B', '#1F6F5C', '#C58B2A', '#4B3B8F', '#B7472A'
 const hashStr = (s) => { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return Math.abs(h); };
 const faceCache = new Map();
 
-/* A small illustrated face, deterministic from a seed string */
-function faceSvg(seed) {
-  if (faceCache.has(seed)) return faceCache.get(seed);
-  const r = srand(hashStr(seed) % 100000 + 7);
-  const p = (a) => a[Math.floor(r() * a.length)];
-  const skin = p(SKINS), hair = p(HAIRS), shirt = p(SHIRTS);
-  const style = Math.floor(r() * 7), extra = r();
-  const eyeY = 30 + r() * 2, mouth = Math.floor(r() * 3);
-  const back = style === 2 || style === 5 ? `<path d="M15 30 Q14 52 22 60 L42 60 Q50 52 49 30 Z" fill="${hair}"/>` : '';
-  const top = [
-    `<path d="M18 28 Q19 12 32 12 Q46 12 46 28 Q42 19 32 19 Q23 19 18 28Z" fill="${hair}"/>`,
-    `<path d="M18 27 Q18 13 32 13 Q46 13 46 27 L44 22 Q38 18 26 21 Q21 22 18 27Z" fill="${hair}"/>`,
-    `<path d="M17 30 Q16 11 32 11 Q48 11 47 30 Q44 18 32 17 Q22 18 17 30Z" fill="${hair}"/>`,
-    `<g fill="${hair}"><circle cx="21" cy="19" r="6"/><circle cx="29" cy="14" r="6.5"/><circle cx="37" cy="14" r="6.5"/><circle cx="44" cy="20" r="6"/><circle cx="17" cy="26" r="4.5"/><circle cx="47" cy="27" r="4.5"/></g>`,
-    `<path d="M19 26 Q20 16 32 16 Q44 16 45 26 Q40 21 32 21 Q24 21 19 26Z" fill="${hair}" opacity=".85"/>`,
-    `<g fill="${hair}"><path d="M17 30 Q16 12 32 12 Q48 12 47 30 Q43 20 32 19 Q21 20 17 30Z"/><circle cx="32" cy="9" r="6"/></g>`,
-    `<path d="M28 20 L32 6 L36 20 Q32 18 28 20Z" fill="${hair}"/>`,
-  ][style];
-  const acc = extra < 0.18 ? `<rect x="20" y="${eyeY - 3}" width="10" height="6" rx="2" fill="#111"/><rect x="34" y="${eyeY - 3}" width="10" height="6" rx="2" fill="#111"/><rect x="29" y="${eyeY - 1}" width="6" height="1.5" fill="#111"/>`
-    : extra < 0.3 ? `<circle cx="25" cy="${eyeY}" r="4.2" fill="none" stroke="#222" stroke-width="1.4"/><circle cx="39" cy="${eyeY}" r="4.2" fill="none" stroke="#222" stroke-width="1.4"/><path d="M29 ${eyeY} H35" stroke="#222" stroke-width="1.4"/>` : '';
-  const cap = extra > 0.9 ? `<path d="M16 22 Q18 9 32 9 Q46 9 48 22 Z" fill="${shirt}"/><path d="M40 21 Q50 21 54 24 L46 24Z" fill="${shirt}"/>` : '';
-  const eyes = extra < 0.18 ? '' : `<circle cx="25" cy="${eyeY}" r="1.9" fill="#1A1A1A"/><circle cx="39" cy="${eyeY}" r="1.9" fill="#1A1A1A"/>`;
-  const m = [`<path d="M26 40 Q32 45 38 40" stroke="#5A2A1E" stroke-width="1.8" fill="none" stroke-linecap="round"/>`, `<path d="M27 40 Q32 47 37 40 Z" fill="#5A2A1E"/>`, `<path d="M28 41 H36" stroke="#5A2A1E" stroke-width="1.8" stroke-linecap="round"/>`][mouth];
-  const svg = `<svg viewBox="0 0 64 64" aria-hidden="true">${back}<path d="M10 64 Q12 50 32 49 Q52 50 54 64Z" fill="${shirt}"/><rect x="27" y="42" width="10" height="9" fill="${skin}"/><ellipse cx="32" cy="31" rx="14" ry="16" fill="${skin}"/><ellipse cx="18" cy="32" rx="2.5" ry="3.5" fill="${skin}"/><ellipse cx="46" cy="32" rx="2.5" ry="3.5" fill="${skin}"/>${top}${cap}${eyes}${acc}${m}<ellipse cx="22" cy="37" rx="2.6" ry="1.6" fill="#E46A6A" opacity=".25"/><ellipse cx="42" cy="37" rx="2.6" ry="1.6" fill="#E46A6A" opacity=".25"/></svg>`;
-  faceCache.set(seed, svg);
-  return svg;
-}
-function logoSvg(name, color) {
-  const letter = esc(name.replace(/[^A-Za-z]/g, '')[0] || '?');
-  return `<svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="${color}"/><circle cx="48" cy="16" r="9" fill="#fff" opacity=".18"/><text x="32" y="44" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="34" fill="#fff">${letter}</text></svg>`;
-}
+/* faceSvg and logoSvg live in faces.js */
 
 /* Post illustration: background in the post's look, motif emoji, layout per format, memes get real top/bottom text */
 function sceneSvg({ seed, format, niche, look, caption, label, color }) {

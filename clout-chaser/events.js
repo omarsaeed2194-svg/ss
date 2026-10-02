@@ -489,7 +489,7 @@ const EVENTS = {
       else if (TH.mod.rep) changeRep(TH.mod.rep);
       if (!TH.mod.charity) { S.money += gifts; S.stats.earned += gifts; } else { S.money += c.giftTotal; } S.stats.giftsEarned = (S.stats.giftsEarned || 0) + gifts;
       if (chance(L.hours >= 12 ? 0.8 : L.hours >= 3 ? 0.45 : 0.25)) { const pk = pick(PR_PACKAGES); const note = pk.fx(); c.pkg = pk.text + (typeof note === 'string' ? `. ${note}` : ''); }
-      c.gain = Math.round(c.gain * (TH.mod.gain || 1) * (1 + (c.hype || 0) * 0.04));
+      c.gain = Math.round(c.gain * (TH.mod.gain || 1) * (1 + (c.hype || 0) * 0.04) * (1 + 0.15 * tm('producer')));
       S.platforms.live.followers += c.gain;
       for (const id of unlockedIds()) if (id !== 'live' && id !== 'vault') S.platforms[id].followers += c.gain * 0.1;
       S.money += c.don; S.stats.earned += c.don; S.stats.streams++;
@@ -533,7 +533,7 @@ const LIVE_GIFTS = [
 function rollGifts(c) {
   const L = STREAMS[c.len];
   const ch = 1 + (skillLvl('charisma') - 1) * 0.08;
-  const budget = (typeof worldMult === 'function' ? worldMult('gift') : 1) * c.viewers * Math.pow(L.hours, 0.85) * rnd(0.25, 0.5) * ch * clamp(S.rep / 55, 0.4, 1.6) * (c.giftX || 1) * (S.team.smm ? 1.15 : 1) + 8;
+  const budget = (typeof worldMult === 'function' ? worldMult('gift') : 1) * (1 + 0.25 * tm('producer')) * c.viewers * Math.pow(L.hours, 0.85) * rnd(0.25, 0.5) * ch * clamp(S.rep / 55, 0.4, 1.6) * (c.giftX || 1) * (S.team.smm ? 1.15 : 1) + 8;
   const out = [];
   for (const g of LIVE_GIFTS) {
     const exp = (budget * g.share) / g.v * rnd(0.6, 1.4);

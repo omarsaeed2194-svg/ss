@@ -50,6 +50,17 @@ const ui = {
 };
 const MAIN_TABS = [['home', 'Home', 'home'], ['explore', 'Explore', 'search'], ['notifs', 'Notifications', 'bell'], ['messages', 'Messages', 'mail'], ['profile', 'Profile', 'user']];
 const CAREER = [['money', 'Money', 'cash'], ['arena', 'Arena', 'dice'], ['legacy', 'Legacy', 'star'], ['deals', 'Brand deals', 'brief'], ['shop', 'Shop', 'bag'], ['team', 'Team', 'team'], ['empire', 'Empire', 'crown'], ['life', 'Life & skills', 'heartp'], ['stats', 'Analytics', 'chart'], ['tea', 'The Tea', 'tea'], ['trophies', 'Trophies', 'trophy'], ['danger', 'Danger Zone', 'fire'], ['account', 'Settings', 'gear']];
+CAREER.push(['hq', 'Headquarters', 'home']);
+/* The sidebar shows five hubs; each hub holds several screens with a tab row on top */
+const HUBS = [['biz', 'Business', 'cash', ['money', 'deals', 'shop', 'empire']], ['play', 'Play', 'dice', ['arena', 'danger']], ['crew', 'Team & HQ', 'team', ['team', 'hq', 'legacy']], ['me', 'Me', 'heartp', ['life', 'stats', 'trophies', 'tea']], ['account', 'Settings', 'gear', ['account']]];
+const hubOf = (t) => HUBS.find((h) => h[3].includes(t));
+const careerName = (id) => (CAREER.find((c) => c[0] === id) || [id, id])[1];
+function hubBadge(h, b) { return h[3].reduce((a, t) => a + (b[t] || 0), 0); }
+function hubBar() {
+  const h = hubOf(tab); if (!h || h[3].length < 2 || ui.view) return '';
+  ui.hubLast = ui.hubLast || {}; ui.hubLast[h[0]] = tab;
+  return `<div class="hubbar">${h[3].map((t) => `<button class="hubtab" data-act="go" data-arg="${t}" aria-current="${t === tab}">${ico((CAREER.find((c) => c[0] === t) || [])[2] || 'star', 'ico')}<span>${careerName(t)}</span></button>`).join('')}</div>`;
+}
 const NICHE_DESC = { beauty: 'Skincare, makeup, dupes', gaming: 'Clutches, speedruns, rage', fitness: 'Gains, routines, discipline', comedy: 'Skits, bits, chaos', tech: 'Reviews, setups, hot takes', food: 'Recipes, taste tests', music: 'Covers, hooks, studio life', fashion: 'Fits, thrift flips, trends', travel: 'Hidden gems, packing hacks', lifestyle: 'Routines, resets, vibes' };
 
 /* ---------- small helpers ---------- */
@@ -214,7 +225,7 @@ function renderSidebar() {
   const b = badges();
   const item = ([id, name, icon], sub) => `<button class="nav-item ${sub ? 'nav-sub' : ''}" data-act="go" data-arg="${id}" ${tab === id && !ui.view ? 'aria-current="page"' : ''} title="${name}">${ico(icon, sub ? 'ico' : 'ico-lg')}${b[id] ? `<span class="dotbadge">${b[id]}</span>` : ''}<span class="lbl">${name}</span></button>`;
   $('#sidebar').innerHTML = `<div class="brand">C<span class="full">lout</span><em>C<span class="full">haser</span></em></div>
-    ${MAIN_TABS.map((t) => item(t)).join('')}<div class="nav-sep"></div>${CAREER.map((t) => item(t, true)).join('')}
+    ${MAIN_TABS.map((t) => item(t)).join('')}<div class="nav-sep"></div>${HUBS.map((h) => { const bb = hubBadge(h, b); const on = h[3].includes(tab) && !ui.view; return `<button class="nav-item nav-sub hub-${h[0]}" data-act="go" data-arg="${h[0]}" ${on ? 'aria-current="page"' : ''} title="${h[1]}">${ico(h[2], 'ico')}${bb ? `<span class="dotbadge">${bb}</span>` : ''}<span class="lbl">${h[1]}</span></button>`; }).join('')}
     <button class="post-btn" data-act="compose" title="Post">${ico('feather')}<span class="lbl"> Post</span></button>
     <button class="btn big" data-act="endDay" title="Sleep to end the day">${ico('moon')}<span class="lbl">Sleep · Day ${S.day}</span></button>
     <button class="me-chip" data-act="go" data-arg="profile">${meAv()}<span class="grow" style="min-width:0"><b style="display:flex;gap:4px;align-items:center">${esc(S.name)} ${meBadge()}</b><span class="muted small">@${esc(S.handle)}</span></span></button>`;
@@ -306,8 +317,8 @@ function renderCol() {
   if (v && v.type === 'post') html = vThread(v.id, v.npc);
   else if (v && v.type === 'star') html = vStar(v.id);
   else if (v && v.type === 'dm') html = vDm(v.key);
-  else html = ({ home: vHome, explore: vExplore, notifs: vNotifs, messages: vMessages, profile: vProfile, danger: vDanger, deals: vDeals, shop: vShop, money: vMoney, arena: vArena, legacy: vLegacy, team: vTeam, empire: vEmpire, life: vLife, stats: vStats, tea: vTea, trophies: vTrophies, account: vAccount }[tab] || vHome)();
-  $('#col').innerHTML = html;
+  else html = ({ home: vHome, explore: vExplore, notifs: vNotifs, messages: vMessages, profile: vProfile, danger: vDanger, deals: vDeals, shop: vShop, money: vMoney, arena: vArena, legacy: vLegacy, hq: vHQ, team: vTeam, empire: vEmpire, life: vLife, stats: vStats, tea: vTea, trophies: vTrophies, account: vAccount }[tab] || vHome)();
+  $('#col').innerHTML = html.replace('<div class="col-head">', '<div class="col-head">' + hubBar());
   if ((tab === 'stats' || (tab === 'profile' && ui.profTab === 'analytics')) && !v) drawChart();
   animateFresh();
   const bio = $('#bioEdit'); if (bio) bio.addEventListener('input', () => { S.bio = bio.value.slice(0, 160); save(); });
@@ -455,7 +466,7 @@ function vHome() {
     : `<div class="empty"><h3>Nothing yet</h3><p>Your posts show up here. Write your first one.</p>${btn('Post', 'compose', '', 'blue')}</div>`;
   return `<div class="col-head">${head('Home', `Day ${S.day} · ${weekday()} · ${tier().name} creator${S.streak ? ` · <span class="gold">${S.streak}-day streak</span>` : ''}`, false, `<button class="btn sm" data-act="endDay" title="Sleep to end the day">${ico('moon')} Sleep</button>`)}
     ${tabsBar([['foryou', 'For you'], ['following', 'Following'], ['mine', 'Your posts']], ui.feedTab, 'feedTab')}</div>
-    ${ui.feedTab !== 'mine' ? storiesBar() : ''}
+    ${ui.feedTab !== 'mine' ? storiesBar() + loginCard() : ''}
     ${statusStrip()}${ui.feedTab !== 'mine' ? heroCard() + (S.world && WORLD_EVENTS[S.world.id] ? `<button class="world-banner" data-act="go" data-arg="arena">${WORLD_EVENTS[S.world.id].icon} <b>${WORLD_EVENTS[S.world.id].name}</b> <span>${WORLD_EVENTS[S.world.id].desc}</span></button>` : '') : ''}${prompt}${ui.feedTab !== 'mine' ? spinCard() + challengeCard() + activeClashes().map(clashCard).join('') : ''}
     ${items.length ? items.slice(0, 50).map((it) => it.k === 'me' ? myPostCard(it.p) : npcPostCard(it.f)).join('') : empty}`;
 }
@@ -1013,7 +1024,7 @@ function openDrawer() {
   $('#drawer').innerHTML = `<div class="drawer" role="dialog" aria-label="Menu">
     <div style="padding:4px 12px 12px">${meAv('lg')}<div style="margin-top:8px"><b style="display:flex;gap:4px;align-items:center;font-size:17px">${esc(S.name)} ${meBadge()}</b><span class="muted">@${esc(S.handle)}</span></div>
       <div class="row small" style="margin-top:8px"><span><b>${following}</b> <span class="muted">Following</span></span><span><b>${fmt(totalFollowers())}</b> <span class="muted">Followers</span></span></div></div>
-    ${CAREER.map(([id, name, icon]) => `<button class="nav-item" style="font-size:18px;width:100%" data-act="go" data-arg="${id}">${ico(icon, 'ico-lg')}<span>${name}</span>${b[id] ? `<span class="pill blue" style="margin-left:auto">${b[id]}</span>` : ''}</button>`).join('')}
+    ${HUBS.map(([id, name, icon, tabs]) => `<button class="nav-item" style="font-size:18px;width:100%" data-act="go" data-arg="${id}">${ico(icon, 'ico-lg')}<span>${name}<span class="small muted" style="display:block;font-size:12px">${tabs.map(careerName).join(' · ')}</span></span>${hubBadge([id, name, icon, tabs], b) ? `<span class="pill blue" style="margin-left:auto">${hubBadge([id, name, icon, tabs], b)}</span>` : ''}</button>`).join('')}
     <div class="nav-sep"></div><button class="btn big" data-act="endDay" style="margin:8px 12px">${ico('moon')} Sleep · end day ${S.day}</button></div>`;
   $('#drawer').hidden = false;
 }
@@ -1028,7 +1039,7 @@ function openView(v) { ui.hist.push({ tab, view: ui.view }); ui.view = v; window
 
 const ACT = {
   noop: () => 'norender',
-  go: (a) => { tab = a; ui.view = null; ui.hist = []; $('#drawer').hidden = true; window.scrollTo({ top: 0 }); if (a === 'notifs') setTimeout(() => { if (!S) return; S.notifs.forEach((n) => { n.read = true; }); renderSidebar(); renderTabbar(); save(); }, 1500); },
+  go: (a) => { const hb = HUBS.find((h) => h[0] === a); if (hb) a = (ui.hubLast && ui.hubLast[hb[0]]) || hb[3][0]; tab = a; ui.view = null; ui.hist = []; $('#drawer').hidden = true; window.scrollTo({ top: 0 }); if (a === 'notifs') setTimeout(() => { if (!S) return; S.notifs.forEach((n) => { n.read = true; }); renderSidebar(); renderTabbar(); save(); }, 1500); },
   back: () => { const h = ui.hist.pop(); if (h) { tab = h.tab; ui.view = h.view; } else ui.view = null; },
   open: (a) => {
     const i = a.indexOf(':'); if (i < 0) return 'norender';
@@ -1388,7 +1399,7 @@ const ACT = {
   },
   restart: (a) => { if (a === 'yes') { wipeSave(); S = null; ui.confirmRestart = false; showStart(); return 'norender'; } ui.confirmRestart = a !== 'no'; },
 };
-Object.assign(ACT, MONEY_ACT, VAULT_ACT, ENDGAME_ACT);
+Object.assign(ACT, MONEY_ACT, VAULT_ACT, ENDGAME_ACT, EXTRA_ACT);
 
 const NO_FLASH = new Set(['go', 'back', 'open', 'openDm', 'endDay', 'dmSend', 'noop']);
 const SHEET_ONLY = new Set(['storyOpen', 'cTheme', 'vPrice', 'vLink', 'vDrop', 'cAff', 'cPoll', 'cCross', 'duet', 'spin', 'cIntent', 'dmChip', 'postAbout', 'cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);

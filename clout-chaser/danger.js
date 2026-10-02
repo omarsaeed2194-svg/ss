@@ -158,7 +158,7 @@ function dangerTick() {
     S.investigation = Math.max(0, S.investigation - 2);
   }
   if (S.injuredUntil && S.injuredUntil < S.day) { S.injuredUntil = 0; notify('system', null, 'You\'re healed. Full energy is back.'); }
-  if (totalFollowers() >= 3000 && chance(0.07) && !S.queue.some((q) => q.ev === 'scam_bots')) S.queue.push({ ev: 'scam_bots', ctx: {} });
+  if (!S.team.cyber && totalFollowers() >= 3000 && chance(0.07) && !S.queue.some((q) => q.ev === 'scam_bots')) S.queue.push({ ev: 'scam_bots', ctx: {} });
 }
 
 Object.assign(EVENTS, {

@@ -116,6 +116,14 @@ A sixth platform, unlocked at 1K followers. Fans pay monthly for exclusive drops
 - **Milestones panel** in the right sidebar (on phones, on your profile): progress bars toward your next follower milestone, next tier, bank balance goal, posting streak and stamina boost, plus your next trophies. Money milestones give +10 energy; streak milestones (3, 7, 14, 30, 60, 100 days) give +3 max energy.
 - **Stream themes**: Just chatting, Gaming, Cooking, IRL city walk, Karaoke night, Q&A, Charity stream and Collab stream. Each changes payouts and brings its own chat moments (clutch plays, kitchen fires, street battles, power ballads, salary questions, donation matching, co-streamers going off-script), and no two streams in a row repeat the same moments. A hype meter builds during the stream and boosts gifts and followers.
 
+## Menus, HQ and more team
+
+- **Merged menu**: the sidebar has five hubs (Business, Play, Team & HQ, Me, Settings). Each hub opens its screens with a tab row on top (e.g. Business: Money · Brand deals · Shop · Empire) and remembers the last one you used.
+- **Detailed faces and logos**: cartoon faces with eyes, brows, noses, lips, beards, shades, chains, earrings, hats and 16 hairstyles. Every parody star has signature caricature traits, and every parody company and sponsor has its own designed logo.
+- **New hires**: photographer, personal chef, personal trainer, stream producer, talent scout and cybersecurity expert (blocks hacks, deepfakes, impersonators and scam bots). All can be upgraded Junior → Legend.
+- **Headquarters**: six rooms (content studio, editing bay, data room, home gym, chill lounge, trophy hall), each upgradable to level 5 for permanent boosts. Your building grows from a bedroom setup to a Clout Empire campus.
+- **Daily login calendar**: real-world daily rewards on a 7-day cycle (cash, energy, Pass XP, lucky charm, followers, a big chest on day 7). Keep the streak going.
+
 ## Visuals
 
 - **Animated posts**: every post illustration has niche scenery (steaming plates, drifting clouds and planes, spinning vinyl, neon grids, spotlights, sparkles). Video posts autoplay when on screen with a progress bar and sound-bars.
@@ -201,6 +209,8 @@ Doing well gives you a second wind, shown as a gold energy pop-up:
 - `index.html` – layout and styles
 - `data.js` – platforms, formats, tones, trends, stars, brands, shop, team
 - `engine.js` – simulation: posting math, day cycle, NPCs, deals, achievements, saving
+- `faces.js` – detailed cartoon faces, celeb caricature traits, designed brand logos
+- `extra.js` – new team members, Headquarters, daily login calendar
 - `visuals.js` – animated scenery, stories, event art, reaction bursts, casino and match animations
 - `art.js` – generated faces, logos, post illustrations, photo resizing
 - `events.js` – random and triggered events, livestream chat, modal queue

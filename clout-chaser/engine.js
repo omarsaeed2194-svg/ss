@@ -134,18 +134,20 @@ const teamPay = (k) => Math.round(TEAM[k].pay * (1 + ((S.teamLvl && S.teamLvl[k]
 const teamUpCost = (k) => Math.round(TEAM[k].pay * 4 * teamLvl(k) / 10) * 10;
 const teamSize = () => Object.keys(S.team).filter((k) => S.team[k]).length;
 const stamina = () => Math.min(150, Math.floor((((S && S.day) || 1) - 1) / 5) * 5); // +5 max energy every 5 days, up to +150
-function maxEnergy() { const m = 100 + (typeof legacyLvl === 'function' ? 10 * legacyLvl('energy') : 0) + stamina() + (S.bonusMaxE || 0) + Math.round(20 * tm('assistant')) + (S.owned.mansion ? 10 : 0) + (S.owned.island ? 10 : 0); return S.injuredUntil && S.injuredUntil >= S.day ? Math.round(m * 0.6) : m; }
+function maxEnergy() { const m = 100 + 10 * tm('trainer') + 5 * (typeof hqLvl === 'function' ? hqLvl('gym') : 0) + (typeof legacyLvl === 'function' ? 10 * legacyLvl('energy') : 0) + stamina() + (S.bonusMaxE || 0) + Math.round(20 * tm('assistant')) + (S.owned.mansion ? 10 : 0) + (S.owned.island ? 10 : 0); return S.injuredUntil && S.injuredUntil >= S.day ? Math.round(m * 0.6) : m; }
 const energyCap = () => maxEnergy() + 60; // rewards can overcharge you past your normal max
 function gearQ(pid) {
   let q = 0;
   for (const it of SHOP) if (S.owned[it.id] && it.q && (!it.plats || it.plats.includes(pid))) q += it.q;
   if (S.owned.drone && S.niche === 'travel' && (pid === 'tube' || pid === 'clipz')) q += 0.1;
   q = Math.min(q, 0.45); // gear helps, but talent still matters
+  if (pid === 'pix') q += 0.08 * tm('photographer');
+  q += 0.04 * (typeof hqLvl === 'function' ? hqLvl('studio') : 0);
   if (pid === 'clipz' || pid === 'tube' || pid === 'pix') q += 0.1 * tm('editor');
   if (pid !== 'chirp') q += 0.06 * tm('stylist');
   return q;
 }
-function reachBonus() { let r = 0.08 * tm('analyst') + Math.min(0.1, Math.max(0, teamSize() - 3) * 0.01); /* dream-team synergy */ for (const it of SHOP) if (S.owned[it.id] && it.reach) r += it.reach; return r; }
+function reachBonus() { let r = 0.03 * (typeof hqLvl === 'function' ? hqLvl('server') : 0) + 0.08 * tm('analyst') + Math.min(0.1, Math.max(0, teamSize() - 3) * 0.01); /* dream-team synergy */ for (const it of SHOP) if (S.owned[it.id] && it.reach) r += it.reach; return r; }
 function repLabel(r = S.rep) { return r >= 85 ? 'Beloved' : r >= 68 ? 'Respected' : r >= 50 ? 'Liked' : r >= 35 ? 'Mixed' : r >= 20 ? 'Sketchy' : 'Toxic'; }
 function repClass(r = S.rep) { return r >= 60 ? 'good' : r >= 35 ? 'warn' : 'bad'; }
 function heatLabel(h = S.heat) { return h >= 85 ? 'Imploding' : h >= 60 ? 'Scorching' : h >= 35 ? 'Heated' : h >= 12 ? 'Buzzing' : 'Calm'; }
@@ -319,7 +321,7 @@ function computePost(o, det = false) {
   const topic = topics.find((x) => x.id === o.topic) || topics[0];
   const FL = hasLook(o.format) && o.filter && FILTERS[o.filter] ? FILTERS[o.filter] : null;
   const lookMatch = !!FL && o.filter === S.aesthetic;
-  const energy = Math.max(2, Math.round(F.e * E.e * (F.video ? Math.max(0.5, 1 - 0.2 * tm('editor')) : 1)) + (FL && FL.e ? FL.e : 0));
+  const energy = Math.max(2, Math.round(F.e * E.e * (F.video ? Math.max(0.35, 1 - 0.2 * tm('editor') - 0.05 * (typeof hqLvl === 'function' ? hqLvl('editbay') : 0)) : 1)) + (FL && FL.e ? FL.e : 0));
   const orig = Math.min(100, originality(o.caption) + (o.img ? 8 : 0) + ((o.caption || '').trim() ? Math.round(12 * tm('ghostwriter')) : 0)); // your own photo counts as original
   let q = E.q * (1 + 0.07 * (skillLvl(F.skill) - 1)) * (1 + gearQ(o.platform));
   if (T.skill) q *= 1 + 0.03 * (skillLvl(T.skill) - 1);
@@ -838,6 +840,7 @@ function endDay() {
   if (typeof vaultTick === 'function') vaultTick(lines);
   if (typeof moneyTick === 'function') moneyTick(lines);
   if (typeof endgameTick === 'function') endgameTick(lines);
+  if (typeof extraTick === 'function') extraTick(lines);
   // Organic growth / decay
   const idle = S.day - S.lastPostDay;
   for (const id of unlockedIds()) {
@@ -891,6 +894,7 @@ function endDay() {
   }
   if (S.team.stylist) changeRep(0.15 * tm('stylist'));
   S.energy = Math.round(maxEnergy() * (S.stress >= 80 ? 0.7 : 1)) + streakBonus;
+  if (S.team.chef) S.energy += Math.round(8 * tm('chef'));
   generateInbox();
   // Burnout
   if (S.stress >= 100) S.queue.push({ ev: 'burnout', ctx: {} });
@@ -961,7 +965,7 @@ function rollRandomEvents() {
   const used = new Set(S.queue.map((q) => q.ev));
   const wt = (e) => (e.w || 1) * (e.neg ? 1 + ti * 0.2 : 1);
   for (let i = 0; i < n; i++) {
-    const pool = Object.entries(EVENTS).filter(([id, e]) => e.random && !used.has(id) && (!e.when || e.when()) && !(e.once && S.flags['ev_' + id]));
+    const pool = Object.entries(EVENTS).filter(([id, e]) => e.random && !(S.team.cyber && typeof CYBER_BLOCKS !== 'undefined' && CYBER_BLOCKS.includes(id)) && !used.has(id) && (!e.when || e.when()) && !(e.once && S.flags['ev_' + id]));
     if (!pool.length) return;
     const tot = pool.reduce((a, [, e]) => a + wt(e), 0);
     let r = Math.random() * tot;
