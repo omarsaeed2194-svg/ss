@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build Clout Chaser as an Android APK. Needs a JDK (17+) and Python 3; no Android SDK required.
+# Build Clout Chaser for Android. Needs a JDK (17+) and Python 3; no Android SDK required.
 # The platform jar and the dex compiler are downloaded from Maven Central into .tools/ on first run.
 #   ./build.sh            -> dist/clout-chaser.apk (sideload) and dist/clout-chaser.aab (Google Play)
 # Signing: set KEYSTORE, KS_PASS and KS_ALIAS to your release key. Without them a throwaway key in .tools/ is used,
@@ -28,23 +28,16 @@ rm -rf "$BUILD/www" && mkdir -p "$BUILD/www"
 cp "$GAME"/*.js "$BUILD/www/"
 { printf '<!doctype html>\n<html lang="en">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<script>window.STORE_BUILD = true;</script>\n'; cat "$GAME/index.html"; } > "$BUILD/www/index.html"
 
-echo "4/6 building the APK"
-python3 apkbuild.py "$BUILD/classes.dex" "$BUILD/www" icons "$BUILD/unsigned.apk"
-
-echo "5/6 signing"
+echo "4/6 preparing the signing key"
 KS=${KEYSTORE:-$TOOLS/clout-chaser.jks}
 ALIAS=${KS_ALIAS:-clout}
+PASS=${KS_PASS:-cloutchaser}
 if [ ! -s "$KS" ]; then
-  keytool -genkeypair -keystore "$KS" -storepass ${KS_PASS:-cloutchaser} -keypass ${KS_PASS:-cloutchaser} -alias "$ALIAS" \
+  keytool -genkeypair -keystore "$KS" -storepass "$PASS" -keypass "$PASS" -alias "$ALIAS" \
     -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Clout Chaser, O=Clout Chaser" >/dev/null 2>&1
 fi
-cp "$BUILD/unsigned.apk" dist/clout-chaser.apk
-jarsigner -keystore "$KS" -storepass ${KS_PASS:-cloutchaser} -sigalg SHA256withRSA -digestalg SHA-256 dist/clout-chaser.apk "$ALIAS" >/dev/null
-P12="$BUILD/sign.p12"; rm -f "$P12"
- keytool -importkeystore -srckeystore "$KS" -srcstorepass ${KS_PASS:-cloutchaser} -destkeystore "$P12" -deststoretype PKCS12 -deststorepass ${KS_PASS:-cloutchaser} >/dev/null 2>&1
-python3 sign_v2.py dist/clout-chaser.apk "$P12" ${KS_PASS:-cloutchaser}
 
-echo "6/6 building the Play Store bundle (AAB)"
+echo "5/6 building the Play Store bundle (AAB)"
 rm -rf "$BUILD/aab" && mkdir -p "$BUILD/aab/base/dex" "$BUILD/aab/base/assets" "$BUILD/tools"
 javac -nowarn -cp "$TOOLS/bundletool.jar" -d "$BUILD/tools" tools/AabModule.java 2>&1 | grep -v "^warning\|^Note\|JAVA_TOOL" || true
 python3 apkbuild.py --manifest-txt "$BUILD/manifest.txt"
@@ -55,5 +48,11 @@ for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do mkdir -p "$BUILD/aa
 (cd "$BUILD/aab/base" && rm -f ../base.zip && zip -qr ../base.zip .)
 rm -f dist/clout-chaser.aab
 java -jar "$TOOLS/bundletool.jar" build-bundle --modules="$BUILD/aab/base.zip" --output=dist/clout-chaser.aab
-jarsigner -keystore "$KS" -storepass ${KS_PASS:-cloutchaser} -sigalg SHA256withRSA -digestalg SHA-256 dist/clout-chaser.aab "$ALIAS" >/dev/null
+jarsigner -keystore "$KS" -storepass "$PASS" -sigalg SHA256withRSA -digestalg SHA-256 dist/clout-chaser.aab "$ALIAS" >/dev/null
+
+echo "6/6 building the phone APK from the bundle (aligned and signed by bundletool)"
+rm -f "$BUILD/universal.apks" dist/clout-chaser.apk
+java -jar "$TOOLS/bundletool.jar" build-apks --bundle=dist/clout-chaser.aab --output="$BUILD/universal.apks" --mode=universal \
+  --ks="$KS" --ks-pass=pass:"$PASS" --ks-key-alias="$ALIAS" --key-pass=pass:"$PASS"
+unzip -p "$BUILD/universal.apks" universal.apk > dist/clout-chaser.apk
 ls -la dist/

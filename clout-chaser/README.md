@@ -296,7 +296,7 @@ All people, brands and platforms in the game are fictional or clearly marked par
 
 - **Sideload:** `android/dist/clout-chaser.apk`. Copy it to your phone, open it, and allow "Install unknown apps" when asked.
 - **Google Play:** `android/dist/clout-chaser.aab` is the App Bundle Play asks for. It targets Android 15 (API 35) and draws edge to edge with system-bar insets handled.
-- Rebuild with `cd android && ./build.sh`. It needs a JDK 17+ and Python 3 with `cryptography`, but no Android SDK: the platform jar and dex compiler come from Maven Central, and bundletool comes from GitHub.
+- Rebuild with `cd android && ./build.sh`. It needs a JDK 17+ and Python 3, but no Android SDK: the platform jar and dex compiler come from Maven Central, and bundletool comes from GitHub. The phone APK is generated from the AAB by bundletool, so it is aligned and signed exactly as Android expects.
 - **Signing:** set `KEYSTORE=/path/release.jks KS_PASS=... KS_ALIAS=upload` to sign with your release (upload) key. Without them, the build uses a throwaway key in `android/.tools/`. That's fine for testing, but it can't update an app installed with another key. Keep the release key and its password somewhere safe; the key is never committed.
 - The app-store build turns on **store-safe names** by default (see below).
 - Android 7.0+ (API 24). Back button closes sheets and pop-ups first, then goes back, then exits. "Add your photo" opens the phone's photo picker.
