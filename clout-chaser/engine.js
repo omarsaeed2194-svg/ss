@@ -261,7 +261,7 @@ function topicsFor() {
     t.push({ id: 'trend:' + tr.tag, label: tr.tag, group: 'Trend', reach: (1.25 + (fit ? 0.35 : 0)) * fresh * tr.hot, eng: fit ? 1.12 : 0.95, rep: tr.edgy ? -1 : 0, heat: tr.edgy ? 6 : 0, viral: 0.025 * fresh, trend: tr.tag, phrase: tr.tag });
   });
   t.push({ id: 'personal', label: 'Storytime', reach: 1.1, eng: 1.25, rep: 0.3, heat: 1, viral: 0.01, phrase: pick(['my worst date ever', 'why I quit my job', 'the night I got locked out in Lisbon', 'my first viral flop']) });
-  if (S.owned.pet) t.push({ id: 'pet', label: 'Pet content', reach: 1.3, eng: 1.45, rep: 1, heat: 0, viral: 0.03, phrase: pick(['my dog judging my outfit', 'my golden retriever meeting a cat', 'pet reacts to my content']) });
+  if (typeof hasPet === 'function' ? hasPet() : S.owned.pet) t.push({ id: 'pet', label: 'Pet content', reach: 1.3, eng: 1.45, rep: 1, heat: 0, viral: 0.03, phrase: pick(['my dog judging my outfit', 'my golden retriever meeting a cat', 'pet reacts to my content']) });
   t.push({ id: 'bts', label: 'Behind the scenes', reach: 0.95, eng: 1.2, rep: 0.8, heat: 0, viral: 0, phrase: 'how I actually make content' });
   t.push({ id: 'cause', label: 'Social cause', reach: 0.85, eng: 1.0, rep: 2.5, heat: -2, viral: 0.01, phrase: pick(['mental health', 'ocean cleanups', 'local food banks', 'creator burnout']) });
   t.push({ id: 'hot', label: 'Controversial take', reach: 1.8, eng: 1.35, rep: -3, heat: 14, viral: 0.05, phrase: pick(HOT_TAKES) });

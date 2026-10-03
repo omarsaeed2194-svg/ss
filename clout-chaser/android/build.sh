@@ -26,6 +26,7 @@ java -cp "$TOOLS/dx.jar" com.android.dx.command.Main --dex --min-sdk-version=24 
 echo "3/6 packing the game"
 rm -rf "$BUILD/www" && mkdir -p "$BUILD/www"
 cp "$GAME"/*.js "$BUILD/www/"
+mkdir -p "$BUILD/www/images" && cp -r "$GAME"/images/. "$BUILD/www/images/"
 { printf '<!doctype html>\n<html lang="en">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<script>window.STORE_BUILD = true;</script>\n'; cat "$GAME/index.html"; } > "$BUILD/www/index.html"
 
 echo "4/6 preparing the signing key"

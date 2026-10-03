@@ -231,14 +231,14 @@ function avatarBody(L) {
   if (_lookCache.has(key)) return _lookCache.get(key);
   const skin = L.skin, sd = avShade(skin, 0.86);
   const hatHidesHair = ['cap', 'beanie', 'bucket', 'cowboy', 'bandana'].includes(L.hat);
-  const out = `${hairBack(L)}${bottomSvg(L)}${shoesSvg(L)}
+  const out = `<g class="av-body"><g class="av-head">${hairBack(L)}</g>${bottomSvg(L)}${shoesSvg(L)}
     <path d="M58 172 L44 250" stroke="${skin}" stroke-width="18" stroke-linecap="round"/><path d="M142 172 L156 250" stroke="${skin}" stroke-width="18" stroke-linecap="round"/>
     ${topSvg(L)}<circle cx="43" cy="255" r="10" fill="${skin}"/><circle cx="157" cy="255" r="10" fill="${skin}"/>
     <rect x="86" y="136" width="28" height="28" rx="10" fill="${sd}"/>${neckSvg(L)}
-    ${earsSvg(L, true)}${faceShape(L, skin)}<ellipse cx="72" cy="118" rx="8" ry="5" fill="#FF7A8A" opacity=".25"/><ellipse cx="128" cy="118" rx="8" ry="5" fill="#FF7A8A" opacity=".25"/>
-    ${hatHidesHair && L.hair !== 'long' && L.hair !== 'braids' ? '' : hairFront(L)}${browsSvg(L)}${eyesSvg(L)}
+    <g class="av-head">${earsSvg(L, true)}${faceShape(L, skin)}<ellipse cx="72" cy="118" rx="8" ry="5" fill="#FF7A8A" opacity=".25"/><ellipse cx="128" cy="118" rx="8" ry="5" fill="#FF7A8A" opacity=".25"/>
+    ${hatHidesHair && L.hair !== 'long' && L.hair !== 'braids' ? '' : hairFront(L)}${browsSvg(L)}<g class="av-eyes">${eyesSvg(L)}</g>
     <path d="M97 106 Q100 116 104 113" stroke="${avShade(skin, 0.7)}" stroke-width="2.6" fill="none" stroke-linecap="round"/>
-    ${mouthSvg(L)}${beardSvg(L)}${glassesSvg(L)}${earsSvg(L, false)}${hatSvg(L)}`;
+    ${mouthSvg(L)}${beardSvg(L)}${glassesSvg(L)}${earsSvg(L, false)}${hatSvg(L)}</g></g>`;
   if (_lookCache.size > 200) _lookCache.clear();
   _lookCache.set(key, out);
   return out;
@@ -346,18 +346,19 @@ function propsSvg(k) {
   placed.filter(([sl]) => sl[2] === 1).forEach(([sl, c]) => { front += carSvg(c, sl[0], sl[1], 1); });
   if (S.money >= 1e8) front += `<g transform="translate(124 216) scale(.72)">${[0, 1, 2].map((r) => [0, 1, 2 - r].map((c) => `<path d="M${c * 22 + r * 11} ${-r * 10} l20 0 l-4 -8 l-12 0Z" fill="#FFD400" stroke="#C99A00"/>`).join('')).join('')}</g>`;
   else if (S.money >= 1e6) front += `<g transform="translate(128 212)">${[0, 1, 2, 3].map((i) => `<rect x="${(i % 2) * 20}" y="${-Math.floor(i / 2) * 8}" width="18" height="7" rx="1" fill="#3DAA5C" stroke="#1E7A3C"/>`).join('')}</g>`;
-  if (S.owned.pet) front += '<g transform="translate(236 204) scale(.85)"><ellipse cx="20" cy="16" rx="18" ry="11" fill="#E0A458" stroke="#8A5A2B" stroke-width="1.5"/><circle cx="38" cy="6" r="10" fill="#E0A458" stroke="#8A5A2B" stroke-width="1.5"/><ellipse cx="44" cy="2" rx="4" ry="7" fill="#B9782F"/><circle cx="41" cy="5" r="1.8" fill="#111"/><circle cx="47" cy="8" r="2" fill="#111"/><path d="M2 12 Q-8 4 -4 -4" stroke="#E0A458" stroke-width="5" fill="none" stroke-linecap="round" class="av-wag"/><rect x="8" y="22" width="5" height="10" fill="#E0A458"/><rect x="28" y="22" width="5" height="10" fill="#E0A458"/></g>';
+  if (typeof petSvgFor === 'function') front += petSvgFor(k);
+  else if (S.owned.pet) front += '<g transform="translate(236 204) scale(.85)"><ellipse cx="20" cy="16" rx="18" ry="11" fill="#E0A458" stroke="#8A5A2B" stroke-width="1.5"/><circle cx="38" cy="6" r="10" fill="#E0A458" stroke="#8A5A2B" stroke-width="1.5"/><ellipse cx="44" cy="2" rx="4" ry="7" fill="#B9782F"/><circle cx="41" cy="5" r="1.8" fill="#111"/><circle cx="47" cy="8" r="2" fill="#111"/><path d="M2 12 Q-8 4 -4 -4" stroke="#E0A458" stroke-width="5" fill="none" stroke-linecap="round" class="av-wag"/><rect x="8" y="22" width="5" height="10" fill="#E0A458"/><rect x="28" y="22" width="5" height="10" fill="#E0A458"/></g>';
   return { back, front };
 }
 const _sceneCache = new Map();
 function lifestyleScene(opts = {}) {
   const k = opts.scene || sceneKey(), L = opts.look || lookInit();
   /* scenes are drawn often (Home, profile, the picker), so cache them by everything they show */
-  const sig = [k, JSON.stringify(L), featuredCars().join(), S.owned.jet, S.owned.yacht, S.owned.heli, S.owned.pet, S.owned.ring, S.owned.pc, S.money >= 1e8 ? 2 : S.money >= 1e6 ? 1 : 0, S.acq ? Object.keys(S.acq.own).slice(0, 4).join() : '', !!(S.prestige && S.prestige.space), S.name].join('|');
+  const sig = [k, JSON.stringify(L), featuredCars().join(), S.owned.jet, S.owned.yacht, S.owned.heli, typeof shownPets === 'function' ? shownPets().join() : S.owned.pet, S.owned.ring, S.owned.pc, S.money >= 1e8 ? 2 : S.money >= 1e6 ? 1 : 0, S.acq ? Object.keys(S.acq.own).slice(0, 4).join() : '', !!(S.prestige && S.prestige.space), S.name].join('|');
   if (_sceneCache.has(sig)) return _sceneCache.get(sig);
   if (_sceneCache.size > 40) _sceneCache.clear();
   const p = propsSvg(k);
-  const out = `<svg class="life-scene" viewBox="0 0 400 250" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${esc(S.name)} at the ${BACKDROPS[k].name.toLowerCase()}">${backdropSvg(k)}${p.back}<ellipse cx="200" cy="236" rx="40" ry="7" fill="#000" opacity=".2"/><svg x="152" y="${k === 'space' ? 50 : 66}" width="96" height="182" viewBox="0 0 200 380">${k === 'space' ? '<rect x="40" y="0" width="120" height="150" rx="60" fill="#fff" opacity=".18" stroke="#fff" stroke-width="4"/>' : ''}${avatarBody(L)}</svg>${p.front}</svg>`;
+  const out = `<svg class="life-scene" viewBox="0 0 400 250" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${esc(S.name)} at the ${BACKDROPS[k].name.toLowerCase()}">${typeof photoScene === 'function' && photoScene(k) ? `<image href="${photoScene(k)}" width="400" height="250" preserveAspectRatio="xMidYMid slice"/><rect y="170" width="400" height="80" fill="url(#scene-fade)"/><defs><linearGradient id="scene-fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></linearGradient></defs>` : (typeof extraBackdrop === 'function' && extraBackdrop(k)) || backdropSvg(k)}${p.back}<ellipse cx="200" cy="236" rx="40" ry="7" fill="#000" opacity=".2"/><svg x="152" y="${k === 'space' ? 50 : 66}" width="96" height="182" viewBox="0 0 200 380">${k === 'space' ? '<rect x="40" y="0" width="120" height="150" rx="60" fill="#fff" opacity=".18" stroke="#fff" stroke-width="4"/>' : ''}${avatarBody(L)}</svg>${p.front}</svg>`;
   _sceneCache.set(sig, out);
   return out;
 }
@@ -379,7 +380,8 @@ function vAvatar() {
   };
   const pending = ui.lookBuy && LOOK_PRICE[ui.lookBuy];
   const sceneTab = `<div class="cards">${Object.entries(BACKDROPS).map(([k, B]) => { const ok = B.ok();
-    return `<button class="scene-pick ${sceneKey() === k ? 'on' : ''}" data-act="${ok ? 'sceneSet' : 'noop'}" data-arg="${k}" ${ok ? '' : 'disabled'}>${ok ? lifestyleScene({ scene: k }) : '<div class="scene-lock">🔒</div>'}<span>${B.name}${ok ? '' : ` · ${{ cabin: 'buy the mountain cabin', loft: 'buy the industrial loft', lake: 'buy the lake house', desert: 'buy the desert palace', castle: 'buy the castle', apartment: 'buy an apartment', mansion: 'buy the mansion', beach: 'buy a beach house', penthouse: 'own a tower or big building', island: 'buy the island', space: 'fly to space (Prestige)' }[k]}`}</span></button>`; }).join('')}</div>
+    return `<button class="scene-pick ${sceneKey() === k ? 'on' : ''}" data-act="${ok ? 'sceneSet' : 'noop'}" data-arg="${k}" ${ok ? '' : 'disabled'}>${ok ? lifestyleScene({ scene: k }) : '<div class="scene-lock">🔒</div>'}<span>${B.name}${ok ? '' : ` · ${B.how || { cabin: 'buy the mountain cabin', loft: 'buy the industrial loft', lake: 'buy the lake house', desert: 'buy the desert palace', castle: 'buy the castle', apartment: 'buy an apartment', mansion: 'buy the mansion', beach: 'buy a beach house', penthouse: 'own a tower or big building', island: 'buy the island', space: 'fly to space (Prestige)' }[k]}`}</span></button>`; }).join('')}</div>
+    ${typeof ownedPets === 'function' && ownedPets().length ? `<span class="opt-lbl">Pets in your scene (up to 2)</span><div class="scroller" style="flex-wrap:wrap">${ownedPets().map((c) => chip(PETS[c].name, 'petPick', c, shownPets().includes(c))).join('')}</div>` : ''}
     ${ownedCars().length ? `<span class="opt-lbl">Cars in your scene (up to 3)</span><div class="scroller" style="flex-wrap:wrap">${ownedCars().map((c) => chip(CARS[c].name, 'garagePick', c, featuredCars().includes(c))).join('')}</div>` : `<span class="small muted">No cars yet. The Shop's Garage has ten, from a $12K hatchback to a $12M race car.</span>`}
     <span class="small muted">Everything you own shows up in your scene: supercars, the jet, the yacht, the helicopter, your dog, your cash, gold bars, and billboards for your companies.</span>`;
   return `<div class="col-head">${head('Your look', 'Customize your character and your scene')}</div>

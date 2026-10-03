@@ -239,6 +239,43 @@ A sixth platform, unlocked at 1K followers. Fans pay monthly for exclusive drops
 - Every kind can be switched off in Settings → Notifications, which also has a test button.
 - Android side: `NotifyBridge` (`window.AndroidNotify`) and `NotifyReceiver` use inexact alarms, so no special alarm permission is needed.
 
+## Pets, special scenes, animation and photos
+- **Pets** (Shop → Pets):
+
+  | Pet | Price |
+  | --- | --- |
+  | Lop bunny | $300 |
+  | Ginger cat | $800 |
+  | Golden retriever | $1.5K |
+  | Mini pig | $2K |
+  | Macaw parrot | $2.5K |
+  | Husky | $3K |
+  | French bulldog | $4K |
+  | Llama | $12K |
+  | Show horse | $80K |
+
+  Every pet lowers stress and unlocks pet content. Two can join your scene; choose which in Me → Your look → Scene.
+- **Special scenes**, unlocked by what you do:
+
+  | Scene | How to unlock |
+  | --- | --- |
+  | Superyacht deck | Own the superyacht |
+  | Creator studio | Reach HQ level 10 |
+  | VIP nightclub | Own a stake in Club Neon |
+  | Your own stadium | Name a stadium (Prestige) |
+  | New York | Visit the US |
+  | Paris | Visit France |
+  | Tokyo | Visit Japan |
+  | Dubai | Visit the UAE |
+  | Rio | Visit Brazil |
+
+- **Animated characters.** In scenes, your character breathes, blinks and looks around. Tails wag, the cat's tail sways, the parrot bobs and the club lights sweep. Animations are off when "reduce motion" is set.
+- **Real photos.** Any scene, pet or original character can use a real photo instead of the drawing:
+  1. Put files in `images/scenes/<scene>.jpg`, `images/pets/<pet>.jpg` or `images/npcs/<id>.jpg`.
+  2. Run `python3 tools/photos.py`.
+
+  Your character and props stay on top of a photo backdrop, like a Snapchat avatar over a real photo. Parody celebrities never get realistic portraits.
+
 ## Full screen and pop-ups
 - **Full screen.**
   - In the Android app, the status and navigation bars are hidden (swipe from the edge to bring them back) and the game uses the area around the camera notch.
@@ -252,9 +289,25 @@ A sixth platform, unlocked at 1K followers. Fans pay monthly for exclusive drops
   - Scenes are cached, so they aren't redrawn on every tap.
 
 ## Navigation and layout
-- **Bottom menu on every screen size.** Page 1 is the social app: Home, Explore, Notifications, Messages, Profile. Page 2 is your career: Money, Business, Play, Team, Friends, Me, Settings. Swipe sideways, or tap the dots or the "Career ›" and "‹ Social" buttons. The left sidebar is gone, so the feed gets the space.
-- **Accordions.** Every titled section on every screen has a collapse arrow, and what you fold stays folded. On Home, the career goal, login reward and daily quests share one **Today** panel. It folds to a single line with chips that light up when something is ready to claim.
-- The stories row was removed.
+- **Bottom menu** on every screen size, with two pages. Swipe or tap the dots to switch.
+  - **Social:** Home · Explore · Inbox (notifications and messages) · Profile.
+  - **Career**, five sections:
+
+    | Section | Screens |
+    | --- | --- |
+    | Work | Deals, FanVault, Team, HQ |
+    | Wealth | Money, Investing, Bank & property, Businesses |
+    | Shop | Shop, Gem Store |
+    | Play | Arena, Danger Zone |
+    | Me | Your look, Life, Friends, Tea, Legacy, Settings |
+
+- **Duplicates merged:**
+  - Analytics and Trophies live only in Profile.
+  - Daily quests live in Home's Today panel.
+  - All homes and rentals are in Bank & property.
+  - Empire (merch, podcast, your brand) sits at the top of Businesses.
+  - The Home card keeps only Post, Go live, FanVault, Your look and Sleep.
+- **Accordions.** Every titled section has a collapse arrow, and what you fold stays folded. Home's Today panel folds to one line.
 
 ## Progression and balance
 - **Career path:** 25 goals, one at a time, shown on Home. Each has a "Show me" button and a reward, leading a new player from their first post to their first rebrand. Old saves skip goals they already finished.
@@ -384,6 +437,8 @@ Doing well gives you a second wind, shown as a gold energy pop-up:
 - `store.js` – Gem Store: products, payment providers, delivery, Gem shop
 - `alerts.js` – in-game banners and phone notification scheduling
 - `avatar.js` – full-body character, customizer, wardrobe, lifestyle scenes
+- `life.js` – pets, special scenes, photo pack support
+- `images/` – optional real photos (`manifest.js` is rebuilt by `tools/photos.py`)
 - `progression.js` – career path, screen unlocks, wealth upkeep, prestige, linked-system events
 - `tests/` – browser test suites and an old-save fixture
 - `visuals.js` – animated scenery, stories, event art, reaction bursts, casino and match animations

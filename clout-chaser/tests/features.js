@@ -159,6 +159,28 @@ const { launch, page, newGame, oldGame, check, done } = require('./helpers');
   check('your custom character is your avatar everywhere', r.meAv);
   check('no errors in avatar run', !g.errors.length, g.errors.slice(0, 3).join(' | '));
 
+  // pets, special scenes, photos and the merged menus
+  r = await g.evaluate(() => {
+    const out = {};
+    S.owned.cat = true; S.owned.horse = true; S.visited = ['jp'];
+    out.pets = shownPets().join();
+    out.tokyo = BACKDROPS.tokyo.ok() && lifestyleScene({ scene: 'tokyo' }).includes('ラーメン');
+    PHOTOS.scenes.room = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22/%3E'; S.scene = 'room';
+    out.photo = lifestyleScene().includes('<image href="data:image/svg');
+    delete PHOTOS.scenes.room;
+    PHOTOS.npcs.aurora = 'a.jpg'; PHOTOS.npcs.taylor = 't.jpg';
+    out.npcPhoto = photoNpc('aurora') === 'a.jpg' && npcAv('aurora').includes('<img');
+    out.parodyBlocked = photoNpc('taylor') === null;
+    delete PHOTOS.npcs.aurora; delete PHOTOS.npcs.taylor;
+    ACT_RUN('go', 'trophies'); out.alias = tab === 'profile' && ui.profTab === 'trophies';
+    out.hubs = HUBS.length;
+    return out;
+  });
+  check('pets join your scene and special scenes unlock', r.pets.startsWith('horse,') && r.tokyo, JSON.stringify(r));
+  check('a photo replaces the drawn backdrop when one is supplied', r.photo);
+  check('photos go to original characters, never to parodies', r.npcPhoto && r.parodyBlocked);
+  check('merged menus redirect old screens', r.alias && r.hubs === 6);
+
   // an old save loads, upgrades and keeps playing
   const o = await page(b);
   await oldGame(o);

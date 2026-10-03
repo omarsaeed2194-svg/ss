@@ -166,7 +166,7 @@ function moneyTick(lines) {
     if (inc) { S.money += inc; S.stats.earned += inc; lines.push([`Course sales (${fmt(sales)})`, inc]); }
   }
   // pet
-  if (S.owned.pet) S.stress = clamp(S.stress - 3, 0, 100);
+  if (typeof ownedPets === 'function') S.stress = clamp(S.stress - ownedPets().slice(0, 3).reduce((a, k) => a + PETS[k].stress, 0), 0, 100);
   // markets
   if (S.team.investor) investorTick(lines);
   const h = marketTick(lines);

@@ -50,9 +50,12 @@ const ui = {
 };
 const MAIN_TABS = [['home', 'Home', 'home'], ['explore', 'Explore', 'search'], ['notifs', 'Notifications', 'bell'], ['messages', 'Messages', 'mail'], ['profile', 'Profile', 'user']];
 const CAREER = [['money', 'Money', 'cash'], ['arena', 'Arena', 'dice'], ['legacy', 'Legacy', 'star'], ['deals', 'Brand deals', 'brief'], ['shop', 'Shop', 'bag'], ['team', 'Team', 'team'], ['empire', 'Empire', 'crown'], ['life', 'Life & skills', 'heartp'], ['stats', 'Analytics', 'chart'], ['tea', 'The Tea', 'tea'], ['trophies', 'Trophies', 'trophy'], ['danger', 'Danger Zone', 'fire'], ['account', 'Settings', 'gear']];
-CAREER.push(['avatar', 'Your look', 'user'], ['store', 'Gem Store', 'star'], ['hq', 'Headquarters', 'home'], ['friends', 'Friends', 'user'], ['quests', 'Daily quests', 'star'], ['invest', 'Investing', 'chart'], ['bank', 'Bank', 'lock'], ['acquire', 'Acquisitions', 'crown'], ['fanvault', 'FanVault', 'lock']);
+CAREER.push(['avatar', 'Your look', 'user'], ['store', 'Gem Store', 'star'], ['hq', 'Headquarters', 'home'], ['friends', 'Friends', 'user'], ['quests', 'Daily quests', 'star'], ['invest', 'Investing', 'chart'], ['bank', 'Bank & property', 'lock'], ['acquire', 'Businesses', 'crown'], ['fanvault', 'FanVault', 'lock']);
 /* The sidebar shows five hubs; each hub holds several screens with a tab row on top */
-const HUBS = [['fin', 'Money', 'cash', ['money', 'invest', 'bank', 'acquire']], ['biz', 'Business', 'brief', ['deals', 'fanvault', 'shop', 'store', 'empire']], ['play', 'Play', 'dice', ['arena', 'danger']], ['crew', 'Team & HQ', 'team', ['team', 'hq', 'legacy']], ['social', 'Friends', 'user', ['friends', 'quests']], ['me', 'Me', 'heartp', ['avatar', 'life', 'stats', 'trophies', 'tea']], ['account', 'Settings', 'gear', ['account']]];
+/* Two dock pages. Social: Home, Explore, Inbox, Profile. Career: five sections, each a few screens. */
+const HUBS = [['inbox', 'Inbox', 'bell', ['notifs', 'messages']], ['work', 'Work', 'brief', ['deals', 'fanvault', 'team', 'hq']], ['wealth', 'Wealth', 'cash', ['money', 'invest', 'bank', 'acquire']], ['shop', 'Shop', 'bag', ['shop', 'store']], ['play', 'Play', 'dice', ['arena', 'danger']], ['me', 'Me', 'heartp', ['avatar', 'life', 'friends', 'tea', 'legacy', 'account']]];
+/* screens that now live inside another one */
+const TAB_ALIAS = { stats: ['profile', 'analytics'], trophies: ['profile', 'trophies'], empire: ['acquire'], quests: ['home', 'quests'] };
 const hubOf = (t) => HUBS.find((h) => h[3].includes(t));
 const careerName = (id) => (CAREER.find((c) => c[0] === id) || [id, id])[1];
 function hubBadge(h, b) { return h[3].reduce((a, t) => a + (b[t] || 0), 0); }
@@ -65,7 +68,7 @@ const NICHE_DESC = { beauty: 'Skincare, makeup, dupes', gaming: 'Clutches, speed
 
 /* ---------- small helpers ---------- */
 const avatar = (name, color, size = '', seed) => `<span class="av ${size}" style="background:${color}" aria-hidden="true">${faceSvg(seed || name)}</span>`;
-const npcAv = (id, size = '') => avatar(NPCS[id].name, NPCS[id].color, size, 'npc:' + id);
+const npcAv = (id, size = '') => (typeof photoNpc === 'function' && photoNpc(id) ? `<span class="av ${size}" style="background:${NPCS[id].color}" aria-hidden="true"><img src="${photoNpc(id)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"></span>` : avatar(NPCS[id].name, NPCS[id].color, size, 'npc:' + id));
 const meAv = (size = '') => { const F = S.frame && FRAMES[S.frame]; const a = `<span class="av me ${size}" style="background:${S.color}" aria-hidden="true">${avatarHead(lookInit())}</span>`; return F ? a.replace(`style="background:${S.color}"`, `style="border:${size === 'xl' ? 5 : 2.5}px solid transparent;background:linear-gradient(${S.color}, ${S.color}) padding-box, ${F.css} border-box"`) : a; };
 const coAv = (id, size = '') => `<span class="av co ${size}" aria-hidden="true">${logoSvg(COMPANIES[id].name, COMPANIES[id].color)}</span>`;
 const flag = (cc) => (COUNTRIES[cc] ? `<span class="flag" title="${COUNTRIES[cc].name}">${COUNTRIES[cc].flag}</span>` : '');
@@ -256,9 +259,10 @@ function renderTabbar() {
   const b = badges();
   const page = ui.dockPage == null ? dockPageOf(tab) : ui.dockPage;
   const btnT = (id, name, icon, on, badge) => `<button data-act="go" data-arg="${id}" aria-label="${name}" ${on ? 'aria-current="page"' : ''}>${ico(icon, 'ico-lg')}<span class="dl">${name}</span>${badge ? `<span class="dotbadge">${badge > 99 ? '99+' : badge}</span>` : ''}</button>`;
-  const social = MAIN_TABS.map(([id, name, icon]) => btnT(id, name, icon, tab === id && !ui.view, b[id])).join('');
-  const career = HUBS.filter(hubOpen).map((h) => btnT(h[0], h[1].split(' &')[0], h[2], h[3].includes(tab) && !ui.view, hubBadge(h, b))).join('');
-  const careerBadge = HUBS.filter(hubOpen).reduce((a, h) => a + hubBadge(h, b), 0), socialBadge = MAIN_TABS.reduce((a, [id]) => a + (b[id] || 0), 0);
+  const inbox = HUBS[0], tabT = (id) => MAIN_TABS.find((m) => m[0] === id);
+  const social = [tabT('home'), tabT('explore')].map(([id, name, icon]) => btnT(id, name, icon, tab === id && !ui.view, b[id])).join('') + btnT('inbox', 'Inbox', 'bell', inbox[3].includes(tab) && !ui.view, hubBadge(inbox, b)) + [tabT('profile')].map(([id, name, icon]) => btnT(id, name, icon, tab === id && !ui.view, b[id])).join('');
+  const career = HUBS.slice(1).filter(hubOpen).map((h) => btnT(h[0], h[1].split(' &')[0], h[2], h[3].includes(tab) && !ui.view, hubBadge(h, b))).join('');
+  const careerBadge = HUBS.slice(1).filter(hubOpen).reduce((a, h) => a + hubBadge(h, b), 0), socialBadge = MAIN_TABS.reduce((a, [id]) => a + (b[id] || 0), 0);
   $('#tabbar').innerHTML = `<div class="dock-pages" id="dockPages"><div class="dock-page" aria-label="Social">${social}<button class="dock-swap" data-act="dockPage" data-arg="1" aria-label="Show career menu">${ico('crown', 'ico-lg')}<span class="dl">Career ›</span>${careerBadge ? '<span class="dotbadge dot"></span>' : ''}</button></div>
     <div class="dock-page" aria-label="Career"><button class="dock-swap" data-act="dockPage" data-arg="0" aria-label="Show social menu">${ico('home', 'ico-lg')}<span class="dl">‹ Social</span>${socialBadge ? '<span class="dotbadge dot"></span>' : ''}</button>${career}</div></div>
     <div class="dock-dots">${[0, 1].map((i) => `<button data-act="dockPage" data-arg="${i}" aria-label="${i ? 'Career' : 'Social'} menu" aria-current="${page === i}"></button>`).join('')}</div>`;
@@ -504,7 +508,7 @@ function heroCard() {
       <div class="hero-n"><span class="num">${fmt(t)}</span>${nx ? `<span class="small muted num"> / ${fmt(nx.min)}</span>` : ''}<span class="small ${df >= 0 ? 'good' : 'bad'} num"> ${signed(df)} today</span></div></div>
       <div class="hero-cash"><span class="small muted">Cash</span><b class="num gold">${money(S.money)}</b></div></div>
     <div class="tierbar" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100" aria-label="Progress to next tier"><i style="width:${pct}%"></i></div>
-    <div class="quick">${tile('feather', 'Post', 'compose', '', 'hot')}${S.platforms.live.unlocked ? tile('live', 'Go live', 'compose', 'live') : ''}${vaultOn() ? tile('lock', 'FanVault', 'compose', 'vault', 'vaultq') : ''}${tile('cash', 'Money', 'go', 'money', '', gigs || '')}${tile('dice', 'Arena', 'go', 'arena', 'arenaq', S.pass && S.pass.tier > S.pass.claimed.length ? S.pass.tier - S.pass.claimed.length : '')}${tile('mail', 'DMs', 'go', 'messages', '', b.messages || '')}${tile('bag', 'Shop', 'go', 'shop')}${tile('fire', 'Danger', 'go', 'danger')}</div></div>`;
+    <div class="quick">${tile('feather', 'Post', 'compose', '', 'hot')}${S.platforms.live.unlocked ? tile('live', 'Go live', 'compose', 'live') : ''}${vaultOn() ? tile('lock', 'FanVault', 'compose', 'vault', 'vaultq') : ''}${tile('user', 'Your look', 'go', 'avatar')}${tile('moon', 'Sleep', 'endDay', '')}</div></div>`;
 }
 /* Confetti for the big moments */
 function celebrate(kind = 'gold') {
@@ -806,7 +810,7 @@ function vShop() {
     ${prestigeSection()}
     <div class="sect"><h3>Lifestyle</h3><div class="cards">${SHOP.filter((i) => i.cat === 'Lifestyle').map(item).join('')}</div></div>
     ${garageSection()}
-    <div class="sect"><h3>Property <span class="small muted">· pays rent every night</span></h3><div class="cards">${SHOP.filter((i) => i.cat === 'Property').map(item).join('')}</div></div>
+    ${petsSection()}
     <div class="sect"><h3>Style <span class="small muted">· avatar frames and profile banners</span></h3><div class="cards">${Object.entries(FRAMES).filter(([k, f]) => !f.pass || (S.frames || []).includes(k)).map(([k, f]) => style('frame', k, f, `<span class="av sm" style="border:3px solid transparent;background:linear-gradient(${S.color}, ${S.color}) padding-box, ${f.css} border-box">${faceSvg(S.faceSeed || S.name)}</span>`)).join('')}${Object.entries(BANNERS).filter(([k, b]) => !b.pass || (S.banners || []).includes(k)).map(([k, b]) => style('banner', k, b, `<span class="swatch" style="background:${b.css}"></span>`)).join('')}</div></div>
     <div class="sect"><h3>Courses</h3><div class="cards">${courses}</div></div>
     <div class="sect"><h3>Boosts & recovery</h3><div class="cards">${cons}</div></div>
@@ -824,7 +828,8 @@ function vTeam() {
     }).join('')}</div></div>`;
 }
 function productName() { return `${S.handle} ${{ beauty: 'Cosmetics', gaming: 'Gear', fitness: 'Protein', comedy: 'Hot Sauce', tech: 'Audio', food: 'Snacks', music: 'Headphones', fashion: 'Studio', travel: 'Luggage', lifestyle: 'Home' }[S.niche]}`; }
-function vEmpire() {
+function vEmpire() { return `<div class="col-head">${head('Empire', `${money(S.money)} cash · ${money(S.savings)} saved`)}</div>` + empireBody(); }
+function empireBody() {
   const t = totalFollowers();
   const lockTxt = (n) => `<span class="small muted row">${ico('lock')} Unlocks at ${n} followers</span>`;
   const merch = S.merch ? `<div class="row"><span class="pill gold">Level ${S.merch.lvl}</span><span class="small muted">${fmt(S.merch.sold)} sold</span></div><div class="row">${btn('Drop a collection · 20', 'merchDrop', '', 'sm blue', S.energy < 20)}${S.merch.lvl < 5 ? btn(`Upgrade · ${money(5000 * S.merch.lvl ** 2)}`, 'merchUp', '', 'sm', S.money < 5000 * S.merch.lvl ** 2) : ''}</div>`
@@ -835,8 +840,7 @@ function vEmpire() {
   const done = S.podcast && S.podcast.last === S.day;
   const pod = S.podcast ? `<span class="small muted">${S.stats.episodes} episodes${done ? ' · one per day' : ''}</span><div class="row">${btn('Solo episode · 30', 'episode', '', 'sm', S.energy < 30 || done)}${guests.slice(0, 5).map((id) => btn(`with ${esc(NPCS[id].name.split(' ')[0])}`, 'episode', id, 'sm', S.energy < 30 || done)).join('')}</div>`
     : t >= 2e4 ? btn('Launch podcast · $2,000', 'podcastLaunch', '', 'primary', S.money < 2000) : lockTxt('20K');
-  return `<div class="col-head">${head('Empire', `${money(S.money)} cash · ${money(S.savings)} saved`)}</div>
-    <div class="sect"><div class="cards">
+  return `    <div class="sect"><div class="cards">
       <div class="card"><div class="t">Merch line</div><span class="small muted">Sales scale with real followers and reputation.</span>${merch}</div>
       <div class="card"><div class="t">Your own brand</div><span class="small muted">A real product with your name on it.</span>${product}</div>
       <div class="card"><div class="t">Podcast</div><span class="small muted">Interview friends. Grows ViewTube.</span>${pod}</div>
@@ -1128,7 +1132,7 @@ const ACT = {
   noop: () => 'norender',
   dockPage: (a) => { ui.dockPage = +a; const dp = $('#dockPages'); if (dp) dp.scrollTo({ left: +a * dp.clientWidth, behavior: 'smooth' }); $$('#tabbar .dock-dots button').forEach((d, i) => d.setAttribute('aria-current', String(i === +a))); return 'norender'; },
   fold: (a) => { S.folds = S.folds || {}; S.folds[a] = !isFolded(a); const el = document.querySelector(`[data-fold="${CSS.escape(a)}"]`); if (el) { el.classList.toggle('folded', isFolded(a)); const bt = el.querySelector('.fold-btn'); if (bt) bt.setAttribute('aria-expanded', String(!isFolded(a))); } if (a === 'home:today') renderCol(); return 'norender'; },
-  go: (a) => { const hb = HUBS.find((h) => h[0] === a); if (hb) a = (ui.hubLast && ui.hubLast[hb[0]]) || hb[3].find(featureOn) || hb[3][0]; tab = a; ui.dockPage = dockPageOf(a); ui.view = null; ui.hist = []; $('#drawer').hidden = true; window.scrollTo({ top: 0 }); if (a === 'notifs') setTimeout(() => { if (!S) return; S.notifs.forEach((n) => { n.read = true; }); renderSidebar(); renderTabbar(); save(); }, 1500); },
+  go: (a) => { const al = TAB_ALIAS[a]; if (al) { a = al[0]; if (al[1] === 'quests') { S.folds = S.folds || {}; S.folds['home:today'] = false; } else if (al[1]) ui.profTab = al[1]; } const hb = HUBS.find((h) => h[0] === a); if (hb) a = (ui.hubLast && ui.hubLast[hb[0]]) || hb[3].find(featureOn) || hb[3][0]; tab = a; ui.dockPage = dockPageOf(a); ui.view = null; ui.hist = []; $('#drawer').hidden = true; window.scrollTo({ top: 0 }); if (a === 'notifs') setTimeout(() => { if (!S) return; S.notifs.forEach((n) => { n.read = true; }); renderSidebar(); renderTabbar(); save(); }, 1500); },
   back: () => { const h = ui.hist.pop(); if (h) { tab = h.tab; ui.view = h.view; } else ui.view = null; },
   open: (a) => {
     const i = a.indexOf(':'); if (i < 0) return 'norender';

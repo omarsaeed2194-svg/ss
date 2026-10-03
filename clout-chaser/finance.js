@@ -441,7 +441,8 @@ function vBank() {
     ${b.loans.length ? `<div class="sect"><h3>Your loans</h3>${b.loans.map((l) => `<div class="card"><div class="t"><span>${esc(loanName(l))}</span><span class="pill ${l.missed ? 'bad' : ''}">${(l.apr * 100).toFixed(1)}% APR</span></div>
       <span class="small">Balance ${money(l.bal)} · ${money(l.pay)}/day · ${l.left} days left${l.missed ? ` · <span class="bad">${l.missed} missed</span>` : ''}</span>
       <div class="row">${btn(`Pay ${money(Math.min(l.bal, Math.max(100, Math.round(l.bal * 0.25))))}`, 'loanPay', `${l.id}:0.25`, 'sm', S.money < Math.min(l.bal, 100))}${btn(`Pay off ${money(l.bal)}`, 'loanPay', `${l.id}:1`, 'sm primary', S.money < l.bal)}</div></div>`).join('')}</div>` : ''}
-    <div class="sect"><div class="row between"><h3>🏘️ Real estate</h3><span class="small muted">Housing index ${(b.hpi * 100).toFixed(1)} ${sparkline(b.hpiH, 80, 24)}</span></div>
+    <div class="sect"><h3>🏡 Homes and rentals <span class="small muted">· buy outright; homes unlock new scenes</span></h3><div class="cards">${SHOP.filter((i) => i.cat === 'Property').sort((a, b) => a.price - b.price).map((it) => `<div class="card ${S.owned[it.id] ? 'owned' : ''}"><div class="t"><span>${esc(it.name)}</span><span class="num">${money(it.price)}</span></div><span class="small muted">${esc(it.desc)}</span>${S.owned[it.id] ? '<span class="pill good">Owned</span>' : btn('Buy', 'buy', it.id, 'sm primary', S.money < it.price)}</div>`).join('')}</div></div>
+    <div class="sect"><div class="row between"><h3>🏘️ Investment property</h3><span class="small muted">Housing index ${(b.hpi * 100).toFixed(1)} ${sparkline(b.hpiH, 80, 24)}</span></div>
       <span class="small muted">Buy outright or with a 360-day mortgage: ${Math.round(downPct() * 100)}% down at ${(loanApr('mortgage') * 100).toFixed(1)}% a year. Rent pays every night and property values follow the housing index. Miss five mortgage payments and the bank takes it back.</span>
       <div class="cards">${Object.entries(REALTY).map(([k, R]) => { const own = b.props[k], price = propPrice(k), dp = Math.round(price * downPct()), l = b.loans.find((x) => x.kind === 'mortgage' && x.prop === k);
         return `<div class="card ${own ? 'owned' : ''}"><div class="t"><span>${R.icon} ${R.name}</span><span class="num">${money(own ? propValue(k) : price)}</span></div><span class="small muted">${R.desc}</span><span class="small">Rent ${money(propRent(k))}/day${l ? ` · mortgage ${money(l.bal)} left` : ''}</span>
@@ -451,10 +452,11 @@ function vBank() {
 function vAcquire() {
   const A = acqInit(), t = totalFollowers();
   const owned = Object.keys(A.own);
-  return `<div class="col-head">${head('Acquisitions', `${owned.length} compan${owned.length === 1 ? 'y' : 'ies'} · ${money(acqValue())}`)}</div>
+  return `<div class="col-head">${head('Businesses', `${owned.length} compan${owned.length === 1 ? 'y' : 'ies'} · ${money(acqValue())}`)}</div>
     <div class="sect"><div class="wallet">${kv('Portfolio value', money(acqValue()))}${kv('Profit per day', money(owned.reduce((a, k) => a + bizProfit(k), 0)), 'gold')}${kv('All-time profit', money(A.earned), 'good')}</div>
       <span class="small muted">Buy stakes in companies. Every night you get your share of their profit, and the stake grows (or shrinks) with the company's value. Own 51% to take control: a 15% control premium, a perk for you and boardroom moves. Finance with an acquisition loan (40% down) if your credit is 620+.${S.team.mabanker ? ' Your M&A banker gets you a discount.' : ''}</span></div>
-    <div class="sect"><div class="cards">${Object.entries(BIZ).map(([k, c]) => {
+    <div class="sect"><h3>Your own brands</h3></div>${empireBody()}
+    <div class="sect"><h3>Companies you can buy</h3><div class="cards">${Object.entries(BIZ).map(([k, c]) => {
       const o = A.own[k], st = stakeOf(k), val = A.val[k], h = A.h[k], ch = h.length > 1 ? (val / h[h.length - 2] - 1) * 100 : 0;
       const locked = t < c.req;
       const opts = [0.1, 0.25, 0.51, 1].map((target) => target - st).filter((add) => add > 0.001);
