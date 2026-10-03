@@ -195,7 +195,7 @@ const SHOP = [
   { id: 'pc',       cat: 'Gear', name: 'Streaming PC',         price: 3000,   q: 0.15, plats: ['live', 'tube'], desc: '+15% on streams and long video.' },
   { id: 'studio',   cat: 'Gear', name: 'Home studio build-out', price: 15000, q: 0.2,  desc: '+20% quality on everything.' },
   { id: 'wardrobe', cat: 'Lifestyle', name: 'Designer wardrobe', price: 6000,  reach: 0.05, desc: '+5% reach. Unlocks the Flex topic.' },
-  { id: 'car',      cat: 'Lifestyle', name: 'Supercar',        price: 90000,   reach: 0.06, upkeep: 150, desc: '+6% reach. $150/day upkeep.' },
+  { id: 'car',      cat: 'Garage', name: 'Supercar',        price: 90000,   reach: 0.06, upkeep: 150, desc: '+6% reach. $150/day upkeep.' },
   { id: 'mansion',  cat: 'Lifestyle', name: 'Hillside mansion', price: 2.5e6,  reach: 0.1, upkeep: 2000, desc: '+10% reach, +10 max energy, less stress. $2K/day.' },
   { id: 'jet',      cat: 'Lifestyle', name: 'Private jet',     price: 2e7,     reach: 0.12, upkeep: 10000, desc: '+12% reach. $10K/day. People will have opinions.' },
   { id: 'island',   cat: 'Lifestyle', name: 'Private island',  price: 1.2e8,   reach: 0.15, upkeep: 30000, desc: 'The endgame flex. +15% reach.' },

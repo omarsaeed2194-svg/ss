@@ -1,5 +1,8 @@
 <meta charset="utf-8">
 <title>Clout Chaser</title>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000000">
 <meta name="description" content="A social media life sim: grow from zero to icon across five platforms, deal with celebrities, brands, scandals and burnout.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -824,6 +827,21 @@ h3.fold-head { justify-content: space-between; }
 .av-neon { animation: twinkle 2.4s ease-in-out infinite; }
 .av-wag { transform-origin: 2px 12px; animation: avWag .5s ease-in-out infinite alternate; }
 @keyframes avWag { to { transform: rotate(-25deg); } }
+
+/* ---------- tidier pop-ups and text ---------- */
+.toasts { bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important; gap: 6px; width: max-content; max-width: calc(100vw - 32px); }
+.toast { display: flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 99px; font-size: 13.5px; font-weight: 600; line-height: 1.3; text-align: left; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+.toast .tn { font-size: 12px; opacity: .85; }
+.toast .tn:empty { display: none; }
+.deltas .delta, #deltas .delta { transform-origin: top center; }
+.clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; position: relative; }
+.card > .small.muted.clamp { -webkit-line-clamp: 3; }
+.clamp.open { display: block; -webkit-line-clamp: unset; }
+.clamp:not(.open)::after { content: ''; }
+
+.card.garage .car-thumb { width: 100%; height: 64px; background: linear-gradient(#EAF4FF, #F7F9FC); border-radius: 10px; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .card.garage .car-thumb { background: linear-gradient(#1C2733, #15202B); } }
+.av-glow { animation: twinkle 2s ease-in-out infinite; }
 </style>
 
 <div id="app" hidden>

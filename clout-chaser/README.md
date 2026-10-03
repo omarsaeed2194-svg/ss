@@ -170,7 +170,34 @@ A sixth platform, unlocked at 1K followers. Fans pay monthly for exclusive drops
   - a rocket if you've been to space
 
   It appears at the top of Home and as your profile banner, and you can choose any home you've unlocked.
-- **New shop items:** Hypercar ($2.5M) and Helicopter ($3M).
+- **Garage:** ten cars, each drawn in its own style:
+
+  | Car | Price |
+  | --- | --- |
+  | Hatchback | $12K |
+  | Lifted pickup | $55K |
+  | Electric sedan | $60K |
+  | Muscle car | $70K |
+  | Supercar | $90K |
+  | Luxury SUV | $180K |
+  | Classic convertible | $450K |
+  | Stretch limo | $900K |
+  | Hypercar | $2.5M |
+  | Race car | $12M |
+
+  The Shop's Garage section shows each one. In Me → Your look → Scene, you pick up to three to park in your scene.
+- **Homes:** five new properties, each with its own scene and nightly rent:
+
+  | Home | Price |
+  | --- | --- |
+  | Mountain cabin | $600K |
+  | Industrial loft | $1.2M |
+  | Lake house | $3.5M |
+  | Desert palace | $15M |
+  | Castle estate | $40M |
+
+- **Wardrobe:** 18 hairstyles, 16 tops (including tracksuit, varsity, puffer, leather, kimono and gown), 9 bottoms, 8 shoes, 11 hats (including tiara and halo), 7 glasses and 7 necklaces.
+- The Helicopter ($3M) is in the Shop too.
 
 ## Gem Store (real-money purchases)
 - **Gems 💎** are the premium currency.
@@ -211,6 +238,18 @@ A sixth platform, unlocked at 1K followers. Fans pay monthly for exclusive drops
 - On Android 13+, the app asks for notification permission after your first night.
 - Every kind can be switched off in Settings → Notifications, which also has a test button.
 - Android side: `NotifyBridge` (`window.AndroidNotify`) and `NotifyReceiver` use inexact alarms, so no special alarm permission is needed.
+
+## Full screen and pop-ups
+- **Full screen.**
+  - In the Android app, the status and navigation bars are hidden (swipe from the edge to bring them back) and the game uses the area around the camera notch.
+  - On the web, it uses the browser's full-screen mode.
+  - Switch it in Settings → Display.
+- **Tidier pop-ups.**
+  - Toasts are small pills above the menu: at most two at once, with repeats merged into "×3".
+  - Rewards that land together (achievements, milestones) merge into one "+40 energy · 5 rewards" pill.
+  - Long tips and descriptions fold to two or three lines; tap to read more.
+  - The current section tab scrolls into view.
+  - Scenes are cached, so they aren't redrawn on every tap.
 
 ## Navigation and layout
 - **Bottom menu on every screen size.** Page 1 is the social app: Home, Explore, Notifications, Messages, Profile. Page 2 is your career: Money, Business, Play, Team, Friends, Me, Settings. Swipe sideways, or tap the dots or the "Career ›" and "‹ Social" buttons. The left sidebar is gone, so the feed gets the space.

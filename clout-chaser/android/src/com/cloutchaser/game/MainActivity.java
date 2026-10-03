@@ -2,6 +2,7 @@ package com.cloutchaser.game;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
@@ -11,6 +12,7 @@ import android.view.WindowInsets;
 import android.widget.FrameLayout;
 import android.view.Window;
 import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -31,6 +33,12 @@ public class MainActivity extends Activity {
         w.setStatusBarColor(Color.BLACK);
         w.setNavigationBarColor(Color.BLACK);
         w.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+        prefs = getSharedPreferences("ui", MODE_PRIVATE);
+        if (Build.VERSION.SDK_INT >= 28) { // use the space around the camera notch too
+            WindowManager.LayoutParams lp = w.getAttributes();
+            lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+            w.setAttributes(lp);
+        }
 
         web = new WebView(this);
         web.setBackgroundColor(Color.BLACK);
@@ -43,6 +51,7 @@ public class MainActivity extends Activity {
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setTextZoom(100);                     // ignore system font scaling so the layout holds
         web.addJavascriptInterface(new NotifyBridge(this), "AndroidNotify");
+        web.addJavascriptInterface(new UiBridge(), "AndroidUi");
         web.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView v, String url) {
@@ -72,7 +81,13 @@ public class MainActivity extends Activity {
         root.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
             @Override
             public WindowInsets onApplyWindowInsets(View v, WindowInsets in) {
-                v.setPadding(in.getSystemWindowInsetLeft(), in.getSystemWindowInsetTop(), in.getSystemWindowInsetRight(), in.getSystemWindowInsetBottom());
+                int top = in.getSystemWindowInsetTop(), left = in.getSystemWindowInsetLeft(), right = in.getSystemWindowInsetRight();
+                if (Build.VERSION.SDK_INT >= 28 && in.getDisplayCutout() != null) { // keep the game clear of the notch
+                    top = Math.max(top, in.getDisplayCutout().getSafeInsetTop());
+                    left = Math.max(left, in.getDisplayCutout().getSafeInsetLeft());
+                    right = Math.max(right, in.getDisplayCutout().getSafeInsetRight());
+                }
+                v.setPadding(left, top, right, in.getSystemWindowInsetBottom()); // bottom includes the keyboard
                 return in;
             }
         });
@@ -107,5 +122,25 @@ public class MainActivity extends Activity {
 
     @Override protected void onSaveInstanceState(Bundle out) { super.onSaveInstanceState(out); web.saveState(out); }
     @Override protected void onPause() { super.onPause(); web.onPause(); }
-    @Override protected void onResume() { super.onResume(); web.onResume(); }
+    @Override protected void onResume() { super.onResume(); web.onResume(); applyFullscreen(); }
+    @Override public void onWindowFocusChanged(boolean focus) { super.onWindowFocusChanged(focus); if (focus) applyFullscreen(); }
+
+    /* Full screen: status and navigation bars hidden; a swipe from the edge shows them for a moment */
+    private SharedPreferences prefs;
+    private boolean fullscreen() { return prefs.getBoolean("fullscreen", true); }
+    @SuppressWarnings("deprecation")
+    private void applyFullscreen() {
+        View d = getWindow().getDecorView();
+        d.setSystemUiVisibility(fullscreen()
+            ? View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+            : 0);
+    }
+    /** window.AndroidUi in the game */
+    class UiBridge {
+        @JavascriptInterface public boolean isFullscreen() { return fullscreen(); }
+        @JavascriptInterface public void setFullscreen(final boolean on) {
+            prefs.edit().putBoolean("fullscreen", on).apply();
+            runOnUiThread(new Runnable() { @Override public void run() { applyFullscreen(); } });
+        }
+    }
 }

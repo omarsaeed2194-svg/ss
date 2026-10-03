@@ -105,10 +105,16 @@ function classifyReply(t) {
   return 'nice';
 }
 
+/* Toasts: compact pills, two at most (the newest replaces the oldest), repeats are merged */
 function toast(msg, cls = '') {
-  const t = document.createElement('div'); t.className = 'toast ' + cls; t.textContent = safe(msg);
-  $('#toasts').appendChild(t); setTimeout(() => t.remove(), 3000);
-  while ($('#toasts').children.length > 3) $('#toasts').firstChild.remove();
+  const box = $('#toasts'); if (!box) return;
+  msg = safe(String(msg));
+  const dup = [...box.children].find((t) => t.dataset.msg === msg);
+  if (dup) { const n = (+dup.dataset.n || 1) + 1; dup.dataset.n = n; dup.querySelector('.tn').textContent = `×${n}`; clearTimeout(dup._t); dup._t = setTimeout(() => dup.remove(), 2800); return; }
+  const t = document.createElement('div'); t.className = 'toast ' + cls; t.dataset.msg = msg;
+  t.innerHTML = `<span class="tm"></span><span class="tn"></span>`; t.querySelector('.tm').textContent = msg;
+  box.appendChild(t); t._t = setTimeout(() => t.remove(), cls === 'bad' || cls === 'gold' ? 3200 : 2600);
+  while (box.children.length > 2) box.firstChild.remove();
 }
 let chargeUntil = 0;
 const chargedCls = () => (performance.now() < chargeUntil ? 'charged' : '');
@@ -182,14 +188,22 @@ function attachMentions(el) {
 }
 
 /* Energy rewards get their own gold pop-up so they feel like a win */
+/* rewards that land together (achievements, milestones, tiers) merge into one pill */
+let eAcc = null;
 function energyBurst(n, reason) {
   const box = $('#deltas'); if (!box) return;
-  const el = document.createElement('div'); el.className = 'delta energy';
-  el.innerHTML = `<span class="pill gold">${ico('bolt')} +${n} energy</span><span class="why">${esc(reason)}</span>`;
-  box.prepend(el); setTimeout(() => el.remove(), 3200);
-  while (box.children.length > 4) box.lastChild.remove();
-  chargeUntil = performance.now() + 400;
-  sound('zap');
+  const now = performance.now();
+  if (eAcc && now - eAcc.t < 1200 && box.contains(eAcc.el)) {
+    eAcc.n += n; eAcc.k++; eAcc.t = now;
+  } else {
+    const el = document.createElement('div'); el.className = 'delta energy';
+    box.prepend(el); eAcc = { el, n, k: 1, t: now, first: reason };
+    sound('zap');
+  }
+  eAcc.el.innerHTML = `<span class="pill gold">${ico('bolt')} +${eAcc.n} energy</span><span class="why">${esc(eAcc.k > 1 ? `${eAcc.k} rewards · ${reason}` : reason)}</span>`;
+  clearTimeout(eAcc.el._t); const el = eAcc.el; el._t = setTimeout(() => el.remove(), 2800);
+  while (box.children.length > 2) box.lastChild.remove();
+  chargeUntil = now + 400;
 }
 /* Floating stat changes after every action, like Status's aura pop-ups */
 function statSnap() { return S ? { f: totalFollowers(), rep: S.rep, heat: S.heat, money: S.money, energy: S.energy, stress: S.stress } : null; }
@@ -205,8 +219,8 @@ function flashDelta(a, b) {
   if (!out.length) return;
   const el = document.createElement('div'); el.className = 'delta';
   el.innerHTML = out.map(([t, c]) => `<span class="pill ${c}">${esc(t)}</span>`).join('');
-  $('#deltas').prepend(el); setTimeout(() => el.remove(), 2700);
-  while ($('#deltas').children.length > 3) $('#deltas').lastChild.remove();
+  $('#deltas').prepend(el); setTimeout(() => el.remove(), 2400);
+  while ($('#deltas').children.length > 2) $('#deltas').lastChild.remove();
 }
 
 /* ======================================================================
@@ -337,13 +351,22 @@ function renderCol() {
   else html = ({ home: vHome, explore: vExplore, notifs: vNotifs, messages: vMessages, profile: vProfile, danger: vDanger, deals: vDeals, shop: vShop, money: vMoney, arena: vArena, legacy: vLegacy, hq: vHQ, friends: vFriends, quests: () => `<div class="col-head">${head('Daily quests', 'Three new quests every game day, plus a bonus chest')}</div><div class="sect">${questsCard(true)}</div>`, team: vTeamOrg, store: vStore, avatar: vAvatar, invest: vInvest, bank: vBank, acquire: vAcquire, fanvault: vFanVault, empire: vEmpire, life: vLife, stats: vStats, tea: vTea, trophies: vTrophies, account: vAccount }[tab] || vHome)();
   $('#col').innerHTML = safe(html).replace('<div class="col-head">', '<div class="col-head">' + hubBar());
   if ((tab === 'stats' || (tab === 'profile' && ui.profTab === 'analytics')) && !v) drawChart();
-  decorateFolds();
+  decorateFolds(); clampLongText();
+  const ht = $('#col .hubtab[aria-current="true"]'); if (ht) ht.scrollIntoView({ block: 'nearest', inline: 'center' });
   animateFresh();
   const bio = $('#bioEdit'); if (bio) bio.addEventListener('input', () => { S.bio = bio.value.slice(0, 160); save(); });
   const rt = $('#replyText'); if (rt) attachMentions(rt);
   const dm = $('#dmInput'); if (dm) attachMentions(dm); if (dm) dm.addEventListener('keydown', (e) => { if (e.key === 'Enter' && dm.value.trim()) { e.preventDefault(); ACT_RUN('dmSend', dm.dataset.npc); } });
   const q = $('#exploreSearch'); if (q) q.addEventListener('input', () => { ui.q = q.value; const r = $('#exploreResults'); if (r) r.innerHTML = exploreResults(); });
 }
+
+/* ---------- full screen: native in the Android app, the Fullscreen API on the web ---------- */
+const isFullscreen = () => (window.AndroidUi ? AndroidUi.isFullscreen() : !!document.fullscreenElement);
+function setFullscreen(on) {
+  if (window.AndroidUi) return AndroidUi.setFullscreen(on);
+  try { if (on) document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => toast('Your browser blocked full screen here.', 'bad')); else if (document.fullscreenElement) document.exitFullscreen(); } catch (e) { toast('Full screen is not available here.', 'bad'); }
+}
+document.addEventListener('fullscreenchange', () => { if (S && tab === 'account') renderCol(); });
 
 /* ---------- accordions ---------- */
 const FOLDED_BY_DEFAULT = new Set(['home:today']);
@@ -367,6 +390,10 @@ function decorateFolds() {
     if (isFolded(key)) sec.classList.add('folded');
   });
 }
+function clampLongText() {
+  $$('#col .hint, #col .card > .small.muted').forEach((el) => { if (!el.classList.contains('clamp') && el.textContent.length > (el.classList.contains('hint') ? 150 : 120)) el.classList.add('clamp'); });
+}
+document.addEventListener('click', (e) => { const c = e.target.closest && e.target.closest('.clamp'); if (c && !e.target.closest('[data-act]')) c.classList.toggle('open'); });
 /* Home: goal, login reward and quests live in one panel that folds to a single line */
 function todayPanel() {
   const g = careerGoal(), Q = questsInit();
@@ -778,6 +805,7 @@ function vShop() {
     <div class="sect"><h3>Gear</h3><div class="cards">${SHOP.filter((i) => i.cat === 'Gear').map(item).join('')}</div></div>
     ${prestigeSection()}
     <div class="sect"><h3>Lifestyle</h3><div class="cards">${SHOP.filter((i) => i.cat === 'Lifestyle').map(item).join('')}</div></div>
+    ${garageSection()}
     <div class="sect"><h3>Property <span class="small muted">· pays rent every night</span></h3><div class="cards">${SHOP.filter((i) => i.cat === 'Property').map(item).join('')}</div></div>
     <div class="sect"><h3>Style <span class="small muted">· avatar frames and profile banners</span></h3><div class="cards">${Object.entries(FRAMES).filter(([k, f]) => !f.pass || (S.frames || []).includes(k)).map(([k, f]) => style('frame', k, f, `<span class="av sm" style="border:3px solid transparent;background:linear-gradient(${S.color}, ${S.color}) padding-box, ${f.css} border-box">${faceSvg(S.faceSeed || S.name)}</span>`)).join('')}${Object.entries(BANNERS).filter(([k, b]) => !b.pass || (S.banners || []).includes(k)).map(([k, b]) => style('banner', k, b, `<span class="swatch" style="background:${b.css}"></span>`)).join('')}</div></div>
     <div class="sect"><h3>Courses</h3><div class="cards">${courses}</div></div>
@@ -899,6 +927,7 @@ function vAccount() {
   return `<div class="col-head">${head('Settings')}</div>
     <div class="sect"><h3>Display</h3><div class="row">${[['system', 'Match device'], ['dark', 'Dark'], ['light', 'Light']].map(([k, l]) => chip(l, 'theme', k, th === k)).join('')}</div>
       <label class="row"><input type="checkbox" id="optSound" data-act="sound" ${S.settings.sound ? 'checked' : ''}> Sound effects</label>
+      <label class="row"><input type="checkbox" data-act="fullscreen" ${isFullscreen() ? 'checked' : ''}> Full screen <span class="small muted">${window.AndroidUi ? '(hides the status and navigation bars; swipe from the edge to see them)' : '(fills the whole screen; press Esc to leave)'}</span></label>
       ${window.STORE_BUILD ? '' : `<label class="row"><input type="checkbox" data-act="iapTest" ${testMode() ? 'checked' : ''}> Test purchases <span class="small muted">(for trying the Gem Store: nothing is charged, orders are marked as tests)</span></label>`}
       <label class="row"><input type="checkbox" data-act="safeNames" ${safeNames ? 'checked' : ''}> Store-safe names <span class="small muted">(original names instead of celebrity and brand parodies; reloads the game)</span></label></div>
     ${alertsSettings()}
@@ -1118,6 +1147,7 @@ const ACT = {
   editBio: () => { ui.editBio = !ui.editBio; },
   compose: (a) => { openCompose(a && S.platforms[a] && S.platforms[a].unlocked ? { platform: a } : {}); return 'norender'; },
   composeTag: (a) => { const tr = S.trends.find((t) => t.tag === a); openCompose({ text: a + ' ', topic: tr ? 'trend:' + tr.tag : 'niche' }); return 'norender'; },
+  fullscreen: () => { setFullscreen(!isFullscreen()); },
   safeNames: () => { setSafeNames(!safeNames); save(); location.reload(); return 'norender'; },
   closeCompose: () => { closeCompose(); return 'norender'; },
   cPlat: (a) => { ui.c.platform = a; ui.c.format = null; renderCompose(false); return 'norender'; },
