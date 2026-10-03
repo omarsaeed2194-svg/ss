@@ -137,6 +137,28 @@ const { launch, page, newGame, oldGame, check, done } = require('./helpers');
   check('notification permission is asked after the first night', r.asked);
   check('no errors in store and notifications', !g.errors.length, g.errors.slice(0, 3).join(' | '));
 
+  // avatar and lifestyle scene
+  r = await g.evaluate(() => {
+    const out = {};
+    ACT_RUN('go', 'avatar'); out.screen = !!document.querySelector('.look-preview .life-scene');
+    ACT_RUN('lookSet', 'hair:afro'); out.hair = S.look.hair === 'afro';
+    S.money = 0; storeInit().gems = 0; ACT_RUN('lookSet', 'hat:crown'); out.lockedPiece = S.look.hat !== 'crown' && ui.lookBuy === 'hat:crown';
+    S.money = 2e6; ACT_RUN('lookBuy', 'cash'); out.bought = S.look.hat === 'crown' && S.wardrobe.includes('hat:crown') && S.money === 1e6;
+    S.owned.car = true; S.owned.jet = true; S.owned.island = true; S.owned.pet = true;
+    const svg = lifestyleScene(); out.scene = sceneKey() === 'island' && svg.includes('#E0245E') && svg.includes('av-fly');
+    ACT_RUN('sceneSet', 'room'); out.picked = sceneKey() === 'room';
+    ACT_RUN('sceneSet', 'space'); out.lockedScene = sceneKey() === 'room';
+    ACT_RUN('go', 'home'); out.hero = !!document.querySelector('.hero-scene svg');
+    out.meAv = meAv('sm').includes('viewBox="30 4 140 140"');
+    return out;
+  });
+  check('avatar customizer changes the character', r.screen && r.hair, JSON.stringify(r));
+  check('premium pieces must be bought first, then stay owned', r.lockedPiece && r.bought);
+  check('lifestyle scene shows owned home, car, jet and pet', r.scene && r.hero);
+  check('scenes unlock with what you own', r.picked && r.lockedScene);
+  check('your custom character is your avatar everywhere', r.meAv);
+  check('no errors in avatar run', !g.errors.length, g.errors.slice(0, 3).join(' | '));
+
   // an old save loads, upgrades and keeps playing
   const o = await page(b);
   await oldGame(o);

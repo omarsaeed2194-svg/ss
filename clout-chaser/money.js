@@ -12,6 +12,8 @@ SHOP.push(
   { id: 'sneakers',    cat: 'Lifestyle', name: 'Grail sneakers',  price: 1200,  reach: 0.02, desc: '+2% reach. Sneakerheads notice.' },
   { id: 'watch',       cat: 'Lifestyle', name: 'Luxury watch',    price: 25000, reach: 0.03, desc: '+3% reach. The wrist shot is a genre.' },
   { id: 'penthouse',   cat: 'Lifestyle', name: 'City penthouse',  price: 6e6,   reach: 0.08, upkeep: 3000, desc: '+8% reach, skyline content. $3K/day.' },
+  { id: 'hyper',       cat: 'Lifestyle', name: 'Hypercar',        price: 2.5e6, reach: 0.05, upkeep: 1500, desc: '+5% reach. 0 to 100 in 2.3 seconds. Parks in your scene.' },
+  { id: 'heli',        cat: 'Lifestyle', name: 'Helicopter',      price: 3e6,   reach: 0.06, upkeep: 2500, desc: '+6% reach. Lands on your rooftop.' },
   { id: 'yacht',       cat: 'Lifestyle', name: 'Superyacht',      price: 8e6,   reach: 0.1, upkeep: 6000, desc: '+10% reach. Monaco-ready. $6K/day.' },
   { id: 'team_owner',  cat: 'Lifestyle', name: 'Buy a sports team', price: 3e8, reach: 0.2, upkeep: 50000, desc: '+20% reach. You are now a "visionary".' },
   { id: 'studio_apt',  cat: 'Property', name: 'Studio apartment', price: 80000,  rent: 100,   desc: 'Rent it out: +$100/day.' },

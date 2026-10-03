@@ -149,6 +149,29 @@ A sixth platform, unlocked at 1K followers. Fans pay monthly for exclusive drops
 - **Legacy**: at 100M followers, rebrand into a new era. Followers reset and you keep 15% of your cash, but you earn Legacy points for permanent perks (more followers per post, more money, more max energy, more viral luck, bigger head start). Repeat forever.
 - **New tiers and goals**: Legend (1B) and Mythic (5B) tiers, milestones up to 10B followers and $100B, mega brands (Nyke, Maison Lumière, Galactic Airlines, Pear Inc. global) and mega contracts (movie lead, halftime show, your own reality series), plus new trophies.
 
+## Your look and your life
+- **Full-body character, Snapchat-style.** Me → **Your look** sets the character that represents you everywhere, from the feed to your profile to DMs. The options are:
+  - skin tone and face shape
+  - 12 hairstyles in 12 colors
+  - eyes and eye color, brows, mouth, facial hair
+  - glasses and hats
+  - tops, bottoms and shoes, each with colors
+  - necklaces and earrings or headphones
+
+  Premium pieces (crown, fur coat, gold sneakers, diamond chain and more) are bought once with cash or Gems and kept forever. 🎲 Randomize mixes it up.
+- **Lifestyle scene.** Your character stands in front of your best home: bedroom studio, city balcony, hillside mansion, beach house, penthouse rooftop, private island, or orbit (after flying to space). The scene also shows what you own:
+  - supercar and hypercar
+  - private jet flying overhead
+  - superyacht on the water
+  - helicopter on the helipad
+  - golden retriever
+  - cash stacks from $1M and gold bars from $100M
+  - a billboard with your companies
+  - a rocket if you've been to space
+
+  It appears at the top of Home and as your profile banner, and you can choose any home you've unlocked.
+- **New shop items:** Hypercar ($2.5M) and Helicopter ($3M).
+
 ## Gem Store (real-money purchases)
 - **Gems 💎** are the premium currency.
   - **Earn** them free: 3 per daily login (25 on every 7th day) and 5 per career goal (25 on every 5th).
@@ -321,6 +344,7 @@ Doing well gives you a second wind, shown as a gold energy pop-up:
 - `names.js` – store-safe original names for every parody
 - `store.js` – Gem Store: products, payment providers, delivery, Gem shop
 - `alerts.js` – in-game banners and phone notification scheduling
+- `avatar.js` – full-body character, customizer, wardrobe, lifestyle scenes
 - `progression.js` – career path, screen unlocks, wealth upkeep, prestige, linked-system events
 - `tests/` – browser test suites and an old-save fixture
 - `visuals.js` – animated scenery, stories, event art, reaction bursts, casino and match animations

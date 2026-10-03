@@ -50,9 +50,9 @@ const ui = {
 };
 const MAIN_TABS = [['home', 'Home', 'home'], ['explore', 'Explore', 'search'], ['notifs', 'Notifications', 'bell'], ['messages', 'Messages', 'mail'], ['profile', 'Profile', 'user']];
 const CAREER = [['money', 'Money', 'cash'], ['arena', 'Arena', 'dice'], ['legacy', 'Legacy', 'star'], ['deals', 'Brand deals', 'brief'], ['shop', 'Shop', 'bag'], ['team', 'Team', 'team'], ['empire', 'Empire', 'crown'], ['life', 'Life & skills', 'heartp'], ['stats', 'Analytics', 'chart'], ['tea', 'The Tea', 'tea'], ['trophies', 'Trophies', 'trophy'], ['danger', 'Danger Zone', 'fire'], ['account', 'Settings', 'gear']];
-CAREER.push(['store', 'Gem Store', 'star'], ['hq', 'Headquarters', 'home'], ['friends', 'Friends', 'user'], ['quests', 'Daily quests', 'star'], ['invest', 'Investing', 'chart'], ['bank', 'Bank', 'lock'], ['acquire', 'Acquisitions', 'crown'], ['fanvault', 'FanVault', 'lock']);
+CAREER.push(['avatar', 'Your look', 'user'], ['store', 'Gem Store', 'star'], ['hq', 'Headquarters', 'home'], ['friends', 'Friends', 'user'], ['quests', 'Daily quests', 'star'], ['invest', 'Investing', 'chart'], ['bank', 'Bank', 'lock'], ['acquire', 'Acquisitions', 'crown'], ['fanvault', 'FanVault', 'lock']);
 /* The sidebar shows five hubs; each hub holds several screens with a tab row on top */
-const HUBS = [['fin', 'Money', 'cash', ['money', 'invest', 'bank', 'acquire']], ['biz', 'Business', 'brief', ['deals', 'fanvault', 'shop', 'store', 'empire']], ['play', 'Play', 'dice', ['arena', 'danger']], ['crew', 'Team & HQ', 'team', ['team', 'hq', 'legacy']], ['social', 'Friends', 'user', ['friends', 'quests']], ['me', 'Me', 'heartp', ['life', 'stats', 'trophies', 'tea']], ['account', 'Settings', 'gear', ['account']]];
+const HUBS = [['fin', 'Money', 'cash', ['money', 'invest', 'bank', 'acquire']], ['biz', 'Business', 'brief', ['deals', 'fanvault', 'shop', 'store', 'empire']], ['play', 'Play', 'dice', ['arena', 'danger']], ['crew', 'Team & HQ', 'team', ['team', 'hq', 'legacy']], ['social', 'Friends', 'user', ['friends', 'quests']], ['me', 'Me', 'heartp', ['avatar', 'life', 'stats', 'trophies', 'tea']], ['account', 'Settings', 'gear', ['account']]];
 const hubOf = (t) => HUBS.find((h) => h[3].includes(t));
 const careerName = (id) => (CAREER.find((c) => c[0] === id) || [id, id])[1];
 function hubBadge(h, b) { return h[3].reduce((a, t) => a + (b[t] || 0), 0); }
@@ -66,7 +66,7 @@ const NICHE_DESC = { beauty: 'Skincare, makeup, dupes', gaming: 'Clutches, speed
 /* ---------- small helpers ---------- */
 const avatar = (name, color, size = '', seed) => `<span class="av ${size}" style="background:${color}" aria-hidden="true">${faceSvg(seed || name)}</span>`;
 const npcAv = (id, size = '') => avatar(NPCS[id].name, NPCS[id].color, size, 'npc:' + id);
-const meAv = (size = '') => { const F = S.frame && FRAMES[S.frame]; const a = avatar(S.name, S.color, size, S.faceSeed || S.name); return F ? a.replace(`style="background:${S.color}"`, `style="border:${size === 'xl' ? 5 : 2.5}px solid transparent;background:linear-gradient(${S.color}, ${S.color}) padding-box, ${F.css} border-box"`) : a; };
+const meAv = (size = '') => { const F = S.frame && FRAMES[S.frame]; const a = `<span class="av me ${size}" style="background:${S.color}" aria-hidden="true">${avatarHead(lookInit())}</span>`; return F ? a.replace(`style="background:${S.color}"`, `style="border:${size === 'xl' ? 5 : 2.5}px solid transparent;background:linear-gradient(${S.color}, ${S.color}) padding-box, ${F.css} border-box"`) : a; };
 const coAv = (id, size = '') => `<span class="av co ${size}" aria-hidden="true">${logoSvg(COMPANIES[id].name, COMPANIES[id].color)}</span>`;
 const flag = (cc) => (COUNTRIES[cc] ? `<span class="flag" title="${COUNTRIES[cc].name}">${COUNTRIES[cc].flag}</span>` : '');
 const vb = (gold) => `<span class="badge-v ${gold ? 'gold' : ''}" title="${gold ? 'Paid badge' : 'Verified'}">${VBADGE}</span>`;
@@ -334,7 +334,7 @@ function renderCol() {
   else if (v && v.type === 'star') html = vStar(v.id);
   else if (v && v.type === 'dm') html = vDm(v.key);
   else if (!featureOn(tab)) html = vLocked(tab);
-  else html = ({ home: vHome, explore: vExplore, notifs: vNotifs, messages: vMessages, profile: vProfile, danger: vDanger, deals: vDeals, shop: vShop, money: vMoney, arena: vArena, legacy: vLegacy, hq: vHQ, friends: vFriends, quests: () => `<div class="col-head">${head('Daily quests', 'Three new quests every game day, plus a bonus chest')}</div><div class="sect">${questsCard(true)}</div>`, team: vTeamOrg, store: vStore, invest: vInvest, bank: vBank, acquire: vAcquire, fanvault: vFanVault, empire: vEmpire, life: vLife, stats: vStats, tea: vTea, trophies: vTrophies, account: vAccount }[tab] || vHome)();
+  else html = ({ home: vHome, explore: vExplore, notifs: vNotifs, messages: vMessages, profile: vProfile, danger: vDanger, deals: vDeals, shop: vShop, money: vMoney, arena: vArena, legacy: vLegacy, hq: vHQ, friends: vFriends, quests: () => `<div class="col-head">${head('Daily quests', 'Three new quests every game day, plus a bonus chest')}</div><div class="sect">${questsCard(true)}</div>`, team: vTeamOrg, store: vStore, avatar: vAvatar, invest: vInvest, bank: vBank, acquire: vAcquire, fanvault: vFanVault, empire: vEmpire, life: vLife, stats: vStats, tea: vTea, trophies: vTrophies, account: vAccount }[tab] || vHome)();
   $('#col').innerHTML = safe(html).replace('<div class="col-head">', '<div class="col-head">' + hubBar());
   if ((tab === 'stats' || (tab === 'profile' && ui.profTab === 'analytics')) && !v) drawChart();
   decorateFolds();
@@ -473,7 +473,7 @@ function heroCard() {
   const ds = S.dayStart || snap(), df = t - ds.f;
   const b = badges(), gigs = S.inbox.filter((m) => m.type === 'gig' && !m.done).length;
   const tile = (icon, label, act, arg, cls = '', badge = '') => `<button class="qt ${cls}" data-act="${act}" data-arg="${arg}">${ico(icon)}<span>${label}</span>${badge ? `<i class="qb">${badge}</i>` : ''}</button>`;
-  return `<div class="hero"><div class="hero-top"><div style="min-width:0"><div class="small muted">${cur.name} creator${nx ? ` · next: <b style="color:var(--ink)">${nx.name}</b>` : ' · top tier'}</div>
+  return `<div class="hero"><button class="hero-scene" data-act="go" data-arg="avatar" aria-label="Your life. Tap to customize">${lifestyleScene()}</button><div class="hero-top"><div style="min-width:0"><div class="small muted">${cur.name} creator${nx ? ` · next: <b style="color:var(--ink)">${nx.name}</b>` : ' · top tier'}</div>
       <div class="hero-n"><span class="num">${fmt(t)}</span>${nx ? `<span class="small muted num"> / ${fmt(nx.min)}</span>` : ''}<span class="small ${df >= 0 ? 'good' : 'bad'} num"> ${signed(df)} today</span></div></div>
       <div class="hero-cash"><span class="small muted">Cash</span><b class="num gold">${money(S.money)}</b></div></div>
     <div class="tierbar" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100" aria-label="Progress to next tier"><i style="width:${pct}%"></i></div>
@@ -721,7 +721,7 @@ function vProfile() {
   const following = Object.values(S.npcs).filter((n) => n.following).length;
   const body = ui.profTab === 'analytics' ? statsBody() : ui.profTab === 'trophies' ? trophiesBody() : (S.posts.length ? S.posts.filter((p) => !p.crossOf).slice(0, 30).map(myPostCard).join('') : `<div class="empty"><h3>No posts yet</h3>${btn('Write your first post', 'compose', '', 'blue')}</div>`);
   return `<div class="col-head">${head(`${esc(S.name)} ${meBadge()}`, `${S.stats.posts} posts`)}</div>
-    <div class="banner" style="background:${S.banner && BANNERS[S.banner] ? BANNERS[S.banner].css : `linear-gradient(120deg, ${S.color}, #111)`}"></div>
+    <button class="banner scene-banner" data-act="go" data-arg="avatar" aria-label="Customize your look and scene" style="background:${S.banner && BANNERS[S.banner] ? BANNERS[S.banner].css : `linear-gradient(120deg, ${S.color}, #111)`}">${lifestyleScene()}<span class="scene-edit">✏️ Edit look</span></button>
     <div class="prof">${meAv('xl')}<div class="prof-actions">${btn(ui.editBio ? 'Done' : 'Edit profile', 'editBio', '', '')}</div>
       <h2>${esc(S.name)} ${meBadge()}</h2><div class="handle">@${esc(S.handle)}</div>
       ${ui.editBio ? `<textarea class="input" id="bioEdit" maxlength="160" rows="2" style="margin-top:12px" aria-label="Bio">${esc(S.bio)}</textarea>` : `<div class="bio">${esc(S.bio)}</div>`}
@@ -1461,7 +1461,7 @@ const ACT = {
   },
   restart: (a) => { if (a === 'yes') { wipeSave(); S = null; ui.confirmRestart = false; showStart(); return 'norender'; } ui.confirmRestart = a !== 'no'; },
 };
-Object.assign(ACT, MONEY_ACT, VAULT_ACT, ENDGAME_ACT, EXTRA_ACT, QUEST_ACT, SOCIAL_ACT, FINANCE_ACT, ARENA_ACT, PROG_ACT, STORE_ACT, ALERT_ACT);
+Object.assign(ACT, MONEY_ACT, VAULT_ACT, ENDGAME_ACT, EXTRA_ACT, QUEST_ACT, SOCIAL_ACT, FINANCE_ACT, ARENA_ACT, PROG_ACT, STORE_ACT, ALERT_ACT, AVATAR_ACT);
 
 const NO_FLASH = new Set(['go', 'back', 'open', 'openDm', 'endDay', 'dmSend', 'noop']);
 const SHEET_ONLY = new Set(['fold', 'dockPage', 'storyOpen', 'cTheme', 'vPrice', 'vLink', 'vDrop', 'cAff', 'cPoll', 'cCross', 'duet', 'spin', 'cIntent', 'dmChip', 'postAbout', 'cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);
