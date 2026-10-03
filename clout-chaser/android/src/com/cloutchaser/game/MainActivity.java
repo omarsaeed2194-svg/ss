@@ -42,6 +42,7 @@ public class MainActivity extends Activity {
         s.setAllowFileAccessFromFileURLs(true);
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setTextZoom(100);                     // ignore system font scaling so the layout holds
+        web.addJavascriptInterface(new NotifyBridge(this), "AndroidNotify");
         web.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView v, String url) {

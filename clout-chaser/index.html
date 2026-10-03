@@ -773,6 +773,24 @@ h3.fold-head { justify-content: space-between; }
 .today .chev { flex: none; color: var(--muted); }
 .today-body { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
 .today-body > * { margin: 0 !important; }
+
+/* ---------- Gem Store and heads-up banners ---------- */
+.gem-chip { font-variant-numeric: tabular-nums; }
+.card.iap { gap: 8px; }
+.card.iap.feature { border-color: var(--gold); background: linear-gradient(135deg, color-mix(in srgb, var(--gold) 14%, var(--surface)), var(--surface)); }
+.gem-n { font-family: var(--f-display); font-size: 24px; font-weight: 800; }
+.warn-hint { border: 1px dashed var(--warn); }
+.headsup { position: fixed; top: calc(3px + env(safe-area-inset-top, 0px)); left: 0; right: 0; z-index: 60; display: flex; justify-content: center; padding: 0 12px; pointer-events: none; }
+.headsup[hidden] { display: none; }
+.hu-card { pointer-events: auto; width: min(460px, 100%); display: flex; align-items: center; gap: 10px; text-align: left; padding: 4px 12px 4px 6px; height: 46px; border-radius: 23px; border: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 10px 30px rgba(0,0,0,.28); color: var(--ink); }
+.hu-text { display: flex; flex-direction: column; min-width: 0; font-size: 12.5px; line-height: 1.25; }
+.hu-card .av.sm { width: 36px; height: 36px; flex: none; }
+.hu-text span { color: var(--muted); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
+.hu-ico { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); font-size: 18px; flex: none; }
+.headsup.in .hu-card { animation: huIn .35s cubic-bezier(.2,.9,.3,1.2) both; }
+.headsup.out .hu-card { animation: huOut .3s ease both; }
+@keyframes huIn { from { transform: translateY(-120%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes huOut { to { transform: translateY(-120%); opacity: 0; } }
 </style>
 
 <div id="app" hidden>
@@ -791,6 +809,7 @@ h3.fold-head { justify-content: space-between; }
 <div class="modal-wrap" id="modal" hidden><div class="modal" role="dialog" aria-modal="true" id="modalBox"></div></div>
 <div class="deltas" id="deltas" aria-live="polite"></div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
+<div class="headsup" id="headsup" hidden aria-live="polite"></div>
 
 <script src="data.js"></script>
 <script src="engine.js"></script>
@@ -810,6 +829,8 @@ h3.fold-head { justify-content: space-between; }
 <script src="arena.js"></script>
 <script src="names.js"></script>
 <script src="progression.js"></script>
+<script src="store.js"></script>
+<script src="alerts.js"></script>
 <script src="quests.js"></script>
 <script src="cloud-config.js"></script>
 <script src="social.js"></script>

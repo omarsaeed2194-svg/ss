@@ -85,6 +85,7 @@ function careerClaim() {
   if (g.cash) { S.money += g.cash; S.stats.earned += g.cash; }
   if (g.e) gainEnergy(g.e, `Goal reward: ${g.t}`);
   c.i++;
+  if (typeof earnGems === 'function') earnGems(c.i % 5 === 0 ? 25 : 5, 'career goal');
   toast(`🎯 Goal complete: ${g.t}${g.cash ? ` · +${money(g.cash)}` : ''}`, 'gold'); sound('cash');
   if (typeof burst === 'function') try { burst('💰'); } catch (e) { /* visual only */ }
   if (c.i % 5 === 0) celebrate('gold');

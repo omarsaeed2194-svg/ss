@@ -80,6 +80,63 @@ const { launch, page, newGame, oldGame, check, done } = require('./helpers');
   check('store-safe names hide every parody', !r.length, r.slice(0, 5).join(', '));
   check('no errors in safe-names run', !q.errors.length, q.errors.slice(0, 3).join(' | '));
 
+  // Gem Store: test mode, a mock Google Play bridge, delivery exactly once
+  const g = await page(b);
+  await newGame(g);
+  r = await g.evaluate(() => {
+    const out = {};
+    out.noProvider = Pay.provider() === null;
+    ACT_RUN('iapTest'); out.test = Pay.provider() === 'test';
+    const g0 = gems(); ACT_RUN('iapBuy', 'gems_550'); out.testGems = gems() - g0; out.testOrder = storeInit().orders[0].test === true;
+    ACT_RUN('iapTest');
+    // mock Google Play: buy → purchase callback → consume
+    const calls = [];
+    window.AndroidBilling = { available: () => true, query: () => calls.push('query'), restore: () => calls.push('restore'), buy: (id) => calls.push('buy:' + id), consume: (t) => calls.push('consume:' + t), acknowledge: (t) => calls.push('ack:' + t) };
+    out.play = Pay.provider() === 'play';
+    ACT_RUN('iapBuy', 'gems_1200');
+    const before = gems();
+    onBillingPurchase(JSON.stringify({ productId: 'gems_1200', orderId: 'GPA.1', token: 'tok1' }));
+    onBillingPurchase(JSON.stringify({ productId: 'gems_1200', orderId: 'GPA.1', token: 'tok1' })); // duplicate callback
+    out.playGems = gems() - before;
+    onBillingPurchase(JSON.stringify({ productId: 'vip_month', orderId: 'GPA.2', token: 'tok2' }));
+    out.vip = vipOn(); out.vipEnergy = maxEnergy();
+    onBillingPurchase(JSON.stringify({ productId: 'starter_pack', orderId: 'GPA.3', token: 'tok3' }));
+    out.calls = calls;
+    onBillingProducts(JSON.stringify([{ id: 'gems_100', price: '€1.09' }])); out.localPrice = Pay.price('gems_100');
+    const c0 = gems(); ACT_RUN('gemSpend', 'refill'); out.spent = c0 - gems();
+    ACT_RUN('go', 'store'); out.screen = !!document.querySelector('.card.iap');
+    delete window.AndroidBilling;
+    return out;
+  });
+  check('store needs a real provider (no free purchases by default)', r.noProvider);
+  check('test mode delivers and marks the order as a test', r.test && r.testGems === 550 && r.testOrder, JSON.stringify(r));
+  check('Google Play purchase is delivered exactly once and consumed', r.play && r.playGems === 1200 && r.calls.filter((c) => c === 'consume:tok1').length >= 1, r.calls.join(','));
+  check('VIP and starter pack are acknowledged, not consumed', r.vip && r.calls.includes('ack:tok2') && r.calls.includes('ack:tok3') && !r.calls.includes('consume:tok2'));
+  check('localized Play prices show in the store', r.localPrice === '€1.09');
+  check('Gems can be spent', r.spent === 25 && r.screen);
+
+  // notifications: banners while playing, phone reminders when the app goes to the background
+  r = await g.evaluate(async () => {
+    const sched = [];
+    window.AndroidNotify = { schedule: (id, t, body, ms) => sched.push([id, t, Math.round(ms / 36e5)]), cancelAll: () => sched.push('cancel'), enabled: () => true, requestPermission: () => sched.push('perm') };
+    loginState().streak = 4;
+    huQueue = []; huBusy = false; huLast = 0;
+    notify('system', null, 'Test milestone');
+    await new Promise((res) => setTimeout(res, 1200));
+    const banner = !document.getElementById('headsup').hidden && document.getElementById('headsup').textContent.includes('Test milestone');
+    quietly(() => notify('system', null, 'Quiet one'));
+    schedulePhoneAlerts();
+    S.settings.alerts.comeback = false; const before = sched.length; schedulePhoneAlerts(); const withoutComeback = sched.slice(before);
+    S.day = 2; S.flags.askedNotify = false; maybeAskNotify();
+    delete window.AndroidNotify;
+    return { banner, sched, withoutComeback, asked: sched.includes('perm') };
+  });
+  check('heads-up banner shows while playing', r.banner);
+  check('phone reminders are scheduled (daily, streak, comeback)', [1, 2, 3].every((id) => r.sched.some((x) => x[0] === id)), JSON.stringify(r.sched));
+  check('switching a reminder off stops it', !r.withoutComeback.some((x) => x[0] === 3));
+  check('notification permission is asked after the first night', r.asked);
+  check('no errors in store and notifications', !g.errors.length, g.errors.slice(0, 3).join(' | '));
+
   // an old save loads, upgrades and keeps playing
   const o = await page(b);
   await oldGame(o);

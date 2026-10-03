@@ -149,6 +149,46 @@ A sixth platform, unlocked at 1K followers. Fans pay monthly for exclusive drops
 - **Legacy**: at 100M followers, rebrand into a new era. Followers reset and you keep 15% of your cash, but you earn Legacy points for permanent perks (more followers per post, more money, more max energy, more viral luck, bigger head start). Repeat forever.
 - **New tiers and goals**: Legend (1B) and Mythic (5B) tiers, milestones up to 10B followers and $100B, mega brands (Nyke, Maison Lumière, Galactic Airlines, Pear Inc. global) and mega contracts (movie lead, halftime show, your own reality series), plus new trophies.
 
+## Gem Store (real-money purchases)
+- **Gems 💎** are the premium currency.
+  - **Earn** them free: 3 per daily login (25 on every 7th day) and 5 per career goal (25 on every 5th).
+  - **Buy** them in **Business → Gem Store**.
+  - **Spend** them on convenience and cosmetics: energy refill, cash bundle, algorithm boost, streak shield, spa day, the exclusive Diamond frame and Aurora Borealis banner. Gems can't be used in the Arena or the casino.
+- **Products.** Create these IDs as in-app products in Google Play Console:
+
+  | Product ID | Type | Price | Contents |
+  | --- | --- | --- | --- |
+  | `gems_100` | consumable | $0.99 | 100 Gems |
+  | `gems_550` | consumable | $4.99 | 550 Gems |
+  | `gems_1200` | consumable | $9.99 | 1,200 Gems |
+  | `gems_2600` | consumable | $19.99 | 2,600 Gems |
+  | `gems_7000` | consumable | $49.99 | 7,000 Gems |
+  | `starter_pack` | one-time | $2.99 | 300 Gems, $25K cash, 50 energy, Diamond frame |
+  | `vip_month` | 30 days | $4.99 | 20 Gems a day, +20 max energy, double login rewards |
+
+- **How payment works.** `store.js` talks to a provider. In the Android app that provider is Google Play Billing, through a JavaScript bridge called `window.AndroidBilling`. The bridge has these methods:
+  - `available()`
+  - `query(idsJson)`, which answers through `onBillingProducts`
+  - `buy(id)`, which answers through `onBillingPurchase({productId, orderId, token})` or `onBillingError`
+  - `consume(token)`
+  - `acknowledge(token)`
+  - `restore()`
+
+  Each order is delivered exactly once, using its order ID. Consumables are consumed and the other products are acknowledged, as Google Play requires.
+- **Status.** The Java side of the billing bridge needs Google's Play Billing library. That library is only published on Google's Maven server (`dl.google.com` / `maven.google.com`), which this build environment can't reach yet. Until it's added, the Android app shows the store, but purchases are off.
+- **Test mode.** On the web, Settings → Test purchases lets you try the whole flow. Nothing is charged and orders are marked as tests. The app-store build never shows this switch.
+- **For production:** verify Play purchase tokens on a server (for example a Supabase Edge Function using the Google Play Developer API) before trusting them.
+
+## Notifications
+- **In-game banners** slide down for milestones, unlocks, viral posts and stars following you. They are never shown during the overnight summary.
+- **Phone notifications** (Android app) are scheduled when the app goes to the background and cleared when you come back:
+  - your daily login reward is ready (9:00 the next day)
+  - your login streak is about to break (19:00 the next day)
+  - a "your fans miss you" nudge after 3 days away
+- On Android 13+, the app asks for notification permission after your first night.
+- Every kind can be switched off in Settings → Notifications, which also has a test button.
+- Android side: `NotifyBridge` (`window.AndroidNotify`) and `NotifyReceiver` use inexact alarms, so no special alarm permission is needed.
+
 ## Navigation and layout
 - **Bottom menu on every screen size.** Page 1 is the social app: Home, Explore, Notifications, Messages, Profile. Page 2 is your career: Money, Business, Play, Team, Friends, Me, Settings. Swipe sideways, or tap the dots or the "Career ›" and "‹ Social" buttons. The left sidebar is gone, so the feed gets the space.
 - **Accordions.** Every titled section on every screen has a collapse arrow, and what you fold stays folded. On Home, the career goal, login reward and daily quests share one **Today** panel. It folds to a single line with chips that light up when something is ready to claim.
@@ -279,6 +319,8 @@ Doing well gives you a second wind, shown as a gold energy pop-up:
 - `finance.js` – bank, loans, mortgages, real estate, investing desk, short selling, acquisitions, enterprise org chart
 - `arena.js` – parlays, Fight Night, horse racing, blackjack, scratch cards, bet history
 - `names.js` – store-safe original names for every parody
+- `store.js` – Gem Store: products, payment providers, delivery, Gem shop
+- `alerts.js` – in-game banners and phone notification scheduling
 - `progression.js` – career path, screen unlocks, wealth upkeep, prestige, linked-system events
 - `tests/` – browser test suites and an old-save fixture
 - `visuals.js` – animated scenery, stories, event art, reaction bursts, casino and match animations

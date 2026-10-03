@@ -50,9 +50,9 @@ const ui = {
 };
 const MAIN_TABS = [['home', 'Home', 'home'], ['explore', 'Explore', 'search'], ['notifs', 'Notifications', 'bell'], ['messages', 'Messages', 'mail'], ['profile', 'Profile', 'user']];
 const CAREER = [['money', 'Money', 'cash'], ['arena', 'Arena', 'dice'], ['legacy', 'Legacy', 'star'], ['deals', 'Brand deals', 'brief'], ['shop', 'Shop', 'bag'], ['team', 'Team', 'team'], ['empire', 'Empire', 'crown'], ['life', 'Life & skills', 'heartp'], ['stats', 'Analytics', 'chart'], ['tea', 'The Tea', 'tea'], ['trophies', 'Trophies', 'trophy'], ['danger', 'Danger Zone', 'fire'], ['account', 'Settings', 'gear']];
-CAREER.push(['hq', 'Headquarters', 'home'], ['friends', 'Friends', 'user'], ['quests', 'Daily quests', 'star'], ['invest', 'Investing', 'chart'], ['bank', 'Bank', 'lock'], ['acquire', 'Acquisitions', 'crown'], ['fanvault', 'FanVault', 'lock']);
+CAREER.push(['store', 'Gem Store', 'star'], ['hq', 'Headquarters', 'home'], ['friends', 'Friends', 'user'], ['quests', 'Daily quests', 'star'], ['invest', 'Investing', 'chart'], ['bank', 'Bank', 'lock'], ['acquire', 'Acquisitions', 'crown'], ['fanvault', 'FanVault', 'lock']);
 /* The sidebar shows five hubs; each hub holds several screens with a tab row on top */
-const HUBS = [['fin', 'Money', 'cash', ['money', 'invest', 'bank', 'acquire']], ['biz', 'Business', 'brief', ['deals', 'fanvault', 'shop', 'empire']], ['play', 'Play', 'dice', ['arena', 'danger']], ['crew', 'Team & HQ', 'team', ['team', 'hq', 'legacy']], ['social', 'Friends', 'user', ['friends', 'quests']], ['me', 'Me', 'heartp', ['life', 'stats', 'trophies', 'tea']], ['account', 'Settings', 'gear', ['account']]];
+const HUBS = [['fin', 'Money', 'cash', ['money', 'invest', 'bank', 'acquire']], ['biz', 'Business', 'brief', ['deals', 'fanvault', 'shop', 'store', 'empire']], ['play', 'Play', 'dice', ['arena', 'danger']], ['crew', 'Team & HQ', 'team', ['team', 'hq', 'legacy']], ['social', 'Friends', 'user', ['friends', 'quests']], ['me', 'Me', 'heartp', ['life', 'stats', 'trophies', 'tea']], ['account', 'Settings', 'gear', ['account']]];
 const hubOf = (t) => HUBS.find((h) => h[3].includes(t));
 const careerName = (id) => (CAREER.find((c) => c[0] === id) || [id, id])[1];
 function hubBadge(h, b) { return h[3].reduce((a, t) => a + (b[t] || 0), 0); }
@@ -214,6 +214,7 @@ function flashDelta(a, b) {
    ====================================================================== */
 function renderAll() {
   if (!S) return;
+  if (!ui.storeBooted) { ui.storeBooted = true; try { Pay.init(); vipDaily(); } catch (e) { console.error(e); } }
   if (mentionState && !document.body.contains(mentionState.el)) hideMentions();
   applyTheme();
   // one broken panel should never take down the whole screen
@@ -233,7 +234,7 @@ function renderSidebar() {
 function renderTopbar() {
   $('#topbar').innerHTML = `<button class="icon-btn" data-act="drawer" aria-label="Open menu">${meAv('sm')}</button>
     <div class="brand">Clout<em>Chaser</em></div>
-    <button class="btn sm" data-act="endDay">${ico('moon')} Day ${S.day}</button>`;
+    <div class="row" style="gap:6px;flex-wrap:nowrap"><button class="btn sm gem-chip" data-act="go" data-arg="store" aria-label="Gem Store">💎 ${fmt(gems())}</button><button class="btn sm" data-act="endDay">${ico('moon')} Day ${S.day}</button></div>`;
 }
 /* Bottom dock on every screen size: page 1 is the social app, page 2 is your career. Swipe or tap the dots to switch. */
 const dockPageOf = (t) => (MAIN_TABS.some((m) => m[0] === t) ? 0 : 1);
@@ -333,7 +334,7 @@ function renderCol() {
   else if (v && v.type === 'star') html = vStar(v.id);
   else if (v && v.type === 'dm') html = vDm(v.key);
   else if (!featureOn(tab)) html = vLocked(tab);
-  else html = ({ home: vHome, explore: vExplore, notifs: vNotifs, messages: vMessages, profile: vProfile, danger: vDanger, deals: vDeals, shop: vShop, money: vMoney, arena: vArena, legacy: vLegacy, hq: vHQ, friends: vFriends, quests: () => `<div class="col-head">${head('Daily quests', 'Three new quests every game day, plus a bonus chest')}</div><div class="sect">${questsCard(true)}</div>`, team: vTeamOrg, invest: vInvest, bank: vBank, acquire: vAcquire, fanvault: vFanVault, empire: vEmpire, life: vLife, stats: vStats, tea: vTea, trophies: vTrophies, account: vAccount }[tab] || vHome)();
+  else html = ({ home: vHome, explore: vExplore, notifs: vNotifs, messages: vMessages, profile: vProfile, danger: vDanger, deals: vDeals, shop: vShop, money: vMoney, arena: vArena, legacy: vLegacy, hq: vHQ, friends: vFriends, quests: () => `<div class="col-head">${head('Daily quests', 'Three new quests every game day, plus a bonus chest')}</div><div class="sect">${questsCard(true)}</div>`, team: vTeamOrg, store: vStore, invest: vInvest, bank: vBank, acquire: vAcquire, fanvault: vFanVault, empire: vEmpire, life: vLife, stats: vStats, tea: vTea, trophies: vTrophies, account: vAccount }[tab] || vHome)();
   $('#col').innerHTML = safe(html).replace('<div class="col-head">', '<div class="col-head">' + hubBar());
   if ((tab === 'stats' || (tab === 'profile' && ui.profTab === 'analytics')) && !v) drawChart();
   decorateFolds();
@@ -898,7 +899,9 @@ function vAccount() {
   return `<div class="col-head">${head('Settings')}</div>
     <div class="sect"><h3>Display</h3><div class="row">${[['system', 'Match device'], ['dark', 'Dark'], ['light', 'Light']].map(([k, l]) => chip(l, 'theme', k, th === k)).join('')}</div>
       <label class="row"><input type="checkbox" id="optSound" data-act="sound" ${S.settings.sound ? 'checked' : ''}> Sound effects</label>
+      ${window.STORE_BUILD ? '' : `<label class="row"><input type="checkbox" data-act="iapTest" ${testMode() ? 'checked' : ''}> Test purchases <span class="small muted">(for trying the Gem Store: nothing is charged, orders are marked as tests)</span></label>`}
       <label class="row"><input type="checkbox" data-act="safeNames" ${safeNames ? 'checked' : ''}> Store-safe names <span class="small muted">(original names instead of celebrity and brand parodies; reloads the game)</span></label></div>
+    ${alertsSettings()}
     <div class="sect"><h3>Save</h3><p class="small muted">The game saves automatically in this browser. Copy a save code to move your progress to another device.</p>
       <div class="row">${btn('Generate save code', 'exportSave', '', 'sm')}${ui.exportCode ? btn('Copy code', 'copySave', '', 'sm blue') : ''}</div>
       ${ui.exportCode ? `<textarea class="input small" id="exportBox" readonly rows="3" style="font-family:var(--f-mono)">${esc(ui.exportCode)}</textarea>` : ''}
@@ -1109,7 +1112,7 @@ const ACT = {
   },
   openDm: (a) => { S.npcs[a].dmOpen = true; openView({ type: 'dm', key: 'npc:' + a }); },
   drawer: () => { openDrawer(); return 'norender'; },
-  endDay: () => { $('#drawer').hidden = true; closeCompose(); endDay(); sound('click'); processQueue(); },
+  endDay: () => { $('#drawer').hidden = true; closeCompose(); quietly(endDay); maybeAskNotify(); sound('click'); processQueue(); },
   feedTab: (a) => { ui.feedTab = a; }, notifTab: (a) => { ui.notifTab = a; }, profTab: (a) => { ui.profTab = a; }, metric: (a) => { ui.metric = a; },
   readNotifs: () => { S.notifs.forEach((n) => { n.read = true; }); },
   editBio: () => { ui.editBio = !ui.editBio; },
@@ -1458,7 +1461,7 @@ const ACT = {
   },
   restart: (a) => { if (a === 'yes') { wipeSave(); S = null; ui.confirmRestart = false; showStart(); return 'norender'; } ui.confirmRestart = a !== 'no'; },
 };
-Object.assign(ACT, MONEY_ACT, VAULT_ACT, ENDGAME_ACT, EXTRA_ACT, QUEST_ACT, SOCIAL_ACT, FINANCE_ACT, ARENA_ACT, PROG_ACT);
+Object.assign(ACT, MONEY_ACT, VAULT_ACT, ENDGAME_ACT, EXTRA_ACT, QUEST_ACT, SOCIAL_ACT, FINANCE_ACT, ARENA_ACT, PROG_ACT, STORE_ACT, ALERT_ACT);
 
 const NO_FLASH = new Set(['go', 'back', 'open', 'openDm', 'endDay', 'dmSend', 'noop']);
 const SHEET_ONLY = new Set(['fold', 'dockPage', 'storyOpen', 'cTheme', 'vPrice', 'vLink', 'vDrop', 'cAff', 'cPoll', 'cCross', 'duet', 'spin', 'cIntent', 'dmChip', 'postAbout', 'cImgRemove', 'composeAt', 'teaSpill', 'cLook', 'clashMeme', 'compose', 'composeTag', 'drawer', 'noop', 'closeCompose', 'copySave', 'cPlat', 'cFmt', 'cTopic', 'cTone', 'cEffort', 'cTime', 'cOpts', 'cDisclose', 'cTag', 'cSuggest']);

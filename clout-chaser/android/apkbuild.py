@@ -25,11 +25,12 @@ T_REF, T_STRING, T_INT, T_HEX, T_BOOL = 0x01, 0x03, 0x10, 0x11, 0x12
 THEME_MATERIAL_NOACTIONBAR = 16974382
 ICON_ID = 0x7F010000  # mipmap/ic_launcher in our resources.arsc
 
-VERSION_CODE, VERSION_NAME = 8, "2.1"
+VERSION_CODE, VERSION_NAME = 9, "2.2"
 MANIFEST = ('manifest', [(None, 'package', T_STRING, 'com.cloutchaser.game'),
                          ('a', 'versionCode', T_INT, VERSION_CODE), ('a', 'versionName', T_STRING, VERSION_NAME)], [
     ('uses-sdk', [('a', 'minSdkVersion', T_INT, 24), ('a', 'targetSdkVersion', T_INT, 35)], []),
     ('uses-permission', [('a', 'name', T_STRING, 'android.permission.INTERNET')], []),
+    ('uses-permission', [('a', 'name', T_STRING, 'android.permission.POST_NOTIFICATIONS')], []),
     ('application', [('a', 'label', T_STRING, 'Clout Chaser'), ('a', 'icon', T_REF, ICON_ID), ('a', 'roundIcon', T_REF, ICON_ID),
                      ('a', 'allowBackup', T_BOOL, True), ('a', 'hardwareAccelerated', T_BOOL, True),
                      ('a', 'theme', T_REF, THEME_MATERIAL_NOACTIONBAR)], [
@@ -41,6 +42,7 @@ MANIFEST = ('manifest', [(None, 'package', T_STRING, 'com.cloutchaser.game'),
                 ('category', [('a', 'name', T_STRING, 'android.intent.category.LAUNCHER')], []),
             ]),
         ]),
+        ('receiver', [('a', 'name', T_STRING, 'com.cloutchaser.game.NotifyReceiver'), ('a', 'exported', T_BOOL, False)], []),
     ]),
 ])
 

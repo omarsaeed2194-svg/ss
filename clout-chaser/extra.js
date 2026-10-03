@@ -106,7 +106,8 @@ const EXTRA_ACT = {
     if (!loginReady()) return 'norender';
     const L = loginState();
     L.streak = L.last === yesterdayKey() ? L.streak + 1 : 1; L.last = todayKey(); L.claimed = todayKey();
-    const rw = loginReward(L.streak); rw.fx();
+    const rw = loginReward(L.streak); rw.fx(); if (typeof vipOn === 'function' && vipOn()) { rw.fx(); toast('👑 VIP: double login reward', 'gold'); }
+    if (typeof earnGems === 'function') earnGems(L.streak % 7 === 0 ? 25 : 3, `day ${L.streak} login`);
     S.stats.bestLogin = Math.max(S.stats.bestLogin || 0, L.streak);
     toast(`Day ${L.streak} reward: ${rw.text}`, 'gold'); sound('cash'); if (L.streak % 7 === 0) celebrate('gold');
   },

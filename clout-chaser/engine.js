@@ -109,6 +109,7 @@ function migrate(s) {
 }
 function notify(type, who, text, extra = {}) {
   S.notifs.unshift({ id: uid(), d: S.day, type, who, text, read: false, ...extra });
+  if (typeof headsUp === 'function') headsUp(S.notifs[0]);
   if (S.notifs.length > 150) S.notifs.length = 150;
 }
 function wipeSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ } }
@@ -138,7 +139,7 @@ const teamPay = (k) => Math.round(TEAM[k].pay * (1 + ((S.teamLvl && S.teamLvl[k]
 const teamUpCost = (k) => Math.round(TEAM[k].pay * 4 * teamLvl(k) / 10) * 10;
 const teamSize = () => Object.keys(S.team).filter((k) => S.team[k]).length;
 const stamina = () => Math.min(150, Math.floor((((S && S.day) || 1) - 1) / 5) * 5); // +5 max energy every 5 days, up to +150
-function maxEnergy() { const m = 100 + 10 * tm('trainer') + 5 * (typeof hqLvl === 'function' ? hqLvl('gym') : 0) + (typeof legacyLvl === 'function' ? 10 * legacyLvl('energy') : 0) + stamina() + (S.bonusMaxE || 0) + Math.round(20 * tm('assistant')) + (S.owned.mansion ? 10 : 0) + (S.owned.island ? 10 : 0) + Math.round(SB('energy')); return S.injuredUntil && S.injuredUntil >= S.day ? Math.round(m * 0.6) : m; }
+function maxEnergy() { const m = 100 + 10 * tm('trainer') + 5 * (typeof hqLvl === 'function' ? hqLvl('gym') : 0) + (typeof legacyLvl === 'function' ? 10 * legacyLvl('energy') : 0) + stamina() + (S.bonusMaxE || 0) + Math.round(20 * tm('assistant')) + (S.owned.mansion ? 10 : 0) + (S.owned.island ? 10 : 0) + Math.round(SB('energy')) + (typeof vipOn === 'function' && vipOn() ? 20 : 0); return S.injuredUntil && S.injuredUntil >= S.day ? Math.round(m * 0.6) : m; }
 const energyCap = () => maxEnergy() + 60; // rewards can overcharge you past your normal max
 function gearQ(pid) {
   let q = 0;
@@ -151,7 +152,7 @@ function gearQ(pid) {
   if (pid !== 'chirp') q += 0.06 * tm('stylist');
   return q + SB('quality');
 }
-function reachBonus() { let r = 0.03 * (typeof hqLvl === 'function' ? hqLvl('server') : 0) + 0.08 * tm('analyst') + Math.min(0.1, Math.max(0, teamSize() - 3) * 0.01); /* dream-team synergy */ for (const it of SHOP) if (S.owned[it.id] && it.reach) r += it.reach; return r + SB('reach') + (typeof prestigeLvl === 'function' ? Math.min(0.2, 0.01 * prestigeLvl()) : 0); }
+function reachBonus() { let r = 0.03 * (typeof hqLvl === 'function' ? hqLvl('server') : 0) + 0.08 * tm('analyst') + Math.min(0.1, Math.max(0, teamSize() - 3) * 0.01); /* dream-team synergy */ for (const it of SHOP) if (S.owned[it.id] && it.reach) r += it.reach; return r + SB('reach') + (S.flags.gemBoost === S.day ? 0.5 : 0) + (typeof prestigeLvl === 'function' ? Math.min(0.2, 0.01 * prestigeLvl()) : 0); }
 function repLabel(r = S.rep) { return r >= 85 ? 'Beloved' : r >= 68 ? 'Respected' : r >= 50 ? 'Liked' : r >= 35 ? 'Mixed' : r >= 20 ? 'Sketchy' : 'Toxic'; }
 function repClass(r = S.rep) { return r >= 60 ? 'good' : r >= 35 ? 'warn' : 'bad'; }
 function heatLabel(h = S.heat) { return h >= 85 ? 'Imploding' : h >= 60 ? 'Scorching' : h >= 35 ? 'Heated' : h >= 12 ? 'Buzzing' : 'Calm'; }
@@ -886,6 +887,7 @@ function endDay() {
   if (S.collab && S.collab.until < S.day + 1) { if (S.collab.until <= S.day) { log(`Collab window with ${npcName(S.collab.npc)} expired.`, 'bad'); S.collab = null; } }
 
   // Posting streak: show up every day and you wake up hyped
+  if (S.lastPostDay !== S.day && S.streak && S.flags.streakShield) { S.flags.streakShield--; S.lastPostDay = S.day; lines.push(['🛡️ Streak shield saved your posting streak', 0]); }
   S.streak = S.lastPostDay === S.day ? (S.streak || 0) + 1 : 0;
   S.stats.bestStreak = Math.max(S.stats.bestStreak || 0, S.streak);
   const streakBonus = Math.min(30, S.streak * 5);
