@@ -275,6 +275,7 @@ A sixth platform, unlocked at 1K followers. Fans pay monthly for exclusive drops
   2. Run `python3 tools/photos.py`.
 
   Your character and props stay on top of a photo backdrop, like a Snapchat avatar over a real photo. Parody celebrities never get realistic portraits.
+- **The Canva photo pack:** 51 images (21 scenes, 9 cut-out pets, 21 character portraits) are generated in Canva. `images/DOWNLOAD.md` lists each one with its link and file name. `python3 tools/photos.py --optimize` shrinks them (scenes about 150 KB each) and rebuilds the list.
 
 ## Full screen and pop-ups
 - **Full screen.**
