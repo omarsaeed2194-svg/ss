@@ -130,6 +130,10 @@ than committing `.env.local`.
 
 ---
 
-This repo also contains [`personal-site/`](personal-site/README.md), a
-separate Next.js app: a personal website with an admin backend and a
-LinkedIn import.
+This repo also contains two separate Next.js apps:
+
+- [`personal-site/`](personal-site/README.md): a personal website with an
+  admin backend and a LinkedIn import.
+- [`smm-panel/`](smm-panel/README.md): an SMM reseller panel with a
+  storefront, customer dashboard, admin backend, provider integration and
+  the standard SMM API v2.

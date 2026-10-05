@@ -1,0 +1,26 @@
+{
+  "name": "smm-panel",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Social media marketing (SMM) reseller panel: storefront, customer dashboard, admin backend, upstream provider integration and a standard v2 API.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "next": "^14.2.35",
+    "pg": "^8.13.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "@types/pg": "^8.11.10",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.5.3"
+  }
+}
