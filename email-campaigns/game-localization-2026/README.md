@@ -8,6 +8,7 @@ https://localization.saudisoft.com/game-localization-adslp2026/?utm_source=email
 | File         | Purpose                                                    |
 | ------------ | ---------------------------------------------------------- |
 | `email.html` | The HTML email. Paste into your ESP's "code your own" editor. |
+| `email-mailchimp.html` | Same email with Mailchimp merge tags filled in. Paste this one into Mailchimp. |
 | `email.txt`  | Plain-text version. Send it as the text part of the email. |
 | `preview-desktop.png`, `preview-mobile.png` | Rendered previews (not part of the email). |
 
@@ -28,7 +29,12 @@ invites people to reply, so replies are leads too.
 
 ## Merge tags to replace
 
-The template uses neutral placeholders. Swap them for your ESP's tags before
+`email-mailchimp.html` already has the Mailchimp tags in place. In Mailchimp:
+Design email → Code your own → Paste in code, then leave the Preview text field
+blank (the preheader is built into the HTML) and turn off Mailchimp's Google
+Analytics link tracking so it doesn't add UTM tags on top of the ones in the links.
+
+`email.html` uses neutral placeholders. Swap them for your ESP's tags before
 sending:
 
 | Placeholder           | Mailchimp              | Brevo (Sendinblue) |
