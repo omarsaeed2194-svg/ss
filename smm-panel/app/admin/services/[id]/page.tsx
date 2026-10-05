@@ -6,7 +6,8 @@ import { one, query } from "@/lib/db";
 
 export const metadata = { title: "Edit service · Admin" };
 
-export default async function EditService({ params }: { params: { id: string } }) {
+export default async function EditService(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   await requireAdmin();
   const id = Number(params.id);
   if (!Number.isInteger(id)) notFound();

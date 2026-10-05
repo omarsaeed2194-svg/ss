@@ -1,6 +1,5 @@
 "use client";
 
-/// <reference types="react-dom/experimental" />
 import { useFormStatus } from "react-dom";
 
 export function SubmitButton({

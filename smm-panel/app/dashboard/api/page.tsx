@@ -9,7 +9,7 @@ export const metadata = { title: "API" };
 
 export default async function ApiPage() {
   const user = await requireUser();
-  const endpoint = `${baseUrl()}/api/v2`;
+  const endpoint = `${await baseUrl()}/api/v2`;
   return (
     <>
       <div className="page-head">

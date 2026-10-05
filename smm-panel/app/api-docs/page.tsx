@@ -19,7 +19,7 @@ export default async function PublicApiDocs() {
             <p>Standard SMM panel API (v2) — compatible with every major panel script and reseller bot.</p>
           </div>
         </div>
-        <ApiDocs endpoint={`${baseUrl()}/api/v2`} />
+        <ApiDocs endpoint={`${await baseUrl()}/api/v2`} />
       </main>
       <PublicFooter siteName={s.siteName} supportEmail={s.supportEmail} />
     </div>

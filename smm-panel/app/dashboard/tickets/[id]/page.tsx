@@ -8,7 +8,8 @@ import { TicketThread, type TicketMessage } from "@/components/TicketThread";
 import { requireUser } from "@/lib/auth";
 import { one, query } from "@/lib/db";
 
-export default async function TicketPage({ params }: { params: { id: string } }) {
+export default async function TicketPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const user = await requireUser();
   const id = Number(params.id);
   if (!Number.isInteger(id)) notFound();

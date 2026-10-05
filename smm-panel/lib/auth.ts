@@ -29,7 +29,7 @@ export async function createSession(userId: number) {
     `${SESSION_DAYS} days`,
   ]);
   await query("UPDATE users SET last_login_at = now() WHERE id = $1", [userId]);
-  cookies().set(SESSION_COOKIE, token, {
+  (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -39,13 +39,14 @@ export async function createSession(userId: number) {
 }
 
 export async function destroySession() {
-  const token = cookies().get(SESSION_COOKIE)?.value;
+  const jar = await cookies();
+  const token = jar.get(SESSION_COOKIE)?.value;
   if (token) await query("DELETE FROM sessions WHERE token_hash = $1", [sha256(token)]);
-  cookies().delete(SESSION_COOKIE);
+  jar.delete(SESSION_COOKIE);
 }
 
 export const getUser = cache(async (): Promise<User | null> => {
-  const token = cookies().get(SESSION_COOKIE)?.value;
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
   const user = await one<User>(
     `SELECT ${USER_COLUMNS} FROM sessions s JOIN users u ON u.id = s.user_id

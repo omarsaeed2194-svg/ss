@@ -33,7 +33,8 @@ interface Row {
   refill_status: string | null;
 }
 
-export default async function OrdersPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
+export default async function OrdersPage(props: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const searchParams = await props.searchParams;
   const user = await requireUser();
   const s = await getSettings();
   // Opportunistic refresh so statuses are current even without a cron job.

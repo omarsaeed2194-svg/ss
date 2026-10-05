@@ -13,7 +13,8 @@ import { getSettings } from "@/lib/settings";
 
 export const metadata = { title: "Provider · Admin" };
 
-export default async function AdminProvider({ params, searchParams }: { params: { id: string }; searchParams: Record<string, string | undefined> }) {
+export default async function AdminProvider(props: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
+  const [params, searchParams] = await Promise.all([props.params, props.searchParams]);
   await requireAdmin();
   const id = Number(params.id);
   if (!Number.isInteger(id)) notFound();

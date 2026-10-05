@@ -9,7 +9,8 @@ import { num } from "@/lib/format";
 
 export const metadata = { title: "Providers · Admin" };
 
-export default async function AdminProviders({ searchParams }: { searchParams: Record<string, string | undefined> }) {
+export default async function AdminProviders(props: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const searchParams = await props.searchParams;
   await requireAdmin();
   const providers = await query<{
     id: number;

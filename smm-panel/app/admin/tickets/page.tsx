@@ -8,7 +8,8 @@ import { query } from "@/lib/db";
 export const metadata = { title: "Tickets · Admin" };
 const PER_PAGE = 50;
 
-export default async function AdminTickets({ searchParams }: { searchParams: Record<string, string | undefined> }) {
+export default async function AdminTickets(props: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const searchParams = await props.searchParams;
   await requireAdmin();
   const page = pageOf(searchParams);
   const status = ["open", "answered", "closed"].includes(searchParams.status ?? "") ? searchParams.status! : "";

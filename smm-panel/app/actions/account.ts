@@ -47,7 +47,7 @@ export async function changePassword(fd: FormData): Promise<FormResult> {
   if (next !== String(fd.get("confirm") ?? "")) return { error: "The new passwords don't match." };
   await query("UPDATE users SET password_hash = $2 WHERE id = $1", [user.id, await hashPassword(next)]);
   // Sign out every other device.
-  const token = cookies().get(SESSION_COOKIE)?.value ?? "";
+  const token = (await cookies()).get(SESSION_COOKIE)?.value ?? "";
   await query("DELETE FROM sessions WHERE user_id = $1 AND token_hash <> $2", [user.id, sha256(token)]);
   return { ok: "Password updated. Other devices have been signed out." };
 }

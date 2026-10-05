@@ -11,7 +11,8 @@ import { one, query } from "@/lib/db";
 import { money, num, ORDER_STATUSES, SERVICE_TYPE_LABEL, STATUS_LABEL, type ServiceType } from "@/lib/format";
 import { getSettings } from "@/lib/settings";
 
-export default async function AdminOrder({ params }: { params: { id: string } }) {
+export default async function AdminOrder(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   await requireAdmin();
   const id = Number(params.id);
   if (!Number.isInteger(id)) notFound();

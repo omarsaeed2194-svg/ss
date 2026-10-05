@@ -13,7 +13,8 @@ import { getSettings } from "@/lib/settings";
 export const metadata = { title: "Orders · Admin" };
 const PER_PAGE = 50;
 
-export default async function AdminOrders({ searchParams }: { searchParams: Record<string, string | undefined> }) {
+export default async function AdminOrders(props: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const searchParams = await props.searchParams;
   await requireAdmin();
   const s = await getSettings();
   const page = pageOf(searchParams);

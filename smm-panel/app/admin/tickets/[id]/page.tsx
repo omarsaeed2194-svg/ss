@@ -10,7 +10,8 @@ import { one, query } from "@/lib/db";
 import { money } from "@/lib/format";
 import { getSettings } from "@/lib/settings";
 
-export default async function AdminTicket({ params }: { params: { id: string } }) {
+export default async function AdminTicket(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   await requireAdmin();
   const id = Number(params.id);
   if (!Number.isInteger(id)) notFound();

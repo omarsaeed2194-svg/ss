@@ -7,7 +7,8 @@ import { getSettings } from "@/lib/settings";
 
 export const metadata = { title: "New order" };
 
-export default async function NewOrderPage({ searchParams }: { searchParams: { service?: string } }) {
+export default async function NewOrderPage(props: { searchParams: Promise<{ service?: string }> }) {
+  const searchParams = await props.searchParams;
   const user = await requireUser();
   const [s, catalog, stats] = await Promise.all([
     getSettings(),

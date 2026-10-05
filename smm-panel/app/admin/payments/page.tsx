@@ -24,7 +24,8 @@ interface MethodRow {
   sort: number;
 }
 
-export default async function AdminPayments({ searchParams }: { searchParams: Record<string, string | undefined> }) {
+export default async function AdminPayments(props: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const searchParams = await props.searchParams;
   await requireAdmin();
   const s = await getSettings();
   const page = pageOf(searchParams);

@@ -1,10 +1,9 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { newOrder } from "@/app/actions/orders";
 import type { CatalogCategory } from "@/lib/catalog";
 import { chargeFor, money, num } from "@/lib/format";
-import { SubmitButton } from "./SubmitButton";
 
 export function OrderForm({ catalog, symbol, initialService }: { catalog: CatalogCategory[]; symbol: string; initialService?: number }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -15,6 +14,7 @@ export function OrderForm({ catalog, symbol, initialService }: { catalog: Catalo
   const [quantity, setQuantity] = useState("");
   const [comments, setComments] = useState("");
   const [result, setResult] = useState<{ error?: string; ok?: string }>();
+  const [pending, startTransition] = useTransition();
 
   const category = catalog.find((c) => c.id === catId);
   const service = category?.services.find((s) => s.id === serviceId);
@@ -45,14 +45,19 @@ export function OrderForm({ catalog, symbol, initialService }: { catalog: Catalo
       <form
         ref={formRef}
         className="card card-body stack"
-        action={async (fd) => {
-          const res = await newOrder(fd);
-          setResult(res);
-          if (res?.ok) {
-            setQuantity("");
-            setComments("");
-            formRef.current?.reset();
-          }
+        onSubmit={(e) => {
+          // Not <form action>: React 19 would reset the form even when the order is rejected.
+          e.preventDefault();
+          const fd = new FormData(e.currentTarget);
+          startTransition(async () => {
+            const res = await newOrder(fd);
+            setResult(res);
+            if (res?.ok) {
+              setQuantity("");
+              setComments("");
+              formRef.current?.reset();
+            }
+          });
         }}
       >
         <div className="field" style={{ position: "relative" }}>
@@ -139,9 +144,9 @@ export function OrderForm({ catalog, symbol, initialService }: { catalog: Catalo
         </div>
         {result?.error && <div className="alert alert-error">{result.error}</div>}
         {result?.ok && <div className="alert alert-success">{result.ok}</div>}
-        <SubmitButton className="btn btn-primary btn-lg btn-block" pendingText="Placing order…">
-          Place order
-        </SubmitButton>
+        <button type="submit" className="btn btn-primary btn-lg btn-block" disabled={pending}>
+          {pending ? "Placing order…" : "Place order"}
+        </button>
       </form>
 
       <div className="card">

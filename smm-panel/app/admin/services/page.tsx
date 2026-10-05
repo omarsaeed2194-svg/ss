@@ -10,7 +10,8 @@ import { getSettings } from "@/lib/settings";
 
 export const metadata = { title: "Services · Admin" };
 
-export default async function AdminServices({ searchParams }: { searchParams: Record<string, string | undefined> }) {
+export default async function AdminServices(props: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const searchParams = await props.searchParams;
   await requireAdmin();
   const s = await getSettings();
   const [categories, services] = await Promise.all([
