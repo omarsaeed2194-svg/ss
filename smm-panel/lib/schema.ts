@@ -245,7 +245,7 @@ export async function seed(q: Q) {
     const { rows } = await q.query<{ id: number; role: string }>("SELECT id, role FROM users WHERE email = $1", [email]);
     if (!rows[0]) {
       let username = "admin";
-      const taken = await q.query("SELECT 1 FROM users WHERE username = $1", [username]);
+      const taken = await q.query("SELECT 1 FROM users WHERE lower(username) = $1", [username]);
       if (taken.rows.length) username = `admin${Date.now().toString(36).slice(-4)}`;
       await q.query(
         `INSERT INTO users (username, email, password_hash, role, api_key) VALUES ($1, $2, $3, 'admin', $4)
@@ -253,7 +253,12 @@ export async function seed(q: Q) {
         [username, email, await hashPassword(password), newApiKey()]
       );
     } else if (rows[0].role !== "admin") {
-      await q.query("UPDATE users SET role = 'admin' WHERE id = $1", [rows[0].id]);
+      // Never promote: sign-up doesn't verify emails, so whoever registered this
+      // address first may not be the owner of ADMIN_EMAIL.
+      console.warn(
+        "ADMIN_EMAIL belongs to an existing customer account, which was NOT made admin. " +
+          "Set ADMIN_EMAIL to an address that isn't registered yet."
+      );
     }
   }
 }
