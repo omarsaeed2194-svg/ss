@@ -132,6 +132,21 @@ created automatically on first request.
 On a VPS: `npm ci && npm run build && npm start` (port 3000) behind nginx or
 Caddy for HTTPS, plus the cron line above.
 
+### The live deployment (Railway)
+
+The production site runs on Railway, in the project **smm-panel**:
+
+| Service | What it is |
+| --- | --- |
+| `smm-panel` | This app, built from this repo with root directory `/smm-panel`. Only changes under `smm-panel/` trigger a redeploy. Health check: `/`. |
+| `Postgres` | The database. The app's `DATABASE_URL` is the reference `${{Postgres.DATABASE_URL}}`, over Railway's private network. |
+| `order-sync` | A Railway Function on a `*/5 * * * *` cron that calls `/api/cron/sync`. Its `APP_URL` and `CRON_SECRET` are references to the `smm-panel` service. |
+
+Variables you set yourself on the `smm-panel` service (Variables tab), so
+they never pass through chat or git: `ADMIN_EMAIL`, `ADMIN_PASSWORD` and
+`CRON_SECRET`. The admin account is created on the first start after
+they're set.
+
 ## Security notes
 
 - Passwords are hashed with scrypt. Sessions are random tokens stored as
