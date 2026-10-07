@@ -12,16 +12,21 @@ https://localization.saudisoft.com/game-localization-adslp2026/?utm_source=email
 | `email.txt`  | Plain-text version. Send it as the text part of the email. |
 | `preview-desktop.png`, `preview-mobile.png` | Rendered previews (not part of the email). |
 
-## Subject lines (A/B test)
+## Subject line and preview text
 
-1. Is your game ready for Arabic players?
-2. Your game, in 100+ languages (with RTL done right)
-3. Broken RTL menus cost you players. Let's fix that.
-4. From strings to voice-over: game localization, handled
-5. Launch your game in MENA and beyond. Free quote inside.
+**Subject:** Translation alone doesn't ship a game
 
-**Preheader** (already in the HTML, shown in the inbox after the subject):
+**Preview text** (already in the HTML, shown in the inbox after the subject):
 Arabic RTL, native voice-over and in-game LQA from one team, in 100+ languages. Get a free quote for your game.
+
+Every subject below is under 50 characters so it isn't cut off on phones, and
+each one reads well next to the preview text above. For a Mailchimp A/B test on
+the subject line, use the first three:
+
+1. Translation alone doesn't ship a game
+2. Taking your game to the Middle East?
+3. Your game, in every language your players speak
+4. Broken menus and cut-off dialogue cost you players
 
 **Recommended sender:** a named person at Saudisoft (e.g. "Name from Saudisoft
 Localization"), with a reply-to address the games team monitors. The final CTA
