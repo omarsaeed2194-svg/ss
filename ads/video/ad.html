@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Jeep Bag Ad</title>
+<style>
+@font-face{font-family:Cairo;font-weight:400;src:url(fonts/cairo-arabic-400-normal.woff2) format('woff2');unicode-range:U+0600-06FF,U+0750-077F,U+0870-08FF,U+200C-200E,U+2010-2011,U+FB50-FDFF,U+FE70-FEFC}
+@font-face{font-family:Cairo;font-weight:700;src:url(fonts/cairo-arabic-700-normal.woff2) format('woff2');unicode-range:U+0600-06FF,U+0750-077F,U+0870-08FF,U+200C-200E,U+2010-2011,U+FB50-FDFF,U+FE70-FEFC}
+@font-face{font-family:Cairo;font-weight:900;src:url(fonts/cairo-arabic-900-normal.woff2) format('woff2');unicode-range:U+0600-06FF,U+0750-077F,U+0870-08FF,U+200C-200E,U+2010-2011,U+FB50-FDFF,U+FE70-FEFC}
+@font-face{font-family:Cairo;font-weight:400;src:url(fonts/cairo-latin-400-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+2000-206F,U+20AC,U+2122}
+@font-face{font-family:Cairo;font-weight:700;src:url(fonts/cairo-latin-700-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+2000-206F,U+20AC,U+2122}
+@font-face{font-family:Cairo;font-weight:900;src:url(fonts/cairo-latin-900-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+2000-206F,U+20AC,U+2122}
+
+html,body{margin:0;background:#0a0c08}
+#stage{position:relative;width:1080px;height:1920px;overflow:hidden;font-family:Cairo,sans-serif;
+  background:radial-gradient(120% 80% at 50% 45%,#2a3122 0%,#161a12 55%,#0a0c08 100%)}
+#tex{position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.025) 0 2px,transparent 2px 22px)}
+#glow{position:absolute;left:90px;top:470px;width:900px;height:900px;border-radius:50%;
+  background:radial-gradient(circle,rgba(226,184,101,.22) 0%,rgba(226,184,101,0) 65%)}
+#floor{position:absolute;left:0;right:0;top:1180px;bottom:0;background:linear-gradient(#0000,#00000080)}
+.tint{position:absolute;inset:0;opacity:0}
+#tintRed{background:radial-gradient(90% 60% at 50% 50%,rgba(255,70,70,.0),rgba(255,70,70,.22))}
+#flash{position:absolute;inset:0;background:#fff;opacity:0}
+.abs{position:absolute}
+svg{display:block;overflow:visible}
+
+.cap{position:absolute;left:40px;right:40px;text-align:center;color:#fff;font-weight:900;line-height:1.28;
+  text-shadow:0 8px 30px rgba(0,0,0,.55);opacity:0}
+.xl{font-size:156px}.l{font-size:100px}.m{font-size:78px}.s{font-size:58px;font-weight:700}
+.sand{color:#e2b865}.red{color:#ff5a5a}.green{color:#3ddc84}.orange{color:#ff7a1a}
+
+#table{left:110px;top:1180px;width:860px;height:150px;opacity:0}
+.eyeline{left:170px;top:680px;width:760px;height:0;border-top:7px dashed}
+.eyeicon{left:52px;top:645px}
+#eyeRed,#eyeGreen{position:absolute;inset:0;opacity:0;pointer-events:none}
+#gap{left:880px;top:690px;transform-origin:50% 0}
+
+#laptop{left:300px;top:880px;opacity:0}
+#stand{left:300px;top:980px;transform:translateX(900px)}
+#standLegs{transform-box:fill-box;transform-origin:50% 100%}
+#standTop{transform-box:fill-box}
+#bag{left:310px;top:690px;transform:translateY(-1200px)}
+#heavy{left:330px;top:770px;transform:translateY(-1200px)}
+#heavyTag{left:640px;top:730px;padding:6px 34px;border-radius:50px;background:#ff5a5a;color:#fff;font-weight:900;font-size:58px;opacity:0}
+
+.item{opacity:0}
+#slab{left:350px;top:850px;width:380px;height:240px;border-radius:22px;background:linear-gradient(135deg,#c4cbd3,#8f98a3);box-shadow:inset 0 0 0 6px #aab2bb}
+#slab::after{content:"";position:absolute;left:170px;top:100px;width:40px;height:40px;border-radius:50%;background:#e9edf1;opacity:.7}
+#phone{left:620px;top:910px;width:96px;height:176px;border-radius:20px;background:#1d2228;box-shadow:inset 0 0 0 6px #9aa3ad}
+#phone::after{content:"";position:absolute;left:12px;top:16px;right:12px;bottom:16px;border-radius:10px;background:linear-gradient(160deg,#ffb35c,#ff7a1a)}
+#notebook{left:380px;top:920px;width:200px;height:150px;border-radius:12px;background:#e8d9b5;box-shadow:inset 18px 0 0 #b9925a}
+
+.check{opacity:0}
+#checkA{left:700px;top:790px}
+#checkB{left:930px;top:610px}
+
+#chips{position:absolute;left:30px;right:30px;top:420px;display:flex;justify-content:center;gap:22px}
+.chip{padding:8px 34px;border-radius:60px;border:4px solid #e2b865;background:rgba(226,184,101,.14);
+  color:#fff;font-size:54px;font-weight:700;opacity:0;white-space:nowrap}
+
+.spark{opacity:0}
+#plus{left:490px;top:870px;width:110px;text-align:center;font-size:150px;font-weight:900;color:#e2b865;opacity:0;line-height:1}
+#price{position:absolute;left:0;right:0;top:540px;text-align:center;opacity:0}
+#price .now{display:inline-block;padding:6px 40px;border-radius:24px;background:#ff7a1a;color:#fff;font-size:80px;font-weight:900}
+#price .old{display:inline-block;margin-inline-start:22px;color:#c9c9c9;font-size:58px;font-weight:700;text-decoration:line-through}
+#cod{position:absolute;left:0;right:0;top:680px;text-align:center;color:#3ddc84;font-size:58px;font-weight:900;opacity:0}
+#btn{position:absolute;left:190px;right:190px;top:1140px;padding:10px 0;border-radius:80px;text-align:center;
+  background:linear-gradient(180deg,#ff8f3a,#ff6a00);color:#fff;font-size:86px;font-weight:900;
+  box-shadow:0 18px 50px rgba(255,106,0,.45);opacity:0}
+#url{position:absolute;left:0;right:0;top:1310px;text-align:center;color:#d8d8d8;font-size:46px;font-weight:700;direction:ltr;opacity:0}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="tex"></div>
+  <div id="glow"></div>
+  <div id="floor"></div>
+  <div class="tint" id="tintRed"></div>
+
+  <!-- scene 2/4 props -->
+  <svg id="table" class="abs" viewBox="0 0 860 150" width="860" height="150">
+    <rect x="0" y="0" width="860" height="30" rx="10" fill="#7a5a3c"/>
+    <rect x="0" y="0" width="860" height="8" rx="4" fill="#9c7752"/>
+    <rect x="60" y="30" width="26" height="120" fill="#5e442d"/>
+    <rect x="774" y="30" width="26" height="120" fill="#5e442d"/>
+  </svg>
+
+  <div id="eyeRed">
+    <svg class="abs eyeicon" viewBox="0 0 110 70" width="110" height="70"><path d="M5 35 Q55 -15 105 35 Q55 85 5 35Z" fill="#fff"/><circle cx="55" cy="35" r="19" fill="#ff5a5a"/><circle cx="55" cy="35" r="8" fill="#111"/></svg>
+    <div class="abs eyeline" style="border-color:#ff5a5a"></div>
+    <svg id="gap" class="abs" viewBox="0 0 60 190" width="60" height="190">
+      <line x1="30" y1="14" x2="30" y2="176" stroke="#ff5a5a" stroke-width="9" stroke-linecap="round"/>
+      <path d="M10 34 L30 8 L50 34" fill="none" stroke="#ff5a5a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M10 156 L30 182 L50 156" fill="none" stroke="#ff5a5a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+  <div id="eyeGreen">
+    <svg class="abs eyeicon" viewBox="0 0 110 70" width="110" height="70"><path d="M5 35 Q55 -15 105 35 Q55 85 5 35Z" fill="#fff"/><circle cx="55" cy="35" r="19" fill="#3ddc84"/><circle cx="55" cy="35" r="8" fill="#111"/></svg>
+    <div class="abs eyeline" style="border-color:#3ddc84"></div>
+  </div>
+
+  <!-- foldable stand -->
+  <svg id="stand" class="abs" viewBox="0 0 480 200" width="480" height="200">
+    <g id="standLegs">
+      <line x1="70" y1="22" x2="410" y2="186" stroke="#9aa3ad" stroke-width="16" stroke-linecap="round"/>
+      <line x1="410" y1="22" x2="70" y2="186" stroke="#c4cbd3" stroke-width="16" stroke-linecap="round"/>
+      <circle cx="240" cy="104" r="13" fill="#6b7480"/>
+    </g>
+    <rect x="40" y="184" width="400" height="16" rx="8" fill="#8f98a3"/>
+    <g id="standTop">
+      <rect x="20" y="0" width="440" height="24" rx="12" fill="#d5dae0"/>
+      <rect x="28" y="2" width="424" height="7" rx="3.5" fill="#fff" opacity=".6"/>
+    </g>
+  </svg>
+
+  <!-- open laptop -->
+  <svg id="laptop" class="abs" viewBox="0 0 480 300" width="480" height="300">
+    <defs><linearGradient id="scr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2f6bff"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs>
+    <rect x="40" y="0" width="400" height="262" rx="18" fill="#2b3036" stroke="#9aa3ad" stroke-width="6"/>
+    <rect x="58" y="18" width="364" height="226" rx="8" fill="url(#scr)"/>
+    <rect x="250" y="40" width="150" height="16" rx="8" fill="#fff" opacity=".85"/>
+    <rect x="170" y="70" width="230" height="12" rx="6" fill="#fff" opacity=".45"/>
+    <rect x="200" y="92" width="200" height="12" rx="6" fill="#fff" opacity=".45"/>
+    <rect x="280" y="130" width="120" height="90" rx="10" fill="#fff" opacity=".22"/>
+    <rect x="80" y="130" width="185" height="90" rx="10" fill="#fff" opacity=".22"/>
+    <path d="M0 268 H480 L462 296 Q460 300 454 300 H26 Q20 300 18 296 Z" fill="#c4cbd3"/>
+    <rect x="200" y="268" width="80" height="8" rx="4" fill="#8f98a3"/>
+  </svg>
+
+  <!-- things that go into the bag (behind it) -->
+  <div id="slab" class="abs item"></div>
+  <div id="notebook" class="abs item"></div>
+  <div id="phone" class="abs item"></div>
+
+  <!-- heavy old bag (problem) -->
+  <svg id="heavy" class="abs" viewBox="0 0 420 400" width="420" height="400">
+    <path d="M120 120 Q120 40 210 40 Q300 40 300 120" fill="none" stroke="#3a3f45" stroke-width="24" stroke-linecap="round"/>
+    <path d="M40 150 Q30 110 80 108 H340 Q390 110 380 150 L394 330 Q398 384 340 386 H80 Q22 384 26 330 Z" fill="#5d636b"/>
+    <path d="M62 168 H358" stroke="#454a51" stroke-width="10" stroke-dasharray="14 8"/>
+    <rect x="140" y="210" width="140" height="96" rx="16" fill="#4a4f56"/>
+    <path d="M60 340 Q210 312 360 340" stroke="#4a4f56" stroke-width="8" fill="none"/>
+  </svg>
+  <div id="heavyTag" class="abs">تقيلة!</div>
+
+  <!-- the Jeep crossbody bag -->
+  <svg id="bag" class="abs" viewBox="0 0 460 460" width="460" height="460">
+    <path id="strap" d="M60 170 C 60 -40, 400 -40, 400 170" fill="none" stroke="#2c3320" stroke-width="26" stroke-linecap="round"/>
+    <rect x="44" y="150" width="32" height="34" rx="8" fill="none" stroke="#c9a865" stroke-width="7"/>
+    <rect x="384" y="150" width="32" height="34" rx="8" fill="none" stroke="#c9a865" stroke-width="7"/>
+    <rect x="20" y="130" width="420" height="300" rx="34" fill="#3d4630"/>
+    <rect x="34" y="144" width="392" height="272" rx="26" fill="none" stroke="#c9a865" stroke-width="3" stroke-dasharray="12 9" opacity=".7"/>
+    <path d="M20 164 Q20 130 54 130 H406 Q440 130 440 164 V300 Q440 330 410 334 Q230 356 50 334 Q20 330 20 300 Z" fill="#4c5838"/>
+    <path d="M38 168 Q38 148 58 148 H402 Q422 148 422 168 V296 Q422 314 404 317 Q230 338 56 317 Q38 314 38 296 Z" fill="none" stroke="#c9a865" stroke-width="3" stroke-dasharray="12 9" opacity=".8"/>
+    <rect x="110" y="292" width="44" height="100" rx="8" fill="#b8955a"/>
+    <rect x="306" y="292" width="44" height="100" rx="8" fill="#b8955a"/>
+    <rect x="102" y="326" width="60" height="38" rx="7" fill="none" stroke="#e8e2d0" stroke-width="7"/>
+    <rect x="298" y="326" width="60" height="38" rx="7" fill="none" stroke="#e8e2d0" stroke-width="7"/>
+    <rect x="176" y="186" width="108" height="60" rx="10" fill="#c9a865"/>
+    <rect x="184" y="194" width="92" height="44" rx="7" fill="none" stroke="#7a6436" stroke-width="2.5" stroke-dasharray="6 4"/>
+  </svg>
+
+  <svg id="checkA" class="abs check" viewBox="0 0 120 120" width="120" height="120"><circle cx="60" cy="60" r="56" fill="#3ddc84"/><path d="M34 62 L52 80 L88 42" fill="none" stroke="#fff" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <svg id="checkB" class="abs check" viewBox="0 0 120 120" width="110" height="110"><circle cx="60" cy="60" r="56" fill="#3ddc84"/><path d="M34 62 L52 80 L88 42" fill="none" stroke="#fff" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/></svg>
+
+  <svg class="abs spark" style="left:250px;top:700px" viewBox="0 0 60 60" width="70" height="70"><path d="M30 0 L36 24 L60 30 L36 36 L30 60 L24 36 L0 30 L24 24Z" fill="#e2b865"/></svg>
+  <svg class="abs spark" style="left:770px;top:760px" viewBox="0 0 60 60" width="56" height="56"><path d="M30 0 L36 24 L60 30 L36 36 L30 60 L24 36 L0 30 L24 24Z" fill="#fff"/></svg>
+  <svg class="abs spark" style="left:220px;top:1050px" viewBox="0 0 60 60" width="48" height="48"><path d="M30 0 L36 24 L60 30 L36 36 L30 60 L24 36 L0 30 L24 24Z" fill="#fff"/></svg>
+  <svg class="abs spark" style="left:800px;top:1030px" viewBox="0 0 60 60" width="66" height="66"><path d="M30 0 L36 24 L60 30 L36 36 L30 60 L24 36 L0 30 L24 24Z" fill="#e2b865"/></svg>
+
+  <div id="plus" class="abs">+</div>
+
+  <!-- captions: same lines as the voice-over script -->
+  <div class="cap xl orange" id="t1" style="top:330px">استنى!</div>
+  <div class="cap l" id="t2" style="top:270px">لو اللابتوب معاك<br>في كل حتة..</div>
+  <div class="cap m sand" id="t3" style="top:560px">الفيديو ده عشانك</div>
+
+  <div class="cap l" id="t4" style="top:260px">الشغل على اللابتوب<br>وهو واطي قدامك</div>
+  <div class="cap m red" id="t5" style="top:530px">بيتعب الرقبة والضهر</div>
+  <div class="cap l" id="t6" style="top:290px">والشنط التقيلة</div>
+  <div class="cap m red" id="t7" style="top:440px">بتزوّد الطين بلة!</div>
+
+  <div class="cap m" id="t8" style="top:270px">عشان كده جبنالك</div>
+  <div class="cap xl sand" id="t9" style="top:370px">طقم Jeep</div>
+  <div class="cap l" id="t10" style="top:320px">شنطة <span class="sand">كروس</span> عملية</div>
+  <div class="cap l" id="t11" style="top:320px">بتتلبس على <span class="sand">كتفك</span></div>
+  <div class="cap l" id="t12" style="top:250px">تاخد اللابتوب<br>وحاجتك كلها</div>
+  <div class="cap l green" id="t13" style="top:320px">وإيدك فاضية</div>
+
+  <div class="cap l" id="t14" style="top:320px">ومعاها <span class="sand">ستاند</span> بيتطبق</div>
+  <div class="cap l" id="t15" style="top:320px">تفتحه في <span class="sand">ثانية</span></div>
+  <div class="cap l" id="t16" style="top:250px">اللابتوب يعلى<br><span class="green">لمستوى عينك</span></div>
+  <div class="cap l" id="t17" style="top:250px">وتقعد مرتاح</div>
+  <div id="chips"><div class="chip" id="c1">في الكافيه</div><div class="chip" id="c2">في الجامعة</div><div class="chip" id="c3">في الشغل</div></div>
+
+  <div class="cap l" id="t18" style="top:250px">تطبقه وتحطه<br>في الشنطة</div>
+  <div class="cap l" id="t19" style="top:250px">ومكتبك معاك<br><span class="sand">في أي مكان</span></div>
+
+  <div class="cap xl sand" id="t20" style="top:240px">الطقم كامل</div>
+  <div class="cap s" id="t21" style="top:440px">شنطة كروس + ستاند لابتوب</div>
+  <div id="price"><span class="now"></span><span class="old"></span></div>
+  <div id="cod">الدفع عند الاستلام</div>
+  <div id="btn">اطلب دلوقتي</div>
+  <div id="url">baityeg.youcan.store</div>
+
+  <div id="flash"></div>
+</div>
+
+<script>
+// Optional offer details come from the query string, e.g. ad.html?price=499&old=699&cod=1
+const q = new URLSearchParams(location.search);
+const PRICE = q.get('price'), OLD = q.get('old'), COD = q.get('cod') === '1';
+if (PRICE) {
+  document.querySelector('#price .now').textContent = `بـ ${PRICE} جنيه بس`;
+  if (OLD) document.querySelector('#price .old').textContent = `بدل ${OLD}`;
+}
+
+const $ = id => document.getElementById(id);
+function A(el, kf, t, d, o = {}) {
+  (typeof el === 'string' ? $(el) : el).animate(kf, {
+    delay: t * 1000, duration: d * 1000, fill: o.fill || 'both',
+    easing: o.ease || 'cubic-bezier(.2,.8,.2,1)', iterations: o.iter || 1, direction: o.dir || 'normal'
+  });
+}
+const IN = {
+  up:   [{opacity: 0, transform: 'translateY(50px)'}, {opacity: 1, transform: 'translateY(0)'}],
+  pop:  [{opacity: 0, transform: 'scale(.5)'}, {opacity: 1, transform: 'scale(1.1)', offset: .65}, {opacity: 1, transform: 'scale(1)'}],
+  slam: [{opacity: 0, transform: 'scale(2)'}, {opacity: 1, transform: 'scale(.94)', offset: .7}, {opacity: 1, transform: 'scale(1)'}],
+};
+const FADE = [{opacity: 1}, {opacity: 0}];
+// Enter at tin; leave so the next line can take its place at tout. Enter animations fill
+// both ways and exits fill forwards only, so an exit never leaks back before it starts.
+function show(id, tin, tout, type = 'up', d = .4) {
+  A(id, IN[type], tin, d);
+  if (tout != null) A(id, [{opacity: 1, transform: 'translateY(0)'}, {opacity: 0, transform: 'translateY(-30px)'}], tout - .2, .2, {fill: 'forwards', ease: 'ease-in'});
+}
+const flash = (t, a = .3) => A('flash', [{opacity: 0}, {opacity: a}, {opacity: 0}], t, .35, {fill: 'none'});
+const shake = t => A('stage', [{transform: 'translate(0,0)'}, {transform: 'translate(-14px,10px)'}, {transform: 'translate(12px,-8px)'}, {transform: 'translate(-8px,6px)'}, {transform: 'translate(0,0)'}], t, .3, {fill: 'none', ease: 'linear'});
+
+A('glow', [{transform: 'scale(1)'}, {transform: 'scale(1.12)'}], 0, 2, {iter: 15, dir: 'alternate', ease: 'ease-in-out'});
+
+// 0–3s  hook
+flash(0, .5);
+show('t1', .1, 1.35, 'slam', .45);
+show('t2', 1.25, 3.0);
+show('t3', 2.1, 3.0, 'pop');
+A('laptop', [{opacity: 0, transform: 'translateY(-130px) scale(.3) rotate(-14deg)'}, {opacity: 1, transform: 'translateY(-130px) scale(1.06) rotate(3deg)', offset: .7}, {opacity: 1, transform: 'translateY(-130px) scale(1) rotate(0)'}], .25, .65);
+
+// 3–8s  problem
+A('tintRed', [{opacity: 0}, {opacity: 1}], 3.0, .6);
+A('tintRed', FADE, 7.8, .3, {fill: 'forwards'});
+A('table', [{opacity: 0, transform: 'translateY(90px)'}, {opacity: 1, transform: 'translateY(0)'}], 2.65, .45);
+A('laptop', [{opacity: 1, transform: 'translateY(-130px)'}, {opacity: 1, transform: 'translateY(14px)', offset: .75}, {opacity: 1, transform: 'translateY(0)'}], 2.75, .45, {fill: 'forwards', ease: 'ease-in'});
+show('t4', 3.05, 5.75);
+show('t5', 4.1, 5.75, 'pop');
+A('eyeRed', [{opacity: 0}, {opacity: 1}], 3.6, .35);
+A('gap', [{transform: 'scaleY(0)'}, {transform: 'scaleY(1)'}], 3.9, .45);
+A('eyeRed', FADE, 5.55, .25, {fill: 'forwards'});
+A('laptop', FADE, 5.55, .25, {fill: 'forwards'});
+A('table', FADE, 5.55, .25, {fill: 'forwards'});
+show('t6', 5.8, 8.0);
+show('t7', 6.6, 8.0, 'pop');
+A('heavy', [{transform: 'translateY(-1200px)'}, {transform: 'translateY(0)'}], 5.85, .4, {ease: 'cubic-bezier(.55,0,1,.45)'});
+A('heavy', [{transform: 'translateY(0) scale(1.08,.88)'}, {transform: 'translateY(0) scale(1)'}], 6.25, .3, {fill: 'forwards', ease: 'ease-out'});
+shake(6.25);
+A('heavyTag', [{opacity: 0, transform: 'rotate(-8deg) scale(.4)'}, {opacity: 1, transform: 'rotate(-8deg) scale(1.15)', offset: .7}, {opacity: 1, transform: 'rotate(-8deg) scale(1)'}], 6.4, .35);
+A('heavy', [{opacity: 1}, {opacity: 0}], 7.75, .25, {fill: 'forwards'});
+A('heavyTag', FADE, 7.75, .25, {fill: 'forwards'});
+
+// 8–16s  the bag
+flash(8.0, .35);
+show('t8', 8.05, 10.35);
+show('t9', 8.45, 10.35, 'slam', .5);
+A('bag', [{transform: 'translateY(-1200px) rotate(-14deg)'}, {transform: 'translateY(30px) rotate(6deg)', offset: .6}, {transform: 'translateY(-10px) rotate(-3deg)', offset: .8}, {transform: 'translateY(0) rotate(0)'}], 8.3, .9, {ease: 'ease-out'});
+show('t10', 10.4, 12.0);
+A('bag', [{transform: 'scale(1)'}, {transform: 'scale(1.06)'}, {transform: 'scale(1)'}], 10.45, .4, {fill: 'forwards'});
+show('t11', 12.0, 13.5);
+A('strap', [{stroke: '#2c3320'}, {stroke: '#e2b865', offset: .2}, {stroke: '#e2b865', offset: .8}, {stroke: '#2c3320'}], 12.05, 1.4);
+A('bag', [{transform: 'rotate(0)'}, {transform: 'rotate(-6deg)', offset: .3}, {transform: 'rotate(4deg)', offset: .65}, {transform: 'rotate(0)'}], 12.1, 1.0, {fill: 'forwards', ease: 'ease-in-out'});
+show('t12', 13.5, 15.0);
+A('slab', [{opacity: 0, transform: 'translateY(-330px)'}, {opacity: 1, transform: 'translateY(-330px)', offset: .3}, {opacity: 1, transform: 'translateY(0)'}], 13.6, .75, {ease: 'ease-in'});
+A('notebook', [{opacity: 0, transform: 'translateY(-400px)'}, {opacity: 1, transform: 'translateY(-400px)', offset: .3}, {opacity: 1, transform: 'translateY(0)'}], 14.05, .7, {ease: 'ease-in'});
+A('phone', [{opacity: 0, transform: 'translateY(-420px)'}, {opacity: 1, transform: 'translateY(-420px)', offset: .3}, {opacity: 1, transform: 'translateY(0)'}], 14.4, .65, {ease: 'ease-in'});
+for (const id of ['slab', 'notebook', 'phone']) A(id, FADE, 15.8, .1, {fill: 'forwards'});
+A('bag', [{transform: 'translateY(0)'}, {transform: 'translateY(16px)'}, {transform: 'translateY(0)'}], 14.35, .3, {fill: 'forwards'});
+show('t13', 15.0, 16.0, 'pop');
+A('checkA', IN.pop, 15.05, .4);
+A('checkA', FADE, 15.8, .2, {fill: 'forwards'});
+A('bag', [{transform: 'translateX(0)'}, {transform: 'translateX(-1050px)'}], 15.95, .45, {fill: 'forwards', ease: 'ease-in'});
+
+// 16–23s  the stand
+flash(16.0, .25);
+show('t14', 16.05, 18.0);
+A('table', [{opacity: 0, transform: 'translateY(90px)'}, {opacity: 1, transform: 'translateY(0)'}], 16.2, .45, {fill: 'forwards'});
+A('stand', [{transform: 'translateX(900px)'}, {transform: 'translateX(0)'}], 16.35, .55);
+show('t15', 18.0, 19.5);
+A('standLegs', [{transform: 'scaleY(.06)'}, {transform: 'scaleY(1.06)', offset: .75}, {transform: 'scaleY(1)'}], 18.2, .55);
+A('standTop', [{transform: 'translateY(160px)'}, {transform: 'translateY(-10px)', offset: .75}, {transform: 'translateY(0)'}], 18.2, .55);
+show('t16', 19.5, 21.0);
+A('laptop', [{opacity: 0, transform: 'translateY(-330px)'}, {opacity: 1, transform: 'translateY(-330px)', offset: .2}, {opacity: 1, transform: 'translateY(-200px)'}], 19.4, .4, {fill: 'forwards', ease: 'ease-in'});
+A('eyeGreen', [{opacity: 0}, {opacity: 1}], 19.75, .35);
+A('checkB', IN.pop, 20.3, .4);
+show('t17', 21.0, 23.0);
+A('c1', IN.pop, 21.2, .35); A('c2', IN.pop, 21.55, .35); A('c3', IN.pop, 21.9, .35);
+for (const id of ['c1', 'c2', 'c3', 'checkB', 'eyeGreen']) A(id, FADE, 22.8, .2, {fill: 'forwards'});
+
+// 23–26s  fold it and pack it
+flash(23.0, .2);
+show('t18', 23.0, 24.8);
+A('laptop', [{opacity: 1, transform: 'translateY(-200px)'}, {opacity: 0, transform: 'translateY(-480px)'}], 23.0, .4, {fill: 'forwards', ease: 'ease-in'});
+A('table', FADE, 23.75, .3, {fill: 'forwards'});
+A('standLegs', [{transform: 'scaleY(1)'}, {transform: 'scaleY(.06)'}], 23.35, .4, {fill: 'forwards', ease: 'ease-in-out'});
+A('standTop', [{transform: 'translateY(0)'}, {transform: 'translateY(160px)'}], 23.35, .4, {fill: 'forwards', ease: 'ease-in-out'});
+A('stand', [{transform: 'translate(0,0) scale(1)'}, {transform: 'translate(0,-560px) scale(.8)'}], 23.75, .4, {fill: 'forwards', ease: 'ease-in-out'});
+A('bag', [{transform: 'translateX(1050px)'}, {transform: 'translateX(0)'}], 23.95, .4, {fill: 'forwards'});
+A('stand', [{transform: 'translate(0,-560px) scale(.8)'}, {transform: 'translate(0,-260px) scale(.8)'}], 24.35, .35, {fill: 'forwards', ease: 'ease-in'});
+A('bag', [{transform: 'translateY(0)'}, {transform: 'translateY(18px) scale(1.03,.97)'}, {transform: 'translateY(0)'}], 24.7, .3, {fill: 'forwards'});
+show('t19', 24.8, 26.0);
+document.querySelectorAll('.spark').forEach((s, i) => {
+  A(s, [{opacity: 0, transform: 'scale(0) rotate(0)'}, {opacity: 1, transform: 'scale(1.2) rotate(45deg)', offset: .4}, {opacity: 0, transform: 'scale(.6) rotate(90deg)'}], 24.85 + i * .12, .8, {fill: 'none'});
+});
+
+// 26–30s  call to action
+flash(26.0, .3);
+show('t20', 26.05, null, 'slam', .5);
+show('t21', 26.4, null);
+A('bag', [{transform: 'translate(0,0) scale(1)'}, {transform: 'translate(-240px,0) scale(.7)'}], 26.05, .55, {fill: 'forwards'});
+A('stand', [{transform: 'translate(0,-260px) scale(.8)'}, {transform: 'translate(265px,-90px) scale(.66)'}], 26.15, .55, {fill: 'forwards'});
+A('standLegs', [{transform: 'scaleY(.06)'}, {transform: 'scaleY(1)'}], 26.6, .4, {fill: 'forwards', ease: 'cubic-bezier(.3,1.6,.5,1)'});
+A('standTop', [{transform: 'translateY(160px)'}, {transform: 'translateY(0)'}], 26.6, .4, {fill: 'forwards', ease: 'cubic-bezier(.3,1.6,.5,1)'});
+A('plus', IN.pop, 26.55, .4);
+if (PRICE) A('price', IN.pop, 26.9, .45);
+if (COD) A('cod', IN.up, 27.1, .4);
+A('btn', IN.pop, 27.25, .45);
+A('btn', [{transform: 'scale(1)'}, {transform: 'scale(1.07)'}], 27.8, .4, {fill: 'forwards', iter: 6, dir: 'alternate', ease: 'ease-in-out'});
+A('url', IN.up, 27.55, .4);
+
+// Render mode: freeze the timeline so render.mjs can step through it frame by frame.
+const RENDER = q.has('render');
+window.__ready = document.fonts.ready.then(() => {
+  if (RENDER) document.getAnimations().forEach(a => a.pause());
+  return true;
+});
+window.seek = t => { for (const a of document.getAnimations()) a.currentTime = t * 1000; };
+</script>
+</body>
+</html>
