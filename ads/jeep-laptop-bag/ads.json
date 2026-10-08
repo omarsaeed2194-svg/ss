@@ -1,0 +1,227 @@
+{
+  "product": {
+    "store_ar": "بيتي",
+    "store_latin": "Baity",
+    "offer_name": "عرض اللابتوب",
+    "bag_label": "شنطة Jeep كروس",
+    "stand_label": "ستاند لابتوب",
+    "price": "",
+    "old_price": "",
+    "currency": "جنيه",
+    "cash_on_delivery": true,
+    "home_delivery": true
+  },
+  "ads": {
+    "v1_main": {
+      "name": "الإعلان الأساسي (~30 ثانية)",
+      "scenes": [
+        {
+          "visual": "hook",
+          "title": "بتشتغل على اللابتوب\nكل يوم؟",
+          "lines": [
+            {
+              "text": "انت بتشتغل على اللابتوب كل يوم؟",
+              "franco": "inta bitishtaghal 3ala-llabtoob kull yoom?"
+            }
+          ]
+        },
+        {
+          "visual": "duo",
+          "title": "عرض اللابتوب",
+          "lines": [
+            {
+              "text": "عرض اللابتوب من بيتي:",
+              "franco": "3arD illabtoob min beeti:"
+            },
+            {
+              "text": "شنطة Jeep كروس + ستاند لابتوب",
+              "say": "شنطة جيب كروس، ومعاها ستاند لابتوب.",
+              "franco": "shanTit Jiib kroos, wi ma3aaha istand labtoob."
+            }
+          ]
+        },
+        {
+          "visual": "bag",
+          "title": "شنطة Jeep كروس",
+          "lines": [
+            {
+              "text": "تشيلها في إيدك أو كروس على كتفك",
+              "franco": "tshiilha fi 2iidak 2aw kroos 3ala kitfak."
+            },
+            {
+              "text": "وفيها سوستة قدام لحاجاتك الصغيرة",
+              "franco": "wi fiiha susta 2uddaam li7agaatak iSSughayyara."
+            }
+          ]
+        },
+        {
+          "visual": "stand",
+          "title": "ستاند بيعلّي الشاشة",
+          "lines": [
+            {
+              "text": "والستاند بيعلّي الشاشة",
+              "franco": "wi-listand bi3alli shshaasha,"
+            },
+            {
+              "text": "فتقعد مفرود ورقبتك مرتاحة",
+              "franco": "fa to23ud mafruud wi ra2abtak mirtaa7a."
+            }
+          ]
+        },
+        {
+          "visual": "fold",
+          "title": "بيتطبق في ثواني",
+          "lines": [
+            {
+              "text": "ولما تخلص، تطبقه وتاخده معاك في أي حتة",
+              "franco": "wi lamma tikhallaS, tiTab2u wi takhdu ma3aak fi 2ayy 7itta."
+            }
+          ]
+        },
+        {
+          "visual": "cta",
+          "title": "اطلب العرض دلوقتي",
+          "lines": [
+            {
+              "text": "اطلب العرض دلوقتي من بيتي",
+              "franco": "2iTlab il3arD dilwa2ti min beeti,"
+            },
+            {
+              "text": "ويوصلك لحد باب البيت!",
+              "franco": "wi yiwSalak li7add baab ilbeet!"
+            }
+          ]
+        }
+      ]
+    },
+    "v2_short": {
+      "name": "إعلان سريع للريلز (~15 ثانية)",
+      "scenes": [
+        {
+          "visual": "hook",
+          "title": "لابتوبك محتاج\nشنطة وستاند؟",
+          "lines": [
+            {
+              "text": "لابتوبك محتاج شنطة وستاند؟",
+              "franco": "labtoobak mi7taag shanTa wi istand?"
+            }
+          ]
+        },
+        {
+          "visual": "duo",
+          "title": "الاتنين في عرض واحد!",
+          "lines": [
+            {
+              "text": "خد الاتنين في عرض واحد!",
+              "franco": "khud il-itneen fi 3arD waa7id!"
+            }
+          ]
+        },
+        {
+          "visual": "bag",
+          "title": "شنطة Jeep كروس",
+          "callouts": false,
+          "lines": [
+            {
+              "text": "شنطة Jeep كروس بني شيك",
+              "say": "شنطة جيب كروس بني شيك،",
+              "franco": "shanTit Jiib kroos bunni sheek,"
+            }
+          ]
+        },
+        {
+          "visual": "fold",
+          "title": "ستاند بيتطبق في ثواني",
+          "lines": [
+            {
+              "text": "وستاند بيعلّي الشاشة وتطبقه في ثواني",
+              "franco": "wi istand bi3alli shshaasha, wi tiTab2u fi sawaani."
+            }
+          ]
+        },
+        {
+          "visual": "cta",
+          "title": "اطلب دلوقتي",
+          "lines": [
+            {
+              "text": "اطلب دلوقتي من بيتي!",
+              "franco": "2iTlab dilwa2ti min beeti!"
+            }
+          ]
+        }
+      ]
+    },
+    "v3_gift": {
+      "name": "إعلان الهدية (~20 ثانية)",
+      "scenes": [
+        {
+          "visual": "gift",
+          "title": "محتار تجيب\nهدية إيه؟",
+          "lines": [
+            {
+              "text": "محتار تجيب هدية إيه لحد بيشتغل على اللابتوب؟",
+              "franco": "mi7taar tgiib hidiyya 2eeh, li7add biyishtaghal 3ala-llabtoob?"
+            }
+          ]
+        },
+        {
+          "visual": "duo",
+          "title": "الهدية الصح",
+          "lines": [
+            {
+              "text": "عرض اللابتوب من بيتي هو الهدية الصح",
+              "franco": "3arD illabtoob min beeti, huwwa-lhidiyya iSSa7."
+            }
+          ]
+        },
+        {
+          "visual": "bag",
+          "title": "شنطة Jeep كروس",
+          "callouts": false,
+          "lines": [
+            {
+              "text": "شنطة Jeep كروس شيك",
+              "say": "شنطة جيب كروس شيك،",
+              "franco": "shanTit Jiib kroos sheek,"
+            }
+          ]
+        },
+        {
+          "visual": "fold",
+          "title": "ستاند لابتوب بيتطبق",
+          "lines": [
+            {
+              "text": "وستاند لابتوب سهل تطبقه",
+              "franco": "wi istand labtoob sahl tiTab2u."
+            }
+          ]
+        },
+        {
+          "visual": "places",
+          "title": "هدية هيستعملها كل يوم",
+          "chips": [
+            "الشغل",
+            "المذاكرة",
+            "السفر"
+          ],
+          "lines": [
+            {
+              "text": "هدية عملية هيستعملها كل يوم",
+              "franco": "hidiyya 3amaliyya, hayista3malha kull yoom."
+            }
+          ]
+        },
+        {
+          "visual": "cta",
+          "title": "اطلبها دلوقتي",
+          "lines": [
+            {
+              "text": "اطلبها دلوقتي من بيتي!",
+              "franco": "2iTlabha dilwa2ti min beeti!"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
