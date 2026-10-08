@@ -145,9 +145,20 @@ class Voice:
             fast.replace(wav)
 
     def _edge(self, text, wav):
+        import ssl
+
+        import certifi
         import edge_tts
+        from edge_tts import communicate
+        # edge-tts pins certifi's CA list; also trust SSL_CERT_FILE so it works
+        # behind TLS-inspecting proxies (sandboxes, corporate networks).
+        ctx = ssl.create_default_context(cafile=certifi.where())
+        if os.environ.get("SSL_CERT_FILE"):
+            ctx.load_verify_locations(os.environ["SSL_CERT_FILE"])
+        communicate._SSL_CTX = ctx
+        proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy")
         mp3 = wav.with_suffix(".mp3")
-        asyncio.run(edge_tts.Communicate(text, self.voice, rate=self.rate).save(str(mp3)))
+        asyncio.run(edge_tts.Communicate(text, self.voice, rate=self.rate, proxy=proxy).save(str(mp3)))
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(mp3), str(wav)], check=True)
         mp3.unlink()
 
