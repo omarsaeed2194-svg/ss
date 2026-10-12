@@ -3,6 +3,7 @@
 import {
   RESOURCES, resLabel, FIELD_RESOURCE, mergeSettings, capacityFor,
   estimateStock, fmtDuration, fmtClock, withinActiveHours, sortedVillages, taskLabel, buildingName,
+  buildBlock,
 } from './shared.js';
 import { t, setLanguage, coords, ltr } from './i18n.js';
 
@@ -113,7 +114,6 @@ async function processPage(state, tabId) {
     setLanguage(s.language);
     d.status = d.status || {};
     d.alertMemo = d.alertMemo || {};
-    if (!fromWorker) d.status.userActiveUntil = now + s.pauseMinutes * 60000;
 
     if (state.type === 'login') {
       if (!d.status.loggedOut) {
@@ -159,6 +159,7 @@ async function processPage(state, tabId) {
         v.resourcesAt = now;
       }
       if (state.type === 'dorf1' || state.type === 'dorf2') {
+        v.queueAt = now;
         v.buildQueue = (state.buildQueue || []).map((b) => ({
           name: b.name, level: b.level, finishAt: b.secondsLeft != null ? now + b.secondsLeft * 1000 : null,
         }));
@@ -319,17 +320,6 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 });
 
 // ------------------------------------------------------------------ jobs ---
-function earliestQueueFinish(v, now) {
-  return (v.buildQueue || []).map((b) => b.finishAt).filter((at) => at && at > now).sort((a, b) => a - b)[0] || null;
-}
-
-function buildReady(v, s, now) {
-  if (!v) return false;
-  if (now < (v.buildRetryAt || 0)) return false;
-  const active = (v.buildQueue || []).filter((b) => !b.finishAt || b.finishAt > now);
-  return active.length < s.maxQueue;
-}
-
 function pickField(v, task) {
   const stock = estimateStock(v) || {};
   const candidates = (v.fields || []).filter((f) =>
@@ -417,12 +407,30 @@ const JOBS = {
       return;
     }
     if (!bp.canUpgrade) {
-      const queueFree = earliestQueueFinish(v, now);
-      const waitMs = bp.secondsUntilResources ? bp.secondsUntilResources * 1000 + 20000
-        : queueFree ? queueFree - now + 20000 : 10 * 60000;
+      if (bp.secondsUntilResources) {
+        // Not enough resources: the game says when there will be. Retry
+        // then, or sooner if a later snapshot shows the cost is covered.
+        const waitMs = bp.secondsUntilResources * 1000 + 20000;
+        await patchVillage(vid, { buildWait: { reason: 'resources', at: now, until: now + waitMs, cost: bp.cost, text: bp.blockedReason } });
+        await log('info', t('log.waiting', { name: title, reason: bp.blockedReason || t('reason.cannotYet'), t: fmtDuration(waitMs) }), vid);
+        return;
+      }
+      // No timer usually means the builders are busy and our queue info was
+      // stale. Re-read the village's build queue before deciding.
+      await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(vid)}`);
+      ({ villages = {} } = await read(['villages']));
+      const fresh = villages[vid];
+      const busy = fresh && buildBlock({ ...fresh, buildWait: null }, s, Date.now());
+      if (busy && busy.reason === 'queue') {
+        await patchVillage(vid, { buildWait: null });
+        await log('info', busy.until ? t('log.busy', { t: fmtDuration(busy.until - Date.now()) }) : t('log.busyUnknown'), vid);
+        return;
+      }
+      // Something else blocks it (storage too small, missing requirement…).
       const attempts = (task.attempts || 0) + 1;
-      if (!bp.secondsUntilResources && !queueFree && attempts >= MAX_BUILD_ATTEMPTS) {
+      if (attempts >= MAX_BUILD_ATTEMPTS) {
         await removeTask(vid, task.id);
+        await patchVillage(vid, { buildWait: null });
         await log('error', t('log.gaveUp', { task: taskLabel(task, v), reason: bp.blockedReason || t('reason.noUpgradeSlot') }), vid);
         return;
       }
@@ -430,20 +438,22 @@ const JOBS = {
         const saved = ((d.tasks || {})[vid] || []).find((x) => x.id === task.id);
         if (saved) saved.attempts = attempts;
       });
-      await patchVillage(vid, { buildRetryAt: now + waitMs });
+      const waitMs = 10 * 60000;
+      await patchVillage(vid, { buildWait: { reason: 'blocked', at: Date.now(), until: Date.now() + waitMs, text: bp.blockedReason } });
       await log('info', t('log.waiting', { name: title, reason: bp.blockedReason || t('reason.cannotYet'), t: fmtDuration(waitMs) }), vid);
       return;
     }
 
     const { res, page: after } = await act(tabId, { kind: 'upgrade' }, true);
     if (!res.ok || !after || after.type === 'build') {
-      await patchVillage(vid, { buildRetryAt: Date.now() + 5 * 60000 });
+      await patchVillage(vid, { buildWait: { reason: 'blocked', at: Date.now(), until: Date.now() + 5 * 60000, text: t('reason.stillOnBuild') } });
       await log('error', t('log.clickFailed', { name: title, reason: res.ok ? t('reason.stillOnBuild') : reasonText(res) }), vid);
       return;
     }
     // Title reads "<name> Level N" in the server's language; drop the level part.
     const name = (bp.title || '').replace(/\s*\S*\s*\d+\s*$/, '') || title;
     await log('success', t('log.upgrading', { name, n: bp.nextLevel ?? '?' }), vid);
+    await patchVillage(vid, { buildWait: null });
     await update(['tasks'], (d) => {
       const saved = ((d.tasks || {})[vid] || []).find((x) => x.id === task.id);
       if (saved) saved.attempts = 0;
@@ -502,21 +512,22 @@ const JOBS = {
   },
 };
 
-function planJobs(s, data, now, force) {
+function planRefresh(s, data, now, force) {
+  const { villages = {}, schedule = {} } = data;
+  if (!(s.watchEnabled || s.botEnabled || force)) return [];
+  if (force || now >= (schedule.refreshAt || 0)) return [{ type: 'refresh', label: t('job.refresh') }];
+  const ids = Object.values(villages).filter((v) => v.needsRefresh).map((v) => v.id);
+  return ids.length ? [{ type: 'refresh', villageIds: ids, label: t('job.refreshAttacked') }] : [];
+}
+
+// Planned after any refresh, so decisions use what the game shows right now.
+function planActions(s, data, now) {
   const { villages = {}, tasks = {}, training = [], schedule = {}, account = {} } = data;
   const jobs = [];
-  const watching = s.watchEnabled || s.botEnabled || force;
-
-  if (watching && (force || now >= (schedule.refreshAt || 0))) {
-    jobs.push({ type: 'refresh', label: t('job.refresh') });
-  } else if (watching) {
-    const ids = Object.values(villages).filter((v) => v.needsRefresh).map((v) => v.id);
-    if (ids.length) jobs.push({ type: 'refresh', villageIds: ids, label: t('job.refreshAttacked') });
-  }
   if (!s.botEnabled || !withinActiveHours(s.activeHours, new Date(now))) return jobs;
 
   for (const v of sortedVillages(villages)) {
-    if ((tasks[v.id] || []).length && buildReady(v, s, now)) jobs.push({ type: 'build', villageId: v.id, label: t('job.build', { v: v.name }) });
+    if ((tasks[v.id] || []).length && !buildBlock(v, s, now)) jobs.push({ type: 'build', villageId: v.id, label: t('job.build', { v: v.name }) });
   }
   for (const rule of training) {
     if (rule.enabled !== false && villages[rule.villageId] && now >= (rule.nextAt || 0)) {
@@ -531,12 +542,40 @@ function planJobs(s, data, now, force) {
   return jobs;
 }
 
+// Runs jobs in order; returns false when the run should stop (logged out,
+// or the player started clicking around in the game).
+async function runJobs(tabId, jobs, s, force) {
+  for (const job of jobs) {
+    await setStatus({ state: 'working', note: job.label });
+    try {
+      await JOBS[job.type](tabId, job, s);
+    } catch (e) {
+      if (e.loggedOut) return false; // processPage already alerted
+      await log('error', `${job.label}: ${e.message}`);
+      if (s.alerts.botErrors) {
+        const { alertMemo = {} } = await read(['alertMemo']);
+        const key = `err:${job.type}`;
+        if (Date.now() - (alertMemo[key] || 0) > 3600000) {
+          await update(['alertMemo'], (d) => { d.alertMemo = { ...(d.alertMemo || {}), [key]: Date.now() }; });
+          await sendAlert({ kind: 'botErrors', title: t('alert.botError.title'), body: `${job.label}: ${e.message}` });
+        }
+      }
+    }
+    const { status: st = {} } = await read(['status']);
+    if (st.loggedOut) return false;
+    if (!force && s.pauseWhenPlaying && (st.userActiveUntil || 0) > Date.now()) return false;
+    await sleep(rand(1200, 3500));
+  }
+  return true;
+}
+
+const DATA_KEYS = ['settings', 'villages', 'tasks', 'training', 'schedule', 'account', 'status'];
 let running = false;
 async function tick(force = false) {
   if (running) return { busy: true };
   running = true;
   try {
-    const data = await read(['settings', 'villages', 'tasks', 'training', 'schedule', 'account', 'status']);
+    const data = await read(DATA_KEYS);
     const s = mergeSettings(data.settings);
     setLanguage(s.language);
     const status = data.status || {};
@@ -553,33 +592,16 @@ async function tick(force = false) {
       await setStatus({ state: 'paused', note: '' });
       return {};
     }
-    const jobs = planJobs(s, data, now, force);
-    if (!jobs.length) {
+    const refreshJobs = planRefresh(s, data, now, force);
+    if (!refreshJobs.length && !planActions(s, data, now).length) {
       await setStatus({ state: 'idle', note: '' });
       return {};
     }
 
     const tabId = await ensureWorkerTab(s.server);
-    for (const job of jobs) {
-      await setStatus({ state: 'working', note: job.label });
-      try {
-        await JOBS[job.type](tabId, job, s);
-      } catch (e) {
-        if (e.loggedOut) break; // processPage already alerted
-        await log('error', `${job.label}: ${e.message}`);
-        if (s.alerts.botErrors) {
-          const { alertMemo = {} } = await read(['alertMemo']);
-          const key = `err:${job.type}`;
-          if (Date.now() - (alertMemo[key] || 0) > 3600000) {
-            await update(['alertMemo'], (d) => { d.alertMemo = { ...(d.alertMemo || {}), [key]: Date.now() }; });
-            await sendAlert({ kind: 'botErrors', title: t('alert.botError.title'), body: `${job.label}: ${e.message}` });
-          }
-        }
-      }
-      const { status: st = {} } = await read(['status']);
-      if (st.loggedOut) break;
-      if (!force && s.pauseWhenPlaying && (st.userActiveUntil || 0) > Date.now()) break;
-      await sleep(rand(1200, 3500));
+    if (await runJobs(tabId, refreshJobs, s, force)) {
+      const fresh = await read(DATA_KEYS);
+      await runJobs(tabId, planActions(s, fresh, Date.now()), s, force);
     }
     await setStatus({ state: 'idle', note: '', lastRunAt: Date.now() });
     return {};
@@ -600,7 +622,7 @@ const COMMANDS = {
       d.tasks = d.tasks || {};
       (d.tasks[villageId] = d.tasks[villageId] || []).push({ ...task, id: uid(), attempts: 0 });
     });
-    await patchVillage(villageId, { buildRetryAt: 0 });
+    await patchVillage(villageId, { buildWait: null });
   },
   async removeTask({ villageId, taskId }) { await removeTask(villageId, taskId); },
   async moveTask({ villageId, taskId, delta }) {
@@ -611,7 +633,7 @@ const COMMANDS = {
       if (i < 0 || j < 0 || j >= list.length) return;
       [list[i], list[j]] = [list[j], list[i]];
     });
-    await patchVillage(villageId, { buildRetryAt: 0 });
+    await patchVillage(villageId, { buildWait: null });
   },
   async addTraining({ rule }) {
     await update(['training'], (d) => { (d.training = d.training || []).push({ ...rule, id: uid(), nextAt: 0, enabled: true }); });
@@ -627,6 +649,10 @@ const COMMANDS = {
   },
   async runNow() {
     await patchSchedule({ refreshAt: 0 });
+    // "Check now" should retry builds immediately, not after a scheduled wait.
+    await update(['villages'], (d) => {
+      for (const v of Object.values(d.villages || {})) { delete v.buildWait; delete v.buildRetryAt; }
+    });
     tick(true);
   },
   async testAlert() {
@@ -650,6 +676,10 @@ const COMMANDS = {
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg) return undefined;
+  if (msg.type === 'USER_ACTIVE') {
+    getSettings().then((st) => setStatus({ userActiveUntil: Date.now() + st.pauseMinutes * 60000 }));
+    return undefined;
+  }
   if (msg.type === 'PAGE') {
     const tabId = sender.tab ? sender.tab.id : null;
     processPage(msg.state, tabId)

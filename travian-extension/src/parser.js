@@ -212,6 +212,7 @@
     const contract = doc.getElementById('contract') || qs(doc, '[id^="contract_building"]');
     const error = qs(contract || doc, '.errorMessage');
     const waitTimer = qs(error, '.timer');
+    const costEls = qsa(qs(contract, '.resourceWrapper'), '.resource .value');
     const title = qs(doc, '.titleInHeader') || qs(doc, 'h1');
     const lvl = qs(title, '.level');
     return {
@@ -223,6 +224,9 @@
       nextLevel: upgrade ? num(upgrade.getAttribute('value') || text(upgrade)) : null,
       blockedReason: error ? text(error).replace(/\d+:\d+:\d+.*$/, '').trim() : null,
       secondsUntilResources: waitTimer ? num(waitTimer.getAttribute('value')) : null,
+      cost: costEls.length >= 4
+        ? { wood: num(text(costEls[0])), clay: num(text(costEls[1])), iron: num(text(costEls[2])), crop: num(text(costEls[3])) }
+        : null,
       maxLevel: !upgrade && !error && !!qs(doc, '.upgradeBuilding .maxLevel, .maxLevelReached'),
       trainable: qsa(doc, '.troop:not(.empty) .cta input.text[name^="t"]').map((input) => {
         const box = input.closest('.troop');

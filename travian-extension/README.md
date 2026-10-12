@@ -72,9 +72,14 @@ Works on Travian: Legends servers (`*.travian.com`, e.g.
   right page and presses the same buttons you would. It waits a random 1–4
   seconds between steps, and spreads its timers by ± the "randomize" percentage
   in Settings.
-- **Pause while I'm playing** (on by default): if you load a Travian page in
-  another tab, the bot stays idle for a few minutes so it doesn't switch your
-  active village under you.
+- **Pause while I'm playing** (on by default): when you click or type in a
+  Travian tab, the bot stays idle for a few minutes so it doesn't switch your
+  active village under you. Just having the game open doesn't count — the game
+  reloads itself when timers finish, and that no longer pauses the bot.
+- **Why isn't it building?** Each village in the popup and the Build queue tab
+  shows the reason the next upgrade hasn't started (automation off, paused
+  while you play, builders busy until…, waiting for resources…). "Check now"
+  retries queued upgrades immediately.
 - **Active hours** (optional): limit automation to a time window. Watching and
   alerts keep running outside it.
 - Everything is stored locally in Chrome (`chrome.storage.local`). Nothing is

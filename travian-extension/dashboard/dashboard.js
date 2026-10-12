@@ -1,6 +1,6 @@
 import { loadAll, command, villageCard, statusLine, esc } from '../src/ui.js';
 import {
-  sortedVillages, taskLabel, buildingName, fmtDuration, fmtAgo, fmtNum, TRAINING_BUILDINGS,
+  sortedVillages, taskLabel, buildingName, fmtDuration, fmtAgo, fmtNum, TRAINING_BUILDINGS, buildStatus,
 } from '../src/shared.js';
 import { t, applyI18n, coords, dateLocale, LANGUAGES } from '../src/i18n.js';
 
@@ -82,6 +82,17 @@ function renderOverview(now) {
 }
 
 // ---------------------------------------------------------------- build ---
+// Why the selected village's next upgrade hasn't started (ticks every second).
+function renderBuildWhy(now) {
+  const v = data.villages[buildVillageId];
+  const why = v && buildStatus(v, data, now);
+  $('buildWhy').hidden = !why;
+  if (why) {
+    $('buildWhy').className = `status ${why.tone}`;
+    $('buildWhy').textContent = why.text;
+  }
+}
+
 function upgradeTable(items, kind) {
   if (!items || !items.length) {
     return `<tr><td class="muted">${esc(t(kind === 'fields' ? 'build.notScannedFields' : 'build.notScannedBuildings'))}</td></tr>`;
@@ -112,8 +123,8 @@ function renderBuild(now, force) {
     return;
   }
   const tasks = data.tasks[v.id] || [];
-  const retry = v.buildRetryAt && v.buildRetryAt > now ? t('build.retry', { t: fmtDuration(v.buildRetryAt - now) }) : '';
-  $('buildScan').textContent = t('build.scan', { a: fmtAgo(v.fieldsAt, now), b: fmtAgo(v.buildingsAt, now), retry });
+  $('buildScan').textContent = t('build.scan', { a: fmtAgo(v.fieldsAt, now), b: fmtAgo(v.buildingsAt, now) });
+  renderBuildWhy(now);
   $('taskList').innerHTML = tasks.length
     ? tasks.map((task) => `<li>
         <span class="label">${esc(taskLabel(task, v))}</span>
@@ -283,6 +294,7 @@ function renderTicking(now) {
   $('status').className = `status ${st.tone}`;
   $('status').textContent = st.text;
   renderOverview(now);
+  renderBuildWhy(now);
 }
 
 function render() {

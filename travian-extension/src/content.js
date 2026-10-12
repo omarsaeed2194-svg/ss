@@ -34,6 +34,17 @@
     }
   }
 
+  // Only real clicks and key presses mean the player is here. Page loads
+  // don't: the game reloads itself whenever a build or troop timer ends.
+  let lastActivePing = 0;
+  function onUserInput(e) {
+    if (!e.isTrusted || Date.now() - lastActivePing < 20000) return;
+    lastActivePing = Date.now();
+    chrome.runtime.sendMessage({ type: 'USER_ACTIVE' }).catch(() => {});
+  }
+  window.addEventListener('pointerdown', onUserInput, { capture: true, passive: true });
+  window.addEventListener('keydown', onUserInput, { capture: true, passive: true });
+
   function showWorkerBadge(label) {
     if (document.getElementById('tvh-worker-badge')) return;
     const el = document.createElement('div');

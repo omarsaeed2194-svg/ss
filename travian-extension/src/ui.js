@@ -1,7 +1,7 @@
 // Rendering helpers shared by the popup and the dashboard.
 import {
   RESOURCES, resLabel, mergeSettings, estimateStock, hoursUntilLimit, capacityFor,
-  fmtDuration, fmtAgo, fmtNum, fmtClock,
+  fmtDuration, fmtAgo, fmtNum, fmtClock, buildStatus,
 } from './shared.js';
 import { t, setLanguage, coords, ltr } from './i18n.js';
 
@@ -79,6 +79,7 @@ export function villageCard(v, data, now = Date.now()) {
     attack = `<div class="attack">⚔ ${esc(n ? t('card.attacks', { n }) : t('card.attack'))}${first}</div>`;
   }
 
+  const why = buildStatus(v, data, now);
   const chips = [];
   if (tasks) chips.push(t('card.buildTasks', { n: tasks }));
   if (trains) chips.push(t('card.trainRules', { n: trains }));
@@ -92,5 +93,6 @@ export function villageCard(v, data, now = Date.now()) {
     <div class="res-grid">${resRows}</div>
     ${queue}
     ${chips.length ? `<p class="chips">${chips.map((c) => `<span>${esc(c)}</span>`).join('')}</p>` : ''}
+    ${why ? `<p class="build-why ${why.tone}">${esc(why.text)}</p>` : ''}
   </article>`;
 }

@@ -106,3 +106,9 @@ button, input, select { font: inherit; color: inherit; }
 .queue li { display: flex; justify-content: space-between; gap: 8px; }
 .chips { margin: 8px 0 0; display: flex; gap: 6px; flex-wrap: wrap; }
 .chips span { font-size: 11px; padding: 1px 7px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); color: var(--muted); }
+
+.build-why { margin: 6px 0 0; font-size: 12px; padding: 4px 8px; border-radius: 6px; background: var(--bg); }
+.build-why::before { content: "🔨 "; }
+.build-why.good { color: var(--good); }
+.build-why.warn { color: var(--warn); }
+.build-why.bad { color: var(--bad); }

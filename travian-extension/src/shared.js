@@ -149,3 +149,40 @@ export function taskLabel(task, village) {
   const name = b ? buildingName(b.gid, b.name) : task.name || t('task.slot', { n: task.slot });
   return t('task.slotLabel', { name, slot: task.slot, n: task.targetLevel });
 }
+
+export function earliestQueueFinish(v, now = Date.now()) {
+  return (v.buildQueue || []).map((b) => b.finishAt).filter((at) => at && at > now).sort((a, b) => a - b)[0] || null;
+}
+
+const covers = (stock, cost) => !!stock && RESOURCES.every((k) => (stock[k] || 0) >= (cost[k] || 0));
+
+// Why a village's next queued upgrade can't start yet, or null when it can.
+export function buildBlock(v, s, now = Date.now()) {
+  const active = (v.buildQueue || []).filter((b) => !b.finishAt || b.finishAt > now);
+  if (active.length >= s.maxQueue) return { reason: 'queue', until: earliestQueueFinish(v, now) };
+  const w = v.buildWait;
+  if (!w || now >= w.until) return null;
+  // Resources can arrive before the game's estimate (trades, returning raids):
+  // retry as soon as a snapshot taken after the wait began shows enough.
+  if (w.reason === 'resources' && w.cost && (v.resourcesAt || 0) > w.at && covers(estimateStock(v, now), w.cost)) return null;
+  return w;
+}
+
+// Plain-language reason shown in the popup and dashboard.
+export function buildStatus(v, data, now = Date.now()) {
+  const s = data.settings;
+  const st = data.status || {};
+  if (!(data.tasks[v.id] || []).length) return null;
+  if (!s.botEnabled) return { tone: 'muted', text: t('why.botOff') };
+  if (st.loggedOut) return { tone: 'bad', text: t('why.loggedOut') };
+  if (s.pauseWhenPlaying && (st.userActiveUntil || 0) > now) {
+    return { tone: 'warn', text: t('why.paused', { t: fmtDuration(st.userActiveUntil - now) }) };
+  }
+  if (!withinActiveHours(s.activeHours, new Date(now))) return { tone: 'muted', text: t('why.hours') };
+  const b = buildBlock(v, s, now);
+  if (!b) return { tone: 'good', text: t('why.ready') };
+  const left = b.until ? fmtDuration(b.until - now) : null;
+  if (b.reason === 'queue') return { tone: 'muted', text: left ? t('why.queue', { t: left }) : t('why.queueUnknown') };
+  if (b.reason === 'resources') return { tone: 'warn', text: t('why.resources', { t: left }) };
+  return { tone: 'warn', text: t('why.blocked', { reason: b.text || t('reason.cannotYet'), t: left }) };
+}
