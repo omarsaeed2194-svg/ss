@@ -1,0 +1,108 @@
+:root {
+  --bg: #f6f4ef;
+  --panel: #ffffff;
+  --text: #1f2328;
+  --muted: #6b6f76;
+  --line: #e3e0d8;
+  --accent: #2f7d32;
+  --accent-ink: #ffffff;
+  --good: #2f7d32;
+  --warn: #c27c0e;
+  --bad: #c62828;
+  --bad-bg: #fdecea;
+  --wood: #8d6e3f;
+  --clay: #c0643a;
+  --iron: #7c8a96;
+  --crop: #d4a514;
+  --radius: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15171a;
+    --panel: #1e2125;
+    --text: #e8e6e1;
+    --muted: #9aa0a6;
+    --line: #2f3338;
+    --accent: #4caf50;
+    --accent-ink: #0b1a0c;
+    --good: #66bb6a;
+    --warn: #e0a030;
+    --bad: #ef5350;
+    --bad-bg: #3a1f1f;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+h1, h2, h3 { margin: 0; font-weight: 600; }
+button, input, select { font: inherit; color: inherit; }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+.mono { font-variant-numeric: tabular-nums; }
+.warn-text { color: var(--warn); margin: 6px 0 0; }
+
+.btn {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.danger { color: var(--bad); }
+.btn.small { padding: 3px 8px; font-size: 12px; }
+.btn:disabled { opacity: .5; cursor: default; }
+
+.switch { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+.switch input { appearance: none; width: 34px; height: 20px; border-radius: 10px; background: var(--line); position: relative; cursor: pointer; transition: background .15s; margin: 0; flex: none; }
+.switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .15s; box-shadow: 0 1px 2px rgba(0,0,0,.3); }
+.switch input:checked { background: var(--accent); }
+.switch input:checked::after { left: 16px; }
+
+.status { padding: 6px 10px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); }
+.status::before { content: "●"; margin-right: 6px; }
+.status.good::before { color: var(--good); }
+.status.warn::before { color: var(--warn); }
+.status.bad::before { color: var(--bad); }
+.status.muted::before { color: var(--muted); }
+
+.village {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.village.attacked { border-color: var(--bad); box-shadow: 0 0 0 1px var(--bad) inset; }
+.village > header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.village h3 { font-size: 14px; }
+.attack { background: var(--bad-bg); color: var(--bad); border-radius: 6px; padding: 5px 8px; margin-bottom: 8px; font-weight: 500; }
+
+.res-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+.res { display: grid; grid-template-columns: auto 1fr; align-items: baseline; gap: 0 6px; }
+.res-name { font-size: 12px; color: var(--muted); }
+.res-val { text-align: right; font-variant-numeric: tabular-nums; }
+.res-val small { color: var(--muted); }
+.res-sub { grid-column: 1 / -1; font-size: 11px; color: var(--muted); }
+.res-sub.bad { color: var(--bad); }
+.res-sub.warn { color: var(--warn); }
+.bar { grid-column: 1 / -1; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; margin: 2px 0 1px; }
+.bar i { display: block; height: 100%; background: var(--accent); }
+.res-wood .bar i { background: var(--wood); }
+.res-clay .bar i { background: var(--clay); }
+.res-iron .bar i { background: var(--iron); }
+.res-crop .bar i { background: var(--crop); }
+.bar i.warn { background: var(--warn) !important; }
+.bar i.bad { background: var(--bad) !important; }
+
+.queue { list-style: none; margin: 8px 0 0; padding: 6px 0 0; border-top: 1px dashed var(--line); }
+.queue li { display: flex; justify-content: space-between; gap: 8px; }
+.chips { margin: 8px 0 0; display: flex; gap: 6px; flex-wrap: wrap; }
+.chips span { font-size: 11px; padding: 1px 7px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); color: var(--muted); }
