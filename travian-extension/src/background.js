@@ -1,9 +1,10 @@
 // Background service worker: stores what the content script reports, raises
 // alerts, and drives a dedicated "bot tab" to run queued actions.
 import {
-  RESOURCES, RESOURCE_LABELS, FIELD_RESOURCE, TRAINING_BUILDINGS, mergeSettings, capacityFor,
+  RESOURCES, resLabel, FIELD_RESOURCE, mergeSettings, capacityFor,
   estimateStock, fmtDuration, fmtClock, withinActiveHours, sortedVillages, taskLabel, buildingName,
 } from './shared.js';
+import { t, setLanguage, coords, ltr } from './i18n.js';
 
 const LOG_LIMIT = 300;
 const PAGE_TIMEOUT_MS = 45000;
@@ -32,7 +33,14 @@ function update(keys, fn) {
   return run;
 }
 const read = (keys) => chrome.storage.local.get(keys);
-const getSettings = async () => mergeSettings((await read(['settings'])).settings);
+async function getSettings() {
+  const s = mergeSettings((await read(['settings'])).settings);
+  setLanguage(s.language);
+  return s;
+}
+
+// Failure text from the content script: a reason code, or a raw message.
+const reasonText = (res) => (res.code ? t(`reason.${res.code}`) : res.reason || '');
 
 async function log(level, msg, villageId) {
   await update(['log'], (d) => {
@@ -76,7 +84,7 @@ async function sendRemote(s, text) {
   }
   const results = await Promise.allSettled(jobs);
   const failed = results.filter((r) => r.status === 'rejected').map((r) => r.reason.message);
-  if (failed.length) await log('error', `Remote notification failed: ${failed.join(', ')}`);
+  if (failed.length) await log('error', t('log.remoteFailed', { e: failed.join(', ') }));
   return { sent: jobs.length, failed };
 }
 
@@ -102,13 +110,14 @@ async function processPage(state, tabId) {
 
   await update(['settings', 'villages', 'account', 'status', 'alertMemo'], (d) => {
     const s = mergeSettings(d.settings);
+    setLanguage(s.language);
     d.status = d.status || {};
     d.alertMemo = d.alertMemo || {};
     if (!fromWorker) d.status.userActiveUntil = now + s.pauseMinutes * 60000;
 
     if (state.type === 'login') {
       if (!d.status.loggedOut) {
-        alerts.push({ kind: 'loggedOut', title: 'Logged out of Travian', body: 'Automation is paused until you log in again.', sticky: true });
+        alerts.push({ kind: 'loggedOut', title: t('alert.loggedOut.title'), body: t('alert.loggedOut.body'), sticky: true });
       }
       d.status.loggedOut = true;
       return;
@@ -119,7 +128,7 @@ async function processPage(state, tabId) {
     if (s.server !== state.server) {
       if (s.server) {
         d.villages = {};
-        notes.push(`Switched to server ${state.server}`);
+        notes.push(t('log.serverSwitch', { s: state.server }));
       }
       s.server = state.server;
       d.settings = s;
@@ -134,7 +143,7 @@ async function processPage(state, tabId) {
       Object.assign(v, { name: vi.name, x: vi.x, y: vi.y, order, underAttack: vi.underAttack });
       if (vi.underAttack && !wasAttacked) {
         v.needsRefresh = true; // fetch arrival times on the next tick
-        attackAlerts[vi.id] = { kind: 'attacks', sticky: true, title: `Incoming attack on ${vi.name}`, body: `(${vi.x}|${vi.y}) is under attack. Open Travian to check arrival times.` };
+        attackAlerts[vi.id] = { kind: 'attacks', sticky: true, title: t('alert.attack.title', { v: vi.name }), body: t('alert.attack.body', { xy: coords(vi.x, vi.y) }) };
       }
       if (!vi.underAttack) v.incomingAttacks = 0;
     });
@@ -171,8 +180,8 @@ async function processPage(state, tabId) {
           const first = incoming.map((m) => m.arriveAt).filter(Boolean).sort((a, b) => a - b)[0];
           attackAlerts[v.id] = {
             kind: 'attacks', sticky: true,
-            title: `${count} incoming attack${count > 1 ? 's' : ''} on ${v.name}`,
-            body: first ? `First one lands in ${fmtDuration(first - now)} (at ${fmtClock(first)}).` : `(${v.x}|${v.y}) is under attack.`,
+            title: t('alert.attacks.title', { n: count, v: v.name }),
+            body: first ? t('alert.attacks.first', { t: fmtDuration(first - now), clock: fmtClock(first) }) : t('alert.attacks.noTime', { xy: coords(v.x, v.y) }),
           };
         }
         v.incomingAttacks = count;
@@ -192,7 +201,7 @@ async function processPage(state, tabId) {
             const key = `full:${v.id}:${k}`;
             if (hours <= s.alerts.storageHours && now - (d.alertMemo[key] || 0) > STORAGE_REALERT_MS) {
               d.alertMemo[key] = now;
-              filling.push(`${RESOURCE_LABELS[k]} ${hours <= 0 ? 'is full' : `full in ${fmtDuration(hours * 3600000)}`}`);
+              filling.push(hours <= 0 ? t('alert.storage.full', { res: resLabel(k) }) : t('alert.storage.fullIn', { res: resLabel(k), t: fmtDuration(hours * 3600000) }));
             }
           }
           if (k === 'crop' && prod < 0 && stock != null) {
@@ -200,12 +209,12 @@ async function processPage(state, tabId) {
             const key = `starve:${v.id}`;
             if (hours <= 3 && now - (d.alertMemo[key] || 0) > STORAGE_REALERT_MS) {
               d.alertMemo[key] = now;
-              alerts.push({ kind: 'starvation', title: `Troops starving soon in ${v.name}`, body: `Crop runs out in ${fmtDuration(hours * 3600000)} (${prod}/h).`, sticky: true });
+              alerts.push({ kind: 'starvation', title: t('alert.starve.title', { v: v.name }), body: t('alert.starve.body', { t: fmtDuration(hours * 3600000), p: ltr(prod) }), sticky: true });
             }
           }
         }
         if (filling.length) {
-          alerts.push({ kind: 'storage', title: `Storage filling up in ${v.name}`, body: `${filling.join(', ')}. Spend or send resources.` });
+          alerts.push({ kind: 'storage', title: t('alert.storage.title', { v: v.name }), body: t('alert.storage.body', { list: filling.join(t('list.sep')) }) });
         }
       }
     }
@@ -224,7 +233,7 @@ async function processPage(state, tabId) {
   for (const n of notes) await log('info', n);
   for (const a of alerts) await sendAlert(a);
   await refreshBadge();
-  return { worker: fromWorker };
+  return fromWorker ? { worker: true, badge: t('badge.worker') } : { worker: false };
 }
 
 // ------------------------------------------------------------- bot tab ----
@@ -237,7 +246,7 @@ function waitForPage(tabId, timeout = PAGE_TIMEOUT_MS) {
   const promise = new Promise((resolve, reject) => {
     entry = {
       resolve, reject,
-      timer: setTimeout(() => { waiters.delete(tabId); reject(new Error('Page did not load in time')); }, timeout),
+      timer: setTimeout(() => { waiters.delete(tabId); reject(new Error(t('err.timeout'))); }, timeout),
     };
   });
   waiters.set(tabId, entry);
@@ -260,7 +269,7 @@ async function navigate(tabId, url) {
   const page = waitForPage(tabId);
   await chrome.tabs.update(tabId, { url });
   const state = await page;
-  if (state.type === 'login') throw Object.assign(new Error('Logged out of Travian'), { loggedOut: true });
+  if (state.type === 'login') throw Object.assign(new Error(t('err.loggedOut')), { loggedOut: true });
   return state;
 }
 
@@ -273,7 +282,7 @@ async function act(tabId, action, expectNavigation) {
     res = await chrome.tabs.sendMessage(tabId, { type: 'ACTION', action });
   } catch (e) {
     if (/Receiving end does not exist/i.test(e.message)) {
-      res = { ok: false, reason: 'Travian page is not loaded in the bot tab' };
+      res = { ok: false, code: 'notLoaded' };
     } else {
       // The page navigated away before answering; treat the click as done.
       res = { ok: true, navigating: true, lost: true };
@@ -281,7 +290,7 @@ async function act(tabId, action, expectNavigation) {
   }
   if (!res || !res.ok) {
     if (page) page.cancel();
-    return { res: res || { ok: false, reason: 'No response from page' } };
+    return { res: res || { ok: false, code: 'noResponse' } };
   }
   return { res, page: page ? await page : null };
 }
@@ -290,8 +299,8 @@ async function ensureWorkerTab(server) {
   const { workerTabId } = await chrome.storage.session.get('workerTabId');
   if (workerTabId != null) {
     try {
-      const t = await chrome.tabs.get(workerTabId);
-      const url = t.url || t.pendingUrl || '';
+      const existing = await chrome.tabs.get(workerTabId);
+      const url = existing.url || existing.pendingUrl || '';
       if (url.startsWith(server)) return workerTabId;
     } catch (e) { /* closed */ }
   }
@@ -306,12 +315,12 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
   const { workerTabId } = await chrome.storage.session.get('workerTabId');
   if (tabId === workerTabId) await chrome.storage.session.remove('workerTabId');
   const w = waiters.get(tabId);
-  if (w) { waiters.delete(tabId); clearTimeout(w.timer); w.reject(new Error('Bot tab was closed')); }
+  if (w) { waiters.delete(tabId); clearTimeout(w.timer); w.reject(new Error(t('err.tabClosed'))); }
 });
 
 // ------------------------------------------------------------------ jobs ---
 function earliestQueueFinish(v, now) {
-  return (v.buildQueue || []).map((b) => b.finishAt).filter((t) => t && t > now).sort((a, b) => a - b)[0] || null;
+  return (v.buildQueue || []).map((b) => b.finishAt).filter((at) => at && at > now).sort((a, b) => a - b)[0] || null;
 }
 
 function buildReady(v, s, now) {
@@ -333,7 +342,7 @@ function pickField(v, task) {
 async function removeTask(villageId, taskId) {
   await update(['tasks'], (d) => {
     d.tasks = d.tasks || {};
-    d.tasks[villageId] = (d.tasks[villageId] || []).filter((t) => t.id !== taskId);
+    d.tasks[villageId] = (d.tasks[villageId] || []).filter((x) => x.id !== taskId);
   });
 }
 
@@ -385,7 +394,7 @@ const JOBS = {
       const field = pickField(v, task);
       if (!field) {
         await removeTask(vid, task.id);
-        await log('success', `Done: ${taskLabel(task, v)}`, vid);
+        await log('success', t('log.done', { task: taskLabel(task, v) }), vid);
         return;
       }
       slot = field.slot;
@@ -393,17 +402,18 @@ const JOBS = {
 
     const page = await navigate(tabId, `${s.server}/build.php?newdid=${encodeURIComponent(vid)}&id=${slot}`);
     const bp = page.buildPage;
-    if (!bp) throw new Error('Build page did not load');
+    if (!bp) throw new Error(t('err.noBuildPage'));
+    const title = bp.title || t('task.slot', { n: slot });
     const now = Date.now();
 
     if (task.kind === 'upgrade' && ((bp.level != null && bp.level >= task.targetLevel) || (bp.nextLevel != null && bp.nextLevel > task.targetLevel))) {
       await removeTask(vid, task.id);
-      await log('success', `Done: ${taskLabel(task, v)}`, vid);
+      await log('success', t('log.done', { task: taskLabel(task, v) }), vid);
       return;
     }
     if (bp.maxLevel) {
       await removeTask(vid, task.id);
-      await log('info', `${bp.title || `Slot ${slot}`} is at max level — removed task`, vid);
+      await log('info', t('log.maxLevel', { name: title }), vid);
       return;
     }
     if (!bp.canUpgrade) {
@@ -413,33 +423,34 @@ const JOBS = {
       const attempts = (task.attempts || 0) + 1;
       if (!bp.secondsUntilResources && !queueFree && attempts >= MAX_BUILD_ATTEMPTS) {
         await removeTask(vid, task.id);
-        await log('error', `Gave up on ${taskLabel(task, v)}: ${bp.blockedReason || 'no upgrade button (is something built in that slot?)'}`, vid);
+        await log('error', t('log.gaveUp', { task: taskLabel(task, v), reason: bp.blockedReason || t('reason.noUpgradeSlot') }), vid);
         return;
       }
       await update(['tasks'], (d) => {
-        const t = ((d.tasks || {})[vid] || []).find((x) => x.id === task.id);
-        if (t) t.attempts = attempts;
+        const saved = ((d.tasks || {})[vid] || []).find((x) => x.id === task.id);
+        if (saved) saved.attempts = attempts;
       });
       await patchVillage(vid, { buildRetryAt: now + waitMs });
-      await log('info', `${bp.title || `Slot ${slot}`}: ${bp.blockedReason || 'cannot upgrade yet'} — retrying in ${fmtDuration(waitMs)}`, vid);
+      await log('info', t('log.waiting', { name: title, reason: bp.blockedReason || t('reason.cannotYet'), t: fmtDuration(waitMs) }), vid);
       return;
     }
 
     const { res, page: after } = await act(tabId, { kind: 'upgrade' }, true);
     if (!res.ok || !after || after.type === 'build') {
       await patchVillage(vid, { buildRetryAt: Date.now() + 5 * 60000 });
-      await log('error', `Upgrade click failed for ${bp.title || `slot ${slot}`}: ${res.reason || 'still on build page'}`, vid);
+      await log('error', t('log.clickFailed', { name: title, reason: res.ok ? t('reason.stillOnBuild') : reasonText(res) }), vid);
       return;
     }
-    const name = (bp.title || '').replace(/\s*\S*\s*\d+\s*$/, '') || `Slot ${slot}`;
-    await log('success', `Upgrading ${name} to level ${bp.nextLevel ?? '?'}`, vid);
+    // Title reads "<name> Level N" in the server's language; drop the level part.
+    const name = (bp.title || '').replace(/\s*\S*\s*\d+\s*$/, '') || title;
+    await log('success', t('log.upgrading', { name, n: bp.nextLevel ?? '?' }), vid);
     await update(['tasks'], (d) => {
-      const t = ((d.tasks || {})[vid] || []).find((x) => x.id === task.id);
-      if (t) t.attempts = 0;
+      const saved = ((d.tasks || {})[vid] || []).find((x) => x.id === task.id);
+      if (saved) saved.attempts = 0;
     });
     if (task.kind === 'upgrade' && bp.nextLevel != null && bp.nextLevel >= task.targetLevel) {
       await removeTask(vid, task.id);
-      await log('success', `Queued final level: ${taskLabel(task, v)}`, vid);
+      await log('success', t('log.finalQueued', { task: taskLabel(task, v) }), vid);
     }
   },
 
@@ -447,21 +458,21 @@ const JOBS = {
     const rule = job.rule;
     const { villages = {} } = await read(['villages']);
     const vname = villages[rule.villageId] ? villages[rule.villageId].name : rule.villageId;
-    const bname = TRAINING_BUILDINGS[rule.gid] || buildingName(rule.gid);
+    const bname = buildingName(rule.gid);
     const page = await navigate(tabId, `${s.server}/build.php?newdid=${encodeURIComponent(rule.villageId)}&gid=${rule.gid}`);
-    const unit = page.buildPage && page.buildPage.trainable.find((t) => t.field === rule.troop);
+    const unit = page.buildPage && page.buildPage.trainable.find((u) => u.field === rule.troop);
     let next = jittered(rule.everyMinutes * 60000, s.jitterPercent);
     if (!unit) {
-      await log('error', `${bname} in ${vname}: troop ${rule.troop} cannot be trained there`, rule.villageId);
+      await log('error', t('log.trainNotThere', { b: bname, v: vname, u: rule.troop }), rule.villageId);
     } else {
       const amount = Math.min(rule.amount, unit.max);
       if (amount < 1) {
         next = Math.min(next, 15 * 60000);
-        await log('info', `${bname} in ${vname}: not enough resources for ${unit.name || rule.troop} — retrying in ${fmtDuration(next)}`, rule.villageId);
+        await log('info', t('log.trainNoRes', { b: bname, v: vname, u: unit.name || rule.troop, t: fmtDuration(next) }), rule.villageId);
       } else {
         const { res } = await act(tabId, { kind: 'train', field: rule.troop, amount }, true);
-        if (res.ok) await log('success', `Training ${amount} × ${unit.name || rule.troop} in ${vname}`, rule.villageId);
-        else await log('error', `Training failed in ${vname}: ${res.reason}`, rule.villageId);
+        if (res.ok) await log('success', t('log.training', { n: amount, u: unit.name || rule.troop, v: vname }), rule.villageId);
+        else await log('error', t('log.trainFailed', { v: vname, reason: reasonText(res) }), rule.villageId);
       }
     }
     await update(['training'], (d) => {
@@ -474,16 +485,16 @@ const JOBS = {
     const prefix = s.farm.villageId ? `newdid=${encodeURIComponent(s.farm.villageId)}&` : '';
     await navigate(tabId, `${s.server}/build.php?${prefix}gid=16&tt=99`);
     const { res } = await act(tabId, { kind: 'farm', ids: s.farm.listIds || [] }, false);
-    if (res.ok) await log('success', `Farm lists sent (${res.started === 'all' ? 'all lists' : `${res.started} list(s)`})`);
-    else await log('info', `Farm lists: ${res.reason}`);
+    if (res.ok) await log('success', t('log.farmSent', { what: res.started === 'all' ? t('log.farmAll') : t('log.farmCount', { n: res.started }) }));
+    else await log('info', t('log.farmInfo', { reason: reasonText(res) }));
     await patchSchedule({ farmAt: Date.now() + jittered(s.farm.intervalMinutes * 60000, s.jitterPercent) });
   },
 
   async adventure(tabId, job, s) {
     await navigate(tabId, `${s.server}/hero/adventures`);
     const { res } = await act(tabId, { kind: 'adventure' }, false);
-    if (res.ok) await log('success', `Hero sent on an adventure${res.detail ? ` to ${res.detail}` : ''}`);
-    else await log('info', `Adventure: ${res.reason}`);
+    if (res.ok) await log('success', t('log.heroSent', { to: res.detail ? t('log.heroTo', { where: ltr(res.detail) }) : '' }));
+    else await log('info', t('log.adventureInfo', { reason: reasonText(res) }));
     await patchSchedule({ adventureAt: Date.now() + jittered(15 * 60000, s.jitterPercent) });
     // Pick up the hero's new status for the dashboard.
     await sleep(rand(1500, 3000));
@@ -497,25 +508,25 @@ function planJobs(s, data, now, force) {
   const watching = s.watchEnabled || s.botEnabled || force;
 
   if (watching && (force || now >= (schedule.refreshAt || 0))) {
-    jobs.push({ type: 'refresh', label: 'Checking villages' });
+    jobs.push({ type: 'refresh', label: t('job.refresh') });
   } else if (watching) {
     const ids = Object.values(villages).filter((v) => v.needsRefresh).map((v) => v.id);
-    if (ids.length) jobs.push({ type: 'refresh', villageIds: ids, label: 'Checking attacked villages' });
+    if (ids.length) jobs.push({ type: 'refresh', villageIds: ids, label: t('job.refreshAttacked') });
   }
   if (!s.botEnabled || !withinActiveHours(s.activeHours, new Date(now))) return jobs;
 
   for (const v of sortedVillages(villages)) {
-    if ((tasks[v.id] || []).length && buildReady(v, s, now)) jobs.push({ type: 'build', villageId: v.id, label: `Building in ${v.name}` });
+    if ((tasks[v.id] || []).length && buildReady(v, s, now)) jobs.push({ type: 'build', villageId: v.id, label: t('job.build', { v: v.name }) });
   }
   for (const rule of training) {
     if (rule.enabled !== false && villages[rule.villageId] && now >= (rule.nextAt || 0)) {
-      jobs.push({ type: 'train', rule, label: `Training in ${villages[rule.villageId].name}` });
+      jobs.push({ type: 'train', rule, label: t('job.train', { v: villages[rule.villageId].name }) });
     }
   }
-  if (s.farm.enabled && now >= (schedule.farmAt || 0)) jobs.push({ type: 'farm', label: 'Sending farm lists' });
+  if (s.farm.enabled && now >= (schedule.farmAt || 0)) jobs.push({ type: 'farm', label: t('job.farm') });
   const hero = account.hero || {};
   if (s.adventure.enabled && hero.adventures > 0 && hero.home && now >= (schedule.adventureAt || 0)) {
-    jobs.push({ type: 'adventure', label: 'Sending hero on adventure' });
+    jobs.push({ type: 'adventure', label: t('job.adventure') });
   }
   return jobs;
 }
@@ -527,18 +538,19 @@ async function tick(force = false) {
   try {
     const data = await read(['settings', 'villages', 'tasks', 'training', 'schedule', 'account', 'status']);
     const s = mergeSettings(data.settings);
+    setLanguage(s.language);
     const status = data.status || {};
     const now = Date.now();
     if (!s.server) {
-      await setStatus({ state: 'idle', note: 'Open your Travian server once so the extension can find it' });
+      await setStatus({ state: 'idle', note: '' });
       return {};
     }
     if (status.loggedOut && !force) {
-      await setStatus({ state: 'blocked', note: 'Logged out — log in to Travian to resume' });
+      await setStatus({ state: 'blocked', note: '' });
       return {};
     }
     if (!force && s.pauseWhenPlaying && (status.userActiveUntil || 0) > now) {
-      await setStatus({ state: 'paused', note: 'Paused while you play' });
+      await setStatus({ state: 'paused', note: '' });
       return {};
     }
     const jobs = planJobs(s, data, now, force);
@@ -560,7 +572,7 @@ async function tick(force = false) {
           const key = `err:${job.type}`;
           if (Date.now() - (alertMemo[key] || 0) > 3600000) {
             await update(['alertMemo'], (d) => { d.alertMemo = { ...(d.alertMemo || {}), [key]: Date.now() }; });
-            await sendAlert({ kind: 'botErrors', title: 'Travian Helper hit a problem', body: `${job.label}: ${e.message}` });
+            await sendAlert({ kind: 'botErrors', title: t('alert.botError.title'), body: `${job.label}: ${e.message}` });
           }
         }
       }
@@ -594,7 +606,7 @@ const COMMANDS = {
   async moveTask({ villageId, taskId, delta }) {
     await update(['tasks'], (d) => {
       const list = (d.tasks || {})[villageId] || [];
-      const i = list.findIndex((t) => t.id === taskId);
+      const i = list.findIndex((x) => x.id === taskId);
       const j = i + delta;
       if (i < 0 || j < 0 || j >= list.length) return;
       [list[i], list[j]] = [list[j], list[i]];
@@ -622,10 +634,10 @@ const COMMANDS = {
     if (s.alerts.desktop) {
       chrome.notifications.create(`tvh-test-${uid()}`, {
         type: 'basic', iconUrl: chrome.runtime.getURL('icons/icon128.png'),
-        title: 'Travian Helper test', message: 'Desktop notifications are working.',
+        title: t('test.title'), message: t('test.desktop'),
       });
     }
-    return sendRemote(s, 'Travian Helper test — notifications are working.');
+    return sendRemote(s, t('test.remote'));
   },
   async clearLog() { await update(['log'], (d) => { d.log = []; }); },
   async resetData() {

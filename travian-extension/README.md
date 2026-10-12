@@ -1,5 +1,8 @@
 # Travian Helper — Chrome extension
 
+**[الدليل بالعربية](README.ar.md)** · The extension's interface is in Arabic
+by default; switch to English under **Settings → Language**.
+
 Keeps track of your **Travian: Legends** villages and runs your routine while
 you're away:
 
@@ -98,6 +101,7 @@ src/parser.js          Reads game state out of Travian pages (pure DOM parsing)
 src/content.js         Runs on Travian pages: reports state, performs clicks
 src/background.js      Service worker: storage, alerts, scheduler, bot jobs
 src/shared.js          Constants and helpers (building names, projections, defaults)
+src/i18n.js            Arabic and English UI strings (Arabic is the default)
 src/ui.js / ui.css     Village cards and styles shared by popup and dashboard
 popup/                 Toolbar popup
 dashboard/             Full dashboard (also the extension's options page)

@@ -1,10 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "Travian Helper",
-  "version": "1.0.0",
-  "description": "Keeps an eye on your Travian Legends villages, alerts you about attacks and full storage, and runs your build queue, troop training, farm lists and hero adventures while you're away.",
+  "name": "مساعد ترافيان",
+  "version": "1.1.0",
+  "description": "يراقب قراك في ترافيان ويرسل لك تنبيهات عند الهجمات وامتلاء المخازن، ويدير قائمة البناء وتدريب القوات وقوائم المزارع ومغامرات البطل أثناء غيابك.",
   "minimum_chrome_version": "116",
-  "permissions": ["storage", "alarms", "notifications"],
+  "permissions": [
+    "storage",
+    "alarms",
+    "notifications"
+  ],
   "host_permissions": [
     "https://*.travian.com/*",
     "https://api.telegram.org/*",
@@ -17,14 +21,19 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://*.travian.com/*"],
-      "js": ["src/parser.js", "src/content.js"],
+      "matches": [
+        "https://*.travian.com/*"
+      ],
+      "js": [
+        "src/parser.js",
+        "src/content.js"
+      ],
       "run_at": "document_idle"
     }
   ],
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "Travian Helper",
+    "default_title": "مساعد ترافيان",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",

@@ -28,18 +28,18 @@
     if (state.type === 'unknown') return;
     try {
       const res = await chrome.runtime.sendMessage({ type: 'PAGE', state });
-      if (res && res.worker) showWorkerBadge();
+      if (res && res.worker) showWorkerBadge(res.badge);
     } catch (e) {
       // Extension reloaded or worker unavailable; nothing to do.
     }
   }
 
-  function showWorkerBadge() {
+  function showWorkerBadge(label) {
     if (document.getElementById('tvh-worker-badge')) return;
     const el = document.createElement('div');
     el.id = 'tvh-worker-badge';
-    el.textContent = 'Travian Helper is using this tab';
-    el.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:99999;padding:6px 10px;border-radius:6px;' +
+    el.textContent = label || 'Travian Helper';
+    el.style.cssText = 'position:fixed;inset-inline-start:12px;bottom:12px;z-index:99999;padding:6px 10px;border-radius:6px;' +
       'background:#1f2937;color:#fff;font:12px/1.3 system-ui,sans-serif;opacity:.85;pointer-events:none';
     document.body.appendChild(el);
   }
@@ -50,16 +50,16 @@
     async upgrade() {
       const btn = document.querySelector('.upgradeButtonsContainer .section1 button.build') ||
         document.querySelector('.upgradeButtonsContainer button.green.build');
-      if (!usable(btn)) return { ok: false, reason: 'Upgrade button not available' };
+      if (!usable(btn)) return { ok: false, code: 'noUpgradeButton' };
       setTimeout(() => btn.click(), 50);
       return { ok: true, navigating: true };
     },
 
     async train({ field, amount }) {
-      if (!/^t\d+$/.test(field)) return { ok: false, reason: 'Bad troop field' };
+      if (!/^t\d+$/.test(field)) return { ok: false, code: 'badField' };
       const input = document.querySelector(`.troop:not(.empty) .cta input.text[name="${field}"]`);
       const submit = document.getElementById('s1');
-      if (!input || !usable(submit)) return { ok: false, reason: 'Training form not found' };
+      if (!input || !usable(submit)) return { ok: false, code: 'noTrainForm' };
       input.focus();
       input.value = String(amount);
       input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -71,7 +71,7 @@
 
     async farm({ ids }) {
       const root = await waitFor(() => document.getElementById('rallyPointFarmList'));
-      if (!root) return { ok: false, reason: 'Farm list page not found — do you have a rally point with farm lists?' };
+      if (!root) return { ok: false, code: 'noFarmPage' };
       let buttons;
       let startedAll = false;
       if (ids && ids.length) {
@@ -86,7 +86,7 @@
         buttons = startedAll ? [all] : Array.from(root.querySelectorAll('button.startFarmList'));
       }
       buttons = buttons.filter(usable);
-      if (!buttons.length) return { ok: false, reason: 'No farm list could be started (empty lists or troops still out)' };
+      if (!buttons.length) return { ok: false, code: 'noFarmStart' };
       for (const b of buttons) {
         b.click();
         await sleep(rand(900, 1800));
@@ -97,7 +97,7 @@
 
     async adventure() {
       const btn = await waitFor(() => document.querySelector('#heroAdventure tbody tr button:not([disabled])'));
-      if (!btn) return { ok: false, reason: 'No adventure available right now' };
+      if (!btn) return { ok: false, code: 'noAdventure' };
       const cells = btn.closest('tr') ? btn.closest('tr').querySelectorAll('td') : [];
       const where = cells[1] ? cells[1].textContent.replace(/[‪-‮]/g, '').trim() : '';
       btn.click();
@@ -112,7 +112,7 @@
     if (!msg || msg.type !== 'ACTION') return undefined;
     const fn = actions[msg.action && msg.action.kind];
     if (!fn) {
-      sendResponse({ ok: false, reason: 'Unknown action' });
+      sendResponse({ ok: false, code: 'unknownAction' });
       return undefined;
     }
     sleep(rand(400, 1200))

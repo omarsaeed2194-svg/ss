@@ -2,10 +2,12 @@ import { loadAll, command, villageCard, statusLine, esc } from '../src/ui.js';
 import {
   sortedVillages, taskLabel, buildingName, fmtDuration, fmtAgo, fmtNum, TRAINING_BUILDINGS,
 } from '../src/shared.js';
+import { t, applyI18n, coords, dateLocale, LANGUAGES } from '../src/i18n.js';
 
 const $ = (id) => document.getElementById(id);
 let data = null;
 let buildVillageId = null;
+let lang = null;
 
 // ------------------------------------------------------------------ tabs ---
 function showTab() {
@@ -28,7 +30,7 @@ function fillSelect(sel, options, selected) {
   }
 }
 
-const villageOptions = () => sortedVillages(data.villages).map((v) => [v.id, `${v.name} (${v.x}|${v.y})`]);
+const villageOptions = () => sortedVillages(data.villages).map((v) => [v.id, `${v.name} ${coords(v.x, v.y)}`]);
 const getPath = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
 
 // ------------------------------------------------------------- settings ---
@@ -65,65 +67,66 @@ function renderOverview(now) {
   const hero = data.account.hero || {};
   const s = data.settings;
   const stats = [
-    [villages.length, 'villages'],
-    [attacked, 'under attack'],
-    [fmtNum(data.account.gold), 'gold'],
-    [fmtNum(data.account.silver), 'silver'],
-    [hero.adventures ?? '—', `adventures · hero ${hero.home ? 'home' : 'away'}`],
+    [villages.length, t('ov.villages')],
+    [attacked, t('ov.underAttack')],
+    [fmtNum(data.account.gold), t('ov.gold')],
+    [fmtNum(data.account.silver), t('ov.silver')],
+    [hero.adventures ?? '—', t('ov.adventures', { status: t(hero.home ? 'ov.heroHome' : 'ov.heroAway') })],
   ];
-  if (s.botEnabled && s.farm.enabled) stats.push([fmtDuration(Math.max(0, (data.schedule.farmAt || now) - now)), 'until farm lists']);
+  if (s.botEnabled && s.farm.enabled) stats.push([fmtDuration(Math.max(0, (data.schedule.farmAt || now) - now)), t('ov.farmIn')]);
   $('summary').innerHTML = stats.map(([b, span]) => `<div class="stat"><b>${esc(b)}</b><span>${esc(span)}</span></div>`).join('');
   villages.sort((a, b) => Number(!!b.underAttack) - Number(!!a.underAttack));
   $('villageGrid').innerHTML = villages.length
     ? villages.map((v) => villageCard(v, data, now)).join('')
-    : '<div class="panel muted">No villages yet. Log in to Travian in this browser, or press “Check now”.</div>';
+    : `<div class="panel muted">${esc(t('ov.empty'))}</div>`;
 }
 
 // ---------------------------------------------------------------- build ---
-function upgradeTable(items, v, kind) {
+function upgradeTable(items, kind) {
   if (!items || !items.length) {
-    return `<tr><td class="muted">${kind === 'fields' ? 'Not scanned yet.' : 'Not scanned yet — runs automatically every few hours, or press “Check now”.'}</td></tr>`;
+    return `<tr><td class="muted">${esc(t(kind === 'fields' ? 'build.notScannedFields' : 'build.notScannedBuildings'))}</td></tr>`;
   }
   const rows = items.slice().sort((a, b) => a.slot - b.slot).map((b) => {
     const name = buildingName(b.gid, b.name);
-    const tag = b.underConstruction ? '<span class="tag busy">upgrading</span>' : b.maxLevel ? '<span class="tag">max</span>' : '';
+    const tag = b.underConstruction ? `<span class="tag busy">${esc(t('build.upgrading'))}</span>`
+      : b.maxLevel ? `<span class="tag">${esc(t('build.max'))}</span>` : '';
     return `<tr>
       <td class="muted">${b.slot}</td>
       <td>${esc(name)} ${tag}</td>
       <td class="mono">${b.level}</td>
-      <td class="actions">${b.maxLevel ? '' : `to <input type="number" class="num" min="${b.level + 1}" max="21" value="${b.level + 1}" data-target="${b.slot}">
-        <button class="btn small" data-add-slot="${b.slot}" data-name="${esc(name)}">Queue</button>`}</td>
+      <td class="actions">${b.maxLevel ? '' : `${esc(t('build.to'))} <input type="number" class="num" min="${b.level + 1}" max="21" value="${b.level + 1}" data-target="${b.slot}">
+        <button class="btn small" data-add-slot="${b.slot}" data-name="${esc(name)}">${esc(t('build.queueBtn'))}</button>`}</td>
     </tr>`;
   }).join('');
-  return `<tr><th>Slot</th><th>${kind === 'fields' ? 'Field' : 'Building'}</th><th>Level</th><th></th></tr>${rows}`;
+  return `<tr><th>${esc(t('th.slot'))}</th><th>${esc(t(kind === 'fields' ? 'th.field' : 'th.building'))}</th><th>${esc(t('th.level'))}</th><th></th></tr>${rows}`;
 }
 
-function renderBuild(now) {
+function renderBuild(now, force) {
   fillSelect($('buildVillage'), villageOptions(), buildVillageId);
   buildVillageId = $('buildVillage').value || null;
   const v = data.villages[buildVillageId];
   if (!v) {
-    $('taskList').innerHTML = '<li class="empty muted">No villages yet.</li>';
+    $('taskList').innerHTML = `<li class="empty muted">${esc(t('build.noVillages'))}</li>`;
     $('fieldTable').innerHTML = '';
     $('buildingTable').innerHTML = '';
     return;
   }
   const tasks = data.tasks[v.id] || [];
-  const retry = v.buildRetryAt && v.buildRetryAt > now ? ` · next try in ${fmtDuration(v.buildRetryAt - now)}` : '';
-  $('buildScan').textContent = `Fields ${fmtAgo(v.fieldsAt, now)} · buildings ${fmtAgo(v.buildingsAt, now)}${retry}`;
+  const retry = v.buildRetryAt && v.buildRetryAt > now ? t('build.retry', { t: fmtDuration(v.buildRetryAt - now) }) : '';
+  $('buildScan').textContent = t('build.scan', { a: fmtAgo(v.fieldsAt, now), b: fmtAgo(v.buildingsAt, now), retry });
   $('taskList').innerHTML = tasks.length
-    ? tasks.map((t) => `<li>
-        <span class="label">${esc(taskLabel(t, v))}</span>
-        ${t.attempts ? '<span class="tag busy">waiting</span>' : ''}
-        <button class="btn small" data-move="-1" data-task="${t.id}" title="Move up">↑</button>
-        <button class="btn small" data-move="1" data-task="${t.id}" title="Move down">↓</button>
-        <button class="btn small danger" data-remove-task="${t.id}" title="Remove">✕</button>
+    ? tasks.map((task) => `<li>
+        <span class="label">${esc(taskLabel(task, v))}</span>
+        ${task.attempts ? `<span class="tag busy">${esc(t('build.waiting'))}</span>` : ''}
+        <button class="btn small" data-move="-1" data-task="${task.id}" title="${esc(t('build.moveUp'))}">↑</button>
+        <button class="btn small" data-move="1" data-task="${task.id}" title="${esc(t('build.moveDown'))}">↓</button>
+        <button class="btn small danger" data-remove-task="${task.id}" title="${esc(t('build.remove'))}">✕</button>
       </li>`).join('')
-    : '<li class="empty muted">Nothing queued. Pick upgrades from the tables, or add an auto-upgrade below.</li>';
+    : `<li class="empty muted">${esc(t('build.emptyQueue'))}</li>`;
 
-  if (!$('fieldTable').contains(document.activeElement)) $('fieldTable').innerHTML = upgradeTable(v.fields, v, 'fields');
+  if (force || !$('fieldTable').contains(document.activeElement)) $('fieldTable').innerHTML = upgradeTable(v.fields, 'fields');
   const buildings = (v.buildings || []).filter((b) => b.gid > 0);
-  if (!$('buildingTable').contains(document.activeElement)) $('buildingTable').innerHTML = upgradeTable(v.buildings ? buildings : null, v, 'buildings');
+  if (force || !$('buildingTable').contains(document.activeElement)) $('buildingTable').innerHTML = upgradeTable(v.buildings ? buildings : null, 'buildings');
 }
 
 $('buildVillage').addEventListener('change', (e) => { buildVillageId = e.target.value; render(); });
@@ -134,18 +137,18 @@ $('addFieldsTask').addEventListener('click', () => {
   command('addTask', { villageId: buildVillageId, task: { kind: 'fields', resource: $('fieldsResource').value, targetLevel } });
 });
 document.getElementById('tab-build').addEventListener('click', (e) => {
-  const t = e.target.closest('button');
-  if (!t || !buildVillageId) return;
-  if (t.dataset.addSlot) {
-    const slot = Number(t.dataset.addSlot);
-    const input = t.parentElement.querySelector(`[data-target="${slot}"]`);
+  const b = e.target.closest('button');
+  if (!b || !buildVillageId) return;
+  if (b.dataset.addSlot) {
+    const slot = Number(b.dataset.addSlot);
+    const input = b.parentElement.querySelector(`[data-target="${slot}"]`);
     const targetLevel = Number(input && input.value);
     if (!(targetLevel >= 1)) return;
-    command('addTask', { villageId: buildVillageId, task: { kind: 'upgrade', slot, targetLevel, name: t.dataset.name } });
-  } else if (t.dataset.move) {
-    command('moveTask', { villageId: buildVillageId, taskId: t.dataset.task, delta: Number(t.dataset.move) });
-  } else if (t.dataset.removeTask) {
-    command('removeTask', { villageId: buildVillageId, taskId: t.dataset.removeTask });
+    command('addTask', { villageId: buildVillageId, task: { kind: 'upgrade', slot, targetLevel, name: b.dataset.name } });
+  } else if (b.dataset.move) {
+    command('moveTask', { villageId: buildVillageId, taskId: b.dataset.task, delta: Number(b.dataset.move) });
+  } else if (b.dataset.removeTask) {
+    command('removeTask', { villageId: buildVillageId, taskId: b.dataset.removeTask });
   }
 });
 
@@ -153,39 +156,40 @@ document.getElementById('tab-build').addEventListener('click', (e) => {
 function unitOptions(v, gid) {
   const known = v && v.units && v.units[gid];
   if (known && known.length) return known.map((u) => [u.field, `${u.name || u.field} (${u.field})`]);
-  return Array.from({ length: 10 }, (_, i) => [`t${i + 1}`, `Unit ${i + 1} (t${i + 1})`]);
+  return Array.from({ length: 10 }, (_, i) => [`t${i + 1}`, `${t('troops.unitN', { n: i + 1 })} (t${i + 1})`]);
 }
 
 function unitName(rule) {
   const v = data.villages[rule.villageId];
   const u = v && v.units && v.units[rule.gid] && v.units[rule.gid].find((x) => x.field === rule.troop);
-  return u && u.name ? u.name : `Unit ${rule.troop.slice(1)}`;
+  return u && u.name ? u.name : t('troops.unitN', { n: rule.troop.slice(1) });
 }
 
 function renderTroops(now) {
   fillSelect($('trainVillage'), villageOptions());
-  fillSelect($('trainBuilding'), Object.entries(TRAINING_BUILDINGS).map(([gid, n]) => [gid, n]));
+  fillSelect($('trainBuilding'), TRAINING_BUILDINGS.map((gid) => [gid, buildingName(gid)]));
   const v = data.villages[$('trainVillage').value];
   fillSelect($('trainUnit'), unitOptions(v, $('trainBuilding').value));
 
   const rules = data.training;
+  const head = ['th.village', 'th.building', 'th.unit', 'th.amount', 'th.every', 'th.next', 'th.on'].map((k) => `<th>${esc(t(k))}</th>`).join('');
   $('trainTable').innerHTML = rules.length
-    ? `<tr><th>Village</th><th>Building</th><th>Unit</th><th>Amount</th><th>Every</th><th>Next run</th><th>On</th><th></th></tr>` +
+    ? `<tr>${head}<th></th></tr>` +
       rules.map((r) => {
         const village = data.villages[r.villageId];
-        const next = r.nextAt && r.nextAt > now ? fmtDuration(r.nextAt - now) : 'due';
+        const next = r.nextAt && r.nextAt > now ? fmtDuration(r.nextAt - now) : t('troops.due');
         return `<tr>
-          <td>${esc(village ? village.name : '(gone)')}</td>
-          <td>${esc(TRAINING_BUILDINGS[r.gid] || buildingName(r.gid))}</td>
+          <td>${esc(village ? village.name : t('troops.gone'))}</td>
+          <td>${esc(buildingName(r.gid))}</td>
           <td>${esc(unitName(r))}</td>
           <td class="mono">${r.amount}</td>
-          <td class="mono">${r.everyMinutes} min</td>
-          <td class="mono">${r.enabled === false ? '—' : next}</td>
+          <td class="mono">${esc(t('troops.everyMin', { n: r.everyMinutes }))}</td>
+          <td class="mono">${r.enabled === false ? '—' : esc(next)}</td>
           <td><label class="switch"><input type="checkbox" data-toggle-rule="${r.id}" ${r.enabled === false ? '' : 'checked'}></label></td>
-          <td class="actions"><button class="btn small danger" data-remove-rule="${r.id}">✕</button></td>
+          <td class="actions"><button class="btn small danger" data-remove-rule="${r.id}" title="${esc(t('build.remove'))}">✕</button></td>
         </tr>`;
       }).join('')
-    : '<tr><td class="muted">No training rules yet.</td></tr>';
+    : `<tr><td class="muted">${esc(t('troops.none'))}</td></tr>`;
 }
 
 $('trainVillage').addEventListener('change', render);
@@ -212,20 +216,20 @@ $('trainTable').addEventListener('click', (e) => {
 
 // ---------------------------------------------------------- farms & hero ---
 function renderRaids(now) {
-  fillSelect($('farmVillage'), [['', 'Whichever village is active'], ...villageOptions()], data.settings.farm.villageId);
+  fillSelect($('farmVillage'), [['', t('raids.anyVillage')], ...villageOptions()], data.settings.farm.villageId);
   const lists = data.account.farmLists || [];
   const chosen = new Set((data.settings.farm.listIds || []).map(String));
   $('farmLists').innerHTML = lists.length
-    ? lists.map((l) => `<label class="switch"><input type="checkbox" data-farm-list="${esc(l.id)}" ${chosen.has(String(l.id)) ? 'checked' : ''}> <span>${esc(l.name || `List ${l.id}`)}</span></label>`).join('')
-    : '<p class="muted small">No farm lists seen yet.</p>';
+    ? lists.map((l) => `<label class="switch"><input type="checkbox" data-farm-list="${esc(l.id)}" ${chosen.has(String(l.id)) ? 'checked' : ''}> <span>${esc(l.name || t('raids.listN', { id: l.id }))}</span></label>`).join('')
+    : `<p class="muted small">${esc(t('raids.none'))}</p>`;
 
   const hero = data.account.hero || {};
   const items = [
-    ['Status', hero.home ? 'Home' : 'Away / moving'],
-    ['Adventures available', hero.adventures ?? '—'],
-    ['Last seen', fmtAgo(data.account.updatedAt, now)],
+    [t('hero.status'), t(hero.home ? 'hero.home' : 'hero.away')],
+    [t('hero.adventures'), hero.adventures ?? '—'],
+    [t('hero.lastSeen'), fmtAgo(data.account.updatedAt, now)],
   ];
-  if (data.settings.adventure.enabled) items.push(['Next check', fmtDuration(Math.max(0, (data.schedule.adventureAt || now) - now))]);
+  if (data.settings.adventure.enabled) items.push([t('hero.nextCheck'), fmtDuration(Math.max(0, (data.schedule.adventureAt || now) - now))]);
   $('heroInfo').innerHTML = items.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('');
 }
 
@@ -238,12 +242,12 @@ $('farmLists').addEventListener('change', () => {
 
 // -------------------------------------------------------------- alerts ---
 $('testAlert').addEventListener('click', async () => {
-  $('testResult').textContent = 'Sending…';
+  $('testResult').textContent = t('alerts.sending');
   try {
     const r = await command('testAlert');
-    if (!r.sent) $('testResult').textContent = 'Desktop test sent. Add Telegram or Discord details to test phone alerts.';
-    else if (r.failed.length) $('testResult').textContent = `Failed: ${r.failed.join(', ')}`;
-    else $('testResult').textContent = `Sent to ${r.sent} phone channel${r.sent > 1 ? 's' : ''}.`;
+    if (!r.sent) $('testResult').textContent = t('alerts.testDesktopOnly');
+    else if (r.failed.length) $('testResult').textContent = t('alerts.testFailed', { list: r.failed.join(t('list.sep')) });
+    else $('testResult').textContent = t('alerts.testSent', { n: r.sent });
   } catch (e) {
     $('testResult').textContent = e.message;
   }
@@ -251,7 +255,7 @@ $('testAlert').addEventListener('click', async () => {
 
 // ------------------------------------------------------------ settings ---
 $('resetData').addEventListener('click', () => {
-  if (confirm('Forget all stored village data? Your build queue, training rules and settings are kept.')) command('resetData');
+  if (confirm(t('settings.resetConfirm'))) command('resetData');
 });
 
 // ------------------------------------------------------------------ log ---
@@ -259,11 +263,11 @@ function renderLog() {
   const names = Object.fromEntries(Object.values(data.villages).map((v) => [v.id, v.name]));
   $('logList').innerHTML = data.log.length
     ? data.log.map((e) => `<li>
-        <span class="muted mono">${new Date(e.t).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-        <span class="lvl ${esc(e.level)}">${esc(e.level)}</span>
+        <span class="muted mono">${new Date(e.t).toLocaleString(dateLocale(), { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+        <span class="lvl ${esc(e.level)}">${esc(t(`level.${e.level}`))}</span>
         <span>${e.villageId && names[e.villageId] ? `<b>${esc(names[e.villageId])}:</b> ` : ''}${esc(e.msg)}</span>
       </li>`).join('')
-    : '<li class="muted">Nothing yet.</li>';
+    : `<li class="muted">${esc(t('log.empty'))}</li>`;
 }
 $('clearLog').addEventListener('click', () => command('clearLog'));
 
@@ -284,10 +288,17 @@ function renderTicking(now) {
 function render() {
   if (!data) return;
   const now = Date.now();
-  $('server').textContent = data.settings.server ? new URL(data.settings.server).host : 'No server yet';
-  $('serverFull').textContent = data.settings.server || 'Not detected yet';
+  const langChanged = lang !== data.settings.language;
+  if (langChanged) {
+    lang = data.settings.language;
+    applyI18n();
+    document.title = t('app.name');
+    fillSelect($('language'), LANGUAGES);
+  }
+  $('server').textContent = data.settings.server ? new URL(data.settings.server).host : t('server.none');
+  $('serverFull').textContent = data.settings.server || t('settings.notDetected');
   renderTicking(now);
-  renderBuild(now);
+  renderBuild(now, langChanged);
   renderTroops(now);
   renderRaids(now);
   renderLog();

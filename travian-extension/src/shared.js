@@ -1,28 +1,49 @@
 // Constants and helpers shared by the background worker, popup and dashboard.
+import { t, getLanguage, dateLocale } from './i18n.js';
 
 export const RESOURCES = ['wood', 'clay', 'iron', 'crop'];
-export const RESOURCE_LABELS = { wood: 'Wood', clay: 'Clay', iron: 'Iron', crop: 'Crop' };
 export const FIELD_RESOURCE = { 1: 'wood', 2: 'clay', 3: 'iron', 4: 'crop' };
+export const resLabel = (k) => t(`res.${k}`);
 
-export const BUILDING_NAMES = {
-  1: 'Woodcutter', 2: 'Clay Pit', 3: 'Iron Mine', 4: 'Cropland', 5: 'Sawmill',
-  6: 'Brickyard', 7: 'Iron Foundry', 8: 'Grain Mill', 9: 'Bakery', 10: 'Warehouse',
-  11: 'Granary', 13: 'Smithy', 14: 'Tournament Square', 15: 'Main Building',
-  16: 'Rally Point', 17: 'Marketplace', 18: 'Embassy', 19: 'Barracks', 20: 'Stable',
-  21: 'Workshop', 22: 'Academy', 23: 'Cranny', 24: 'Town Hall', 25: 'Residence',
-  26: 'Palace', 27: 'Treasury', 28: 'Trade Office', 29: 'Great Barracks',
-  30: 'Great Stable', 31: 'City Wall', 32: 'Earth Wall', 33: 'Palisade',
-  34: "Stonemason's Lodge", 35: 'Brewery', 36: 'Trapper', 37: "Hero's Mansion",
-  38: 'Great Warehouse', 39: 'Great Granary', 40: 'Wonder of the World',
-  41: 'Horse Drinking Trough', 42: 'Stone Wall', 43: 'Makeshift Wall',
-  44: 'Command Center', 45: 'Waterworks', 46: 'Hospital',
+const BUILDING_NAMES = {
+  en: {
+    1: 'Woodcutter', 2: 'Clay Pit', 3: 'Iron Mine', 4: 'Cropland', 5: 'Sawmill',
+    6: 'Brickyard', 7: 'Iron Foundry', 8: 'Grain Mill', 9: 'Bakery', 10: 'Warehouse',
+    11: 'Granary', 13: 'Smithy', 14: 'Tournament Square', 15: 'Main Building',
+    16: 'Rally Point', 17: 'Marketplace', 18: 'Embassy', 19: 'Barracks', 20: 'Stable',
+    21: 'Workshop', 22: 'Academy', 23: 'Cranny', 24: 'Town Hall', 25: 'Residence',
+    26: 'Palace', 27: 'Treasury', 28: 'Trade Office', 29: 'Great Barracks',
+    30: 'Great Stable', 31: 'City Wall', 32: 'Earth Wall', 33: 'Palisade',
+    34: "Stonemason's Lodge", 35: 'Brewery', 36: 'Trapper', 37: "Hero's Mansion",
+    38: 'Great Warehouse', 39: 'Great Granary', 40: 'Wonder of the World',
+    41: 'Horse Drinking Trough', 42: 'Stone Wall', 43: 'Makeshift Wall',
+    44: 'Command Center', 45: 'Waterworks', 46: 'Hospital',
+  },
+  ar: {
+    1: 'الحطاب', 2: 'حفرة الطين', 3: 'منجم الحديد', 4: 'حقل القمح', 5: 'معمل النشارة',
+    6: 'مصنع الطوب', 7: 'مسبك الحديد', 8: 'المطحنة', 9: 'المخبز', 10: 'المخزن',
+    11: 'مخزن الحبوب', 13: 'الحداد', 14: 'ساحة البطولة', 15: 'المبنى الرئيسي',
+    16: 'نقطة التجمع', 17: 'السوق', 18: 'السفارة', 19: 'الثكنة', 20: 'الإسطبل',
+    21: 'المصانع الحربية', 22: 'الأكاديمية الحربية', 23: 'المخبأ', 24: 'البلدية', 25: 'السكن',
+    26: 'القصر', 27: 'الخزنة', 28: 'المكتب التجاري', 29: 'الثكنة الكبيرة',
+    30: 'الإسطبل الكبير', 31: 'السور', 32: 'السور الترابي', 33: 'الحاجز',
+    34: 'كوخ الحجّار', 35: 'المعصرة', 36: 'الصياد', 37: 'قصر الأبطال',
+    38: 'المخزن الكبير', 39: 'مخزن الحبوب الكبير', 40: 'معجزة العالم',
+    41: 'ساقية الخيول', 42: 'السور الحجري', 43: 'السور المؤقت',
+    44: 'مركز القيادة', 45: 'محطة المياه', 46: 'المستشفى',
+  },
 };
 
-export const TRAINING_BUILDINGS = { 19: 'Barracks', 20: 'Stable', 21: 'Workshop', 29: 'Great Barracks', 30: 'Great Stable', 25: 'Residence', 26: 'Palace' };
+// Buildings that train troops, in the order shown in the dashboard.
+export const TRAINING_BUILDINGS = [19, 20, 21, 29, 30, 25, 26];
 
-export const buildingName = (gid, fallback) => fallback || BUILDING_NAMES[gid] || (gid ? `Building #${gid}` : 'Empty site');
+// `fallback` is the name the game itself showed (already in the server's language).
+export const buildingName = (gid, fallback) =>
+  fallback || (BUILDING_NAMES[getLanguage()] || BUILDING_NAMES.en)[gid] ||
+  (gid ? t('building.unknown', { gid }) : t('building.empty'));
 
 export const DEFAULT_SETTINGS = {
+  language: 'ar',
   server: '',
   watchEnabled: true,       // periodically re-check villages and send alerts
   botEnabled: false,        // perform queued actions (build, train, farm, adventures)
@@ -88,23 +109,23 @@ export function fmtDuration(ms) {
   const h = Math.floor(s / 3600); s -= h * 3600;
   const m = Math.floor(s / 60); s -= m * 60;
   const pad = (n) => String(n).padStart(2, '0');
-  const body = d ? `${d}d ${h}h` : h ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+  const body = d ? t('time.dh', { d, h }) : h ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
   return neg ? `-${body}` : body;
 }
 
 export function fmtAgo(ts, now = Date.now()) {
-  if (!ts) return 'never';
+  if (!ts) return t('ago.never');
   const s = Math.round((now - ts) / 1000);
-  if (s < 60) return 'just now';
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return `${Math.floor(s / 86400)}d ago`;
+  if (s < 60) return t('ago.now');
+  if (s < 3600) return t('ago.m', { n: Math.floor(s / 60) });
+  if (s < 86400) return t('ago.h', { n: Math.floor(s / 3600) });
+  return t('ago.d', { n: Math.floor(s / 86400) });
 }
 
-export const fmtNum = (n) => (n == null ? '—' : Math.round(n).toLocaleString());
+export const fmtNum = (n) => (n == null ? '—' : Math.round(n).toLocaleString('en-US'));
 
 export function fmtClock(ts) {
-  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return new Date(ts).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' });
 }
 
 export function withinActiveHours(cfg, date = new Date()) {
@@ -121,10 +142,10 @@ export function sortedVillages(villages) {
 
 export function taskLabel(task, village) {
   if (task.kind === 'fields') {
-    const which = task.resource && task.resource !== 'all' ? `${RESOURCE_LABELS[task.resource]} fields` : 'All resource fields';
-    return `${which} → level ${task.targetLevel}`;
+    const what = task.resource && task.resource !== 'all' ? t(`fieldsOf.${task.resource}`) : t('task.allFields');
+    return t('task.toLevel', { what, n: task.targetLevel });
   }
   const b = village && [...(village.fields || []), ...(village.buildings || [])].find((x) => x.slot === task.slot);
-  const name = task.name || (b ? buildingName(b.gid, b.name) : `Slot ${task.slot}`);
-  return `${name} (slot ${task.slot}) → level ${task.targetLevel}`;
+  const name = b ? buildingName(b.gid, b.name) : task.name || t('task.slot', { n: task.slot });
+  return t('task.slotLabel', { name, slot: task.slot, n: task.targetLevel });
 }

@@ -1,32 +1,32 @@
 <!doctype html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
-  <title>Travian Helper</title>
+  <title>مساعد ترافيان</title>
   <link rel="stylesheet" href="../src/ui.css">
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <header class="top">
     <div>
-      <h1>Travian Helper</h1>
+      <h1 data-i18n="app.name"></h1>
       <span id="server" class="muted small"></span>
     </div>
     <span id="gold" class="muted small"></span>
   </header>
 
   <section class="toggles">
-    <label class="switch"><input type="checkbox" id="watch"> <span>Watch &amp; alert</span></label>
-    <label class="switch"><input type="checkbox" id="bot"> <span>Automate actions</span></label>
+    <label class="switch"><input type="checkbox" id="watch"> <span data-i18n="toggle.watch"></span></label>
+    <label class="switch"><input type="checkbox" id="bot"> <span data-i18n="toggle.bot"></span></label>
   </section>
 
   <div id="status" class="status"></div>
   <main id="villages"></main>
 
   <footer class="bottom">
-    <button class="btn" id="checkNow">Check now</button>
-    <button class="btn" id="openGame">Open Travian</button>
-    <button class="btn primary" id="openDashboard">Dashboard</button>
+    <button class="btn" id="checkNow" data-i18n="btn.checkNow"></button>
+    <button class="btn" id="openGame" data-i18n="btn.openGame"></button>
+    <button class="btn primary" id="openDashboard" data-i18n="btn.dashboard"></button>
   </footer>
   <script type="module" src="popup.js"></script>
 </body>

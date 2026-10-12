@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Travian Helper</title>
+  <title>مساعد ترافيان</title>
   <link rel="stylesheet" href="../src/ui.css">
   <link rel="stylesheet" href="dashboard.css">
 </head>
@@ -11,22 +11,22 @@
 <div class="layout">
   <nav class="side">
     <div class="brand">
-      <h1>Travian Helper</h1>
+      <h1 data-i18n="app.name"></h1>
       <span id="server" class="muted small"></span>
     </div>
     <div class="tabs">
-      <a href="#overview" data-tab="overview">Overview</a>
-      <a href="#build" data-tab="build">Build queue</a>
-      <a href="#troops" data-tab="troops">Troops</a>
-      <a href="#raids" data-tab="raids">Farms &amp; hero</a>
-      <a href="#alerts" data-tab="alerts">Alerts</a>
-      <a href="#settings" data-tab="settings">Settings</a>
-      <a href="#log" data-tab="log">Activity log</a>
+      <a href="#overview" data-tab="overview" data-i18n="nav.overview"></a>
+      <a href="#build" data-tab="build" data-i18n="nav.build"></a>
+      <a href="#troops" data-tab="troops" data-i18n="nav.troops"></a>
+      <a href="#raids" data-tab="raids" data-i18n="nav.raids"></a>
+      <a href="#alerts" data-tab="alerts" data-i18n="nav.alerts"></a>
+      <a href="#settings" data-tab="settings" data-i18n="nav.settings"></a>
+      <a href="#log" data-tab="log" data-i18n="nav.log"></a>
     </div>
     <div class="side-toggles">
-      <label class="switch"><input type="checkbox" data-setting="watchEnabled"> <span>Watch &amp; alert</span></label>
-      <label class="switch"><input type="checkbox" data-setting="botEnabled"> <span>Automate actions</span></label>
-      <button class="btn small" id="checkNow">Check now</button>
+      <label class="switch"><input type="checkbox" data-setting="watchEnabled"> <span data-i18n="toggle.watch"></span></label>
+      <label class="switch"><input type="checkbox" data-setting="botEnabled"> <span data-i18n="toggle.bot"></span></label>
+      <button class="btn small" id="checkNow" data-i18n="btn.checkNow"></button>
     </div>
   </nav>
 
@@ -42,32 +42,32 @@
     <!-- Build queue -->
     <section class="tab" id="tab-build">
       <div class="row">
-        <label>Village <select id="buildVillage"></select></label>
+        <label><span data-i18n="build.village"></span> <select id="buildVillage"></select></label>
         <span id="buildScan" class="muted small"></span>
       </div>
       <div class="cols">
         <div class="panel">
-          <h2>Queue</h2>
-          <p class="muted small">Worked top to bottom. The bot starts the next upgrade whenever a builder is free and you have the resources.</p>
+          <h2 data-i18n="build.queue"></h2>
+          <p class="muted small" data-i18n="build.queueHelp"></p>
           <ol id="taskList" class="tasks"></ol>
-          <h3>Auto-upgrade resource fields</h3>
-          <p class="muted small">Always upgrades the lowest field first; ties go to the resource you have least of.</p>
+          <h3 data-i18n="build.autoTitle"></h3>
+          <p class="muted small" data-i18n="build.autoHelp"></p>
           <div class="row">
             <select id="fieldsResource">
-              <option value="all">All fields</option>
-              <option value="wood">Wood</option>
-              <option value="clay">Clay</option>
-              <option value="iron">Iron</option>
-              <option value="crop">Crop</option>
+              <option value="all" data-i18n="build.allFields"></option>
+              <option value="wood" data-i18n="res.wood"></option>
+              <option value="clay" data-i18n="res.clay"></option>
+              <option value="iron" data-i18n="res.iron"></option>
+              <option value="crop" data-i18n="res.crop"></option>
             </select>
-            <label>to level <input type="number" id="fieldsLevel" min="1" max="21" value="10" class="num"></label>
-            <button class="btn primary" id="addFieldsTask">Add</button>
+            <label><span data-i18n="build.toLevel"></span> <input type="number" id="fieldsLevel" min="1" max="21" value="10" class="num"></label>
+            <button class="btn primary" id="addFieldsTask" data-i18n="btn.add"></button>
           </div>
         </div>
         <div class="panel">
-          <h2>Resource fields</h2>
+          <h2 data-i18n="build.fields"></h2>
           <table class="list" id="fieldTable"></table>
-          <h2 class="gap">Buildings</h2>
+          <h2 class="gap" data-i18n="build.buildings"></h2>
           <table class="list" id="buildingTable"></table>
         </div>
       </div>
@@ -76,21 +76,21 @@
     <!-- Troops -->
     <section class="tab" id="tab-troops">
       <div class="panel">
-        <h2>Training rules</h2>
-        <p class="muted small">Each rule trains up to the amount you set, every N minutes. If you can only afford fewer, it trains what it can.</p>
+        <h2 data-i18n="troops.rules"></h2>
+        <p class="muted small" data-i18n="troops.help"></p>
         <table class="list" id="trainTable"></table>
       </div>
       <div class="panel">
-        <h3>Add a rule</h3>
+        <h3 data-i18n="troops.add"></h3>
         <div class="row wrap">
-          <label>Village <select id="trainVillage"></select></label>
-          <label>Building <select id="trainBuilding"></select></label>
-          <label>Unit <select id="trainUnit"></select></label>
-          <label>Amount <input type="number" id="trainAmount" min="1" value="10" class="num"></label>
-          <label>Every <input type="number" id="trainEvery" min="5" value="60" class="num"> min</label>
-          <button class="btn primary" id="addTrain">Add rule</button>
+          <label><span data-i18n="troops.village"></span> <select id="trainVillage"></select></label>
+          <label><span data-i18n="troops.building"></span> <select id="trainBuilding"></select></label>
+          <label><span data-i18n="troops.unit"></span> <select id="trainUnit"></select></label>
+          <label><span data-i18n="troops.amount"></span> <input type="number" id="trainAmount" min="1" value="10" class="num"></label>
+          <label><span data-i18n="troops.every"></span> <input type="number" id="trainEvery" min="5" value="60" class="num"> <span data-i18n="troops.min"></span></label>
+          <button class="btn primary" id="addTrain" data-i18n="troops.addBtn"></button>
         </div>
-        <p class="muted small">Unit names appear once the extension has seen that building's page. Until then units are shown by their slot (Unit 1 = your tribe's first unit).</p>
+        <p class="muted small" data-i18n="troops.unitHelp"></p>
       </div>
     </section>
 
@@ -98,22 +98,22 @@
     <section class="tab" id="tab-raids">
       <div class="cols">
         <div class="panel">
-          <h2>Farm lists</h2>
-          <label class="switch"><input type="checkbox" data-setting="farm.enabled"> <span>Send farm lists automatically</span></label>
+          <h2 data-i18n="raids.farmLists"></h2>
+          <label class="switch"><input type="checkbox" data-setting="farm.enabled"> <span data-i18n="raids.auto"></span></label>
           <div class="row">
-            <label>Every <input type="number" data-setting="farm.intervalMinutes" min="5" class="num"> minutes</label>
+            <label><span data-i18n="raids.every"></span> <input type="number" data-setting="farm.intervalMinutes" min="5" class="num"> <span data-i18n="raids.minutes"></span></label>
           </div>
           <div class="row">
-            <label>From village <select data-setting="farm.villageId" id="farmVillage"></select></label>
+            <label><span data-i18n="raids.fromVillage"></span> <select data-setting="farm.villageId" id="farmVillage"></select></label>
           </div>
-          <h3>Lists to send</h3>
+          <h3 data-i18n="raids.lists"></h3>
           <div id="farmLists"></div>
-          <p class="muted small">Open Rally Point → Farm List in Travian once so your lists show up here. Leave all unticked to press “Start all”.</p>
+          <p class="muted small" data-i18n="raids.help"></p>
         </div>
         <div class="panel">
-          <h2>Hero</h2>
-          <label class="switch"><input type="checkbox" data-setting="adventure.enabled"> <span>Send hero on adventures</span></label>
-          <p class="muted small">Sends the hero to the first available adventure whenever they're home.</p>
+          <h2 data-i18n="hero.title"></h2>
+          <label class="switch"><input type="checkbox" data-setting="adventure.enabled"> <span data-i18n="hero.auto"></span></label>
+          <p class="muted small" data-i18n="hero.help"></p>
           <div id="heroInfo" class="kv"></div>
         </div>
       </div>
@@ -123,33 +123,33 @@
     <section class="tab" id="tab-alerts">
       <div class="cols">
         <div class="panel">
-          <h2>What to alert on</h2>
-          <label class="switch"><input type="checkbox" data-setting="alerts.attacks"> <span>Incoming attacks</span></label>
-          <label class="switch"><input type="checkbox" data-setting="alerts.storage"> <span>Warehouse / granary almost full</span></label>
+          <h2 data-i18n="alerts.what"></h2>
+          <label class="switch"><input type="checkbox" data-setting="alerts.attacks"> <span data-i18n="alerts.attacks"></span></label>
+          <label class="switch"><input type="checkbox" data-setting="alerts.storage"> <span data-i18n="alerts.storage"></span></label>
           <div class="row indent">
-            <label>Warn when full within <input type="number" step="0.5" min="0" data-setting="alerts.storageHours" class="num"> hours</label>
+            <label><span data-i18n="alerts.storageWithin"></span> <input type="number" step="0.5" min="0" data-setting="alerts.storageHours" class="num"> <span data-i18n="alerts.hours"></span></label>
           </div>
-          <label class="switch"><input type="checkbox" data-setting="alerts.starvation"> <span>Crop running out (troops starving)</span></label>
-          <label class="switch"><input type="checkbox" data-setting="alerts.loggedOut"> <span>Logged out of Travian</span></label>
-          <label class="switch"><input type="checkbox" data-setting="alerts.botErrors"> <span>Automation problems</span></label>
-          <h3 class="gap">Desktop</h3>
-          <label class="switch"><input type="checkbox" data-setting="alerts.desktop"> <span>Show desktop notifications</span></label>
+          <label class="switch"><input type="checkbox" data-setting="alerts.starvation"> <span data-i18n="alerts.starvation"></span></label>
+          <label class="switch"><input type="checkbox" data-setting="alerts.loggedOut"> <span data-i18n="alerts.loggedOut"></span></label>
+          <label class="switch"><input type="checkbox" data-setting="alerts.botErrors"> <span data-i18n="alerts.botErrors"></span></label>
+          <h3 class="gap" data-i18n="alerts.desktopTitle"></h3>
+          <label class="switch"><input type="checkbox" data-setting="alerts.desktop"> <span data-i18n="alerts.desktop"></span></label>
         </div>
         <div class="panel">
-          <h2>Phone alerts</h2>
-          <p class="muted small">Get alerts on your phone while you're away. Set up either or both.</p>
+          <h2 data-i18n="alerts.phone"></h2>
+          <p class="muted small" data-i18n="alerts.phoneHelp"></p>
           <h3>Telegram</h3>
           <ol class="small muted howto">
-            <li>Message <b>@BotFather</b> on Telegram, send <code>/newbot</code>, and copy the token.</li>
-            <li>Send any message to your new bot, then open <code>https://api.telegram.org/bot&lt;token&gt;/getUpdates</code> and copy <code>chat.id</code>.</li>
+            <li data-i18n-html="alerts.tgStep1"></li>
+            <li data-i18n-html="alerts.tgStep2"></li>
           </ol>
-          <label class="field">Bot token <input type="password" data-setting="telegram.token" autocomplete="off"></label>
-          <label class="field">Chat ID <input type="text" data-setting="telegram.chatId" autocomplete="off"></label>
+          <label class="field"><span data-i18n="alerts.tgToken"></span> <input type="password" data-setting="telegram.token" autocomplete="off" dir="ltr"></label>
+          <label class="field"><span data-i18n="alerts.tgChat"></span> <input type="text" data-setting="telegram.chatId" autocomplete="off" dir="ltr"></label>
           <h3 class="gap">Discord</h3>
-          <p class="small muted">Server Settings → Integrations → Webhooks → New Webhook → Copy URL.</p>
-          <label class="field">Webhook URL <input type="password" data-setting="discord.webhookUrl" autocomplete="off" placeholder="https://discord.com/api/webhooks/…"></label>
+          <p class="small muted" data-i18n="alerts.discordHelp"></p>
+          <label class="field"><span data-i18n="alerts.webhook"></span> <input type="password" data-setting="discord.webhookUrl" autocomplete="off" dir="ltr" placeholder="https://discord.com/api/webhooks/…"></label>
           <div class="row gap">
-            <button class="btn" id="testAlert">Send test alert</button>
+            <button class="btn" id="testAlert" data-i18n="alerts.test"></button>
             <span id="testResult" class="small muted"></span>
           </div>
         </div>
@@ -160,29 +160,31 @@
     <section class="tab" id="tab-settings">
       <div class="cols">
         <div class="panel">
-          <h2>Timing</h2>
-          <div class="row"><label>Check villages every <input type="number" min="3" data-setting="refreshMinutes" class="num"> minutes</label></div>
-          <div class="row"><label>Randomize timings by ± <input type="number" min="0" max="60" data-setting="jitterPercent" class="num"> %</label></div>
-          <label class="switch"><input type="checkbox" data-setting="pauseWhenPlaying"> <span>Pause while I'm playing</span></label>
-          <div class="row indent"><label>Resume <input type="number" min="1" data-setting="pauseMinutes" class="num"> minutes after my last page load</label></div>
-          <label class="switch"><input type="checkbox" data-setting="activeHours.enabled"> <span>Only automate between</span></label>
+          <h2 data-i18n="settings.language"></h2>
+          <div class="row"><select data-setting="language" id="language"></select></div>
+          <h2 class="gap" data-i18n="settings.timing"></h2>
+          <div class="row"><label><span data-i18n="settings.checkEvery"></span> <input type="number" min="3" data-setting="refreshMinutes" class="num"> <span data-i18n="settings.minutes"></span></label></div>
+          <div class="row"><label><span data-i18n="settings.jitter"></span> <input type="number" min="0" max="60" data-setting="jitterPercent" class="num"> %</label></div>
+          <label class="switch"><input type="checkbox" data-setting="pauseWhenPlaying"> <span data-i18n="settings.pause"></span></label>
+          <div class="row indent"><label><span data-i18n="settings.resume"></span> <input type="number" min="1" data-setting="pauseMinutes" class="num"> <span data-i18n="settings.resumeAfter"></span></label></div>
+          <label class="switch"><input type="checkbox" data-setting="activeHours.enabled"> <span data-i18n="settings.activeHours"></span></label>
           <div class="row indent">
-            <input type="time" data-setting="activeHours.from"> and <input type="time" data-setting="activeHours.to">
+            <input type="time" data-setting="activeHours.from"> <span data-i18n="settings.and"></span> <input type="time" data-setting="activeHours.to">
           </div>
-          <p class="muted small indent">Outside these hours the extension still watches and alerts.</p>
+          <p class="muted small indent" data-i18n="settings.activeHelp"></p>
         </div>
         <div class="panel">
-          <h2>Building</h2>
+          <h2 data-i18n="settings.building"></h2>
           <div class="row">
-            <label>Builders <select data-setting="maxQueue">
-              <option value="1">1 (standard)</option>
-              <option value="2">2 (Travian Plus or Romans)</option>
+            <label><span data-i18n="settings.builders"></span> <select data-setting="maxQueue">
+              <option value="1" data-i18n="settings.builders1"></option>
+              <option value="2" data-i18n="settings.builders2"></option>
             </select></label>
           </div>
-          <h2 class="gap">Server</h2>
-          <p><span id="serverFull" class="mono"></span></p>
-          <p class="muted small">Detected from the last Travian page you opened. To switch servers, just log in to the other one.</p>
-          <button class="btn danger" id="resetData">Forget village data</button>
+          <h2 class="gap" data-i18n="settings.server"></h2>
+          <p><span id="serverFull" class="mono" dir="ltr"></span></p>
+          <p class="muted small" data-i18n="settings.serverHelp"></p>
+          <button class="btn danger" id="resetData" data-i18n="settings.reset"></button>
         </div>
       </div>
     </section>
@@ -191,8 +193,8 @@
     <section class="tab" id="tab-log">
       <div class="panel">
         <div class="row between">
-          <h2>Activity log</h2>
-          <button class="btn small" id="clearLog">Clear</button>
+          <h2 data-i18n="log.title"></h2>
+          <button class="btn small" id="clearLog" data-i18n="log.clear"></button>
         </div>
         <ul id="logList" class="log"></ul>
       </div>
