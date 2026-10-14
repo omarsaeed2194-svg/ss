@@ -4,7 +4,7 @@
 import { command, esc } from '../src/ui.js';
 import {
   RESOURCES, FIELD_RESOURCE, resLabel, sortedVillages, estimateStock, hoursUntilLimit, capacityFor, buildStatus,
-  buildingName, taskLabel, fmtDuration, fmtAgo, fmtNum, fmtClock,
+  buildingName, taskLabel, fmtDuration, fmtAgo, fmtNum, fmtClock, earliestQueueFinish,
 } from '../src/shared.js';
 import { t, coords, ltr } from '../src/i18n.js';
 import { leaseIsFresh } from '../src/sync.js';
@@ -58,12 +58,18 @@ function renderFilter(villages, data) {
 
 // ------------------------------------------------------------------ KPIs ---
 function renderKpis(scope, data, now) {
-  let stock = 0, prod = 0, crop = 0, attacks = 0, busy = 0, idle = 0, hasRes = false;
-  let first = null;
+  let stock = 0, cap = 0, prod = 0, crop = 0, attacks = 0, busy = 0, hasRes = false;
+  let first = null, firstAttack = null, nextFree = null;
+  const idleNames = [], attackedNames = [];
+  const multi = scope.length > 1;
   for (const v of scope) {
     const est = estimateStock(v, now);
     const p = v.resources && v.resources.production;
-    if (est) { hasRes = true; stock += RESOURCES.reduce((n, k) => n + est[k], 0); }
+    if (est) {
+      hasRes = true;
+      stock += RESOURCES.reduce((n, k) => n + est[k], 0);
+      cap += RESOURCES.reduce((n, k) => n + (capacityFor(v.resources, k) || 0), 0);
+    }
     if (p) {
       prod += (p.wood || 0) + (p.clay || 0) + (p.iron || 0) + Math.max(0, p.crop || 0);
       crop += p.crop || 0;
@@ -73,29 +79,53 @@ function renderKpis(scope, data, now) {
         if (h != null && (!first || h < first.h)) first = { h, k, v };
       }
     }
-    if (v.underAttack) attacks += Math.max(1, v.incomingAttacks || 0);
+    if (v.underAttack) {
+      attacks += Math.max(1, v.incomingAttacks || 0);
+      attackedNames.push(v.name);
+      for (const m of v.movements || []) {
+        if (m.kind === 'att1' && m.arriveAt > now && (!firstAttack || m.arriveAt < firstAttack)) firstAttack = m.arriveAt;
+      }
+    }
     const active = (v.buildQueue || []).filter((b) => !b.finishAt || b.finishAt > now).length;
     busy += active;
-    if (v.buildQueue && !active) idle += 1;
+    if (v.buildQueue && !active) idleNames.push(v.name);
+    const free = earliestQueueFinish(v, now);
+    if (free && (!nextFree || free < nextFree)) nextFree = free;
   }
+  const idle = idleNames.length;
+  // Every tile gets a sub line so the cards in a row line up.
   const tiles = [
-    { label: t('ov.stockTotal'), value: hasRes ? fmtNum(stock) : '—' },
-    { label: t('ov.prodHour'), value: hasRes ? ltr(`+${fmtNum(prod)}`) : '—' },
-    { label: t('ov.netCrop'), value: hasRes ? ltr(`${crop >= 0 ? '+' : ''}${fmtNum(crop)}`) : '—', sev: crop < 0 ? 'critical' : '' },
+    { label: t('ov.stockTotal'), value: hasRes ? fmtNum(stock) : '—', sub: cap ? t('ov.ofCapacity', { pct: Math.round((stock / cap) * 100) }) : '' },
+    { label: t('ov.prodHour'), value: hasRes ? ltr(`+${fmtNum(prod)}`) : '—', sub: hasRes ? t('ov.perDay', { n: fmtNum(prod * 24) }) : '' },
+    { label: t('ov.netCrop'), value: hasRes ? ltr(`${crop >= 0 ? '+' : ''}${fmtNum(crop)}`) : '—', sub: hasRes ? t('ov.afterUpkeep') : '', sev: crop < 0 ? 'critical' : '' },
     {
       label: t('ov.fillsFirst'),
       value: first ? (first.h <= 0 ? t('card.full') : fmtDuration(first.h * 3600000)) : '—',
       text: !!first && first.h <= 0,
-      sub: first ? (scope.length > 1 ? `${resLabel(first.k)} · ${first.v.name}` : resLabel(first.k)) : '',
+      sub: first ? (multi ? `${resLabel(first.k)} · ${first.v.name}` : resLabel(first.k)) : '',
       sev: first && first.h <= 0.5 ? 'critical' : first && first.h <= 2 ? 'warning' : '',
     },
-    { label: t('ov.incoming'), value: String(attacks), sev: attacks ? 'critical' : '', icon: attacks ? '⚔' : '' },
-    { label: t('ov.builders'), value: idle ? t('ov.buildersIdle', { n: idle }) : busy ? t('ov.buildersBusy', { n: busy }) : '—', sev: idle ? 'warning' : '', text: true },
+    {
+      label: t('ov.incoming'),
+      value: String(attacks),
+      sub: !attacks ? t('ov.noAttacks') : firstAttack ? t('ov.firstIn', { t: fmtDuration(firstAttack - now) }) : multi ? attackedNames.join(' · ') : '',
+      sev: attacks ? 'critical' : '',
+      icon: attacks ? '⚔' : '',
+    },
+    {
+      label: t('ov.builders'),
+      value: idle ? t('ov.buildersIdle') : busy ? t('ov.buildersBusy', { n: busy }) : '—',
+      sub: idle ? (multi ? idleNames.join(' · ') : t('ov.nothingBuilding')) : nextFree ? t('ov.freeAt', { clock: fmtClock(nextFree) }) : '',
+      sev: idle ? 'warning' : '',
+      text: true,
+    },
   ];
   $('summary').innerHTML = tiles.map((x) => `<div class="kpi ${x.sev || ''}">
       <span class="kpi-label">${x.icon ? `<span aria-hidden="true">${x.icon}</span> ` : ''}${esc(x.label)}</span>
-      <b class="kpi-value${x.text ? ' text' : ''}">${esc(x.value)}</b>
-      ${x.sub ? `<span class="kpi-sub">${esc(x.sub)}</span>` : ''}
+      <span class="kpi-body">
+        <b class="kpi-value${x.text ? ' text' : ''}">${esc(x.value)}</b>
+        <span class="kpi-sub" title="${esc(x.sub)}">${esc(x.sub)}</span>
+      </span>
     </div>`).join('');
 }
 
@@ -361,7 +391,7 @@ function renderPostcards(scope, now) {
   if (artCache.cards !== sig) {
     artCache.cards = sig;
     $('ovPostcards').innerHTML = scope.map((v) => `<button type="button" class="postcard${v.underAttack ? ' attacked' : ''}" data-filter="${esc(v.id)}">
-        ${villageArt(v, { label: esc(v.name), now })}
+        ${villageArt(v, { label: esc(v.name), now, wide: true })}
         <span class="pc-name">${esc(v.name)} <small class="muted">${coords(v.x, v.y)}</small></span>
         <span class="pc-line" data-pc="${esc(v.id)}"></span>
       </button>`).join('');

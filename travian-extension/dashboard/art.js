@@ -119,8 +119,9 @@ export function villageArt(v, { label = '', now = Date.now(), wide = false } = {
   parts.push('</g>');
   if (v.underAttack) {
     parts.push(`<rect width="${W}" height="150" class="attack-tint"/>`);
-    const bx = wide ? 60 : 30;
-    parts.push(`<g class="attack-badge"><circle cx="${bx}" cy="${wide ? 70 : 30}" r="14"/><text x="${bx}" y="${wide ? 75 : 35}" text-anchor="middle">⚔</text></g>`);
+    // Beside the village, so it stays in view however much of the sides is cropped.
+    const bx = ox + 30, by = wide ? 52 : 30;
+    parts.push(`<g class="attack-badge"><circle cx="${bx}" cy="${by}" r="14"/><text x="${bx}" y="${by + 5}" text-anchor="middle">⚔</text></g>`);
   }
   return `<svg viewBox="0 0 ${W} 150" class="art village-art" role="img" aria-label="${label}" preserveAspectRatio="xMidYMax slice">${parts.join('')}</svg>`;
 }

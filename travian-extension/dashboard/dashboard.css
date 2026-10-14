@@ -120,22 +120,44 @@ table.list tr.attacked td { background: var(--bad-bg); }
 .account-strip small { color: var(--text-2); font-size: 11px; }
 .account-strip b { font-size: 14px; font-weight: 600; }
 
-.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+/* One 16px gutter everywhere. The score cards and the two columns share a
+   6-column grid, so the side column lines up with the last two cards. Sizes
+   follow the space the overview actually has (container queries), not the
+   window, because the sidebar takes part of the window. */
+#ovBody { display: flex; flex-direction: column; gap: 16px; container: ovbody / inline-size; }
+.kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; }
 .kpi {
   background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
-  padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; position: relative; overflow: hidden;
+  padding: 14px 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 8px;
+  position: relative; overflow: hidden; min-width: 0;
 }
 .kpi::before { content: ""; position: absolute; inset-block: 0; inset-inline-start: 0; width: 3px; background: transparent; }
 .kpi.warning::before { background: var(--warn-mark); }
 .kpi.critical::before { background: var(--bad-mark); }
-.kpi-label { color: var(--text-2); font-size: 12px; }
-.kpi-value { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; }
+.kpi-label { color: var(--text-2); font-size: 12px; line-height: 1.4; }
+/* Value + sub sit at the bottom, so values line up even when a label wraps. */
+.kpi-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.kpi-value { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; line-height: 28px; font-variant-numeric: tabular-nums; }
 .kpi.critical .kpi-value { color: var(--bad); }
-.kpi-value.text { font-size: 16px; line-height: 1.35; }
-.kpi-sub { color: var(--text-2); font-size: 12px; }
+.kpi-value.text { font-size: 16px; }
+.kpi-sub { color: var(--text-2); font-size: 12px; line-height: 1.4; min-height: 1.4em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.dash-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.dash-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.dash-main { grid-column: span 4; container: ovmain / inline-size; }
+.dash-side { grid-column: span 2; }
 .dash-main, .dash-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+@container ovbody (max-width: 959px) {
+  .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dash-grid { grid-template-columns: minmax(0, 1fr); }
+  .dash-main, .dash-side { grid-column: auto; }
+  /* Side panels go below the main column, flowing into two columns when they fit. */
+  .dash-side { display: block; columns: 2 300px; column-gap: 16px; }
+  .dash-side > .panel { break-inside: avoid; margin-block-end: 16px; }
+}
+@container ovbody (max-width: 479px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
 /* Tips: status = mark + icon + label, text stays in ink. */
 .tips { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
@@ -207,7 +229,8 @@ table.list tr.attacked td { background: var(--bad-bg); }
 /* Side feeds. */
 .feed { list-style: none; margin: 0; padding: 0; }
 .feed li { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
-.feed li:last-child { border-bottom: 0; }
+.feed li:first-child { padding-top: 0; }
+.feed li:last-child { border-bottom: 0; padding-bottom: 0; }
 .feed li.bad > span:first-child { color: var(--bad); font-weight: 500; }
 .feed-time { display: flex; flex-direction: column; align-items: flex-end; text-align: end; white-space: nowrap; }
 .feed li.lvl-success > span:first-child::before { content: "✓ "; color: var(--good-mark); }
@@ -257,11 +280,13 @@ svg.chart .hit { fill: transparent; }
 }
 :root[dir="rtl"] .toast { transform: translateX(50%); }
 
-@media (max-width: 1100px) {
-  .dash-grid { grid-template-columns: 1fr; }
+/* Narrow main column: "fills in" moves under the bar, key buildings under the fields. */
+@container ovmain (max-width: 639px) {
+  .fields-grid { grid-template-columns: 1fr; }
+}
+@container ovmain (max-width: 559px) {
   .meter-row { grid-template-columns: 56px minmax(60px, 1fr) 110px 56px; }
   .meter-when { grid-column: 2 / -1; }
-  .fields-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 760px) {
   .layout { grid-template-columns: 1fr; }
@@ -344,7 +369,8 @@ svg.chart .hit { fill: transparent; }
 }
 .art-chip small { color: var(--text-2); }
 
-.postcards { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(200px, 230px); gap: 12px; overflow-x: auto; padding-block-end: 4px; }
+/* Cards share the column's width; with many villages the row scrolls sideways. */
+.postcards { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(220px, 1fr); gap: 16px; overflow-x: auto; padding: 1px 1px 4px; margin: -1px -1px 0; }
 .postcard {
   text-align: start; display: flex; flex-direction: column; gap: 4px; padding: 0 0 10px; cursor: pointer;
   background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; color: var(--text);
