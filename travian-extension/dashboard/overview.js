@@ -1,7 +1,7 @@
 // The Overview dashboard: a village filter, headline numbers, tips worked
 // out from the village's state, resources, a 24-hour chart, field levels,
 // and side panels for what's coming up, construction, movements and activity.
-import { command, esc } from '../src/ui.js';
+import { command, esc, troopInfo } from '../src/ui.js';
 import {
   RESOURCES, FIELD_RESOURCE, resLabel, sortedVillages, estimateStock, hoursUntilLimit, capacityFor, buildStatus,
   buildingName, taskLabel, fmtDuration, fmtAgo, fmtNum, fmtClock, earliestQueueFinish,
@@ -12,6 +12,7 @@ import { adviseAll } from '../src/advisor.js';
 import { renderStockChart } from './chart.js';
 import { villageArt, heroArt } from './art.js';
 import { wallOf } from '../src/advisor.js';
+import { pickAutoUpgrade } from '../src/autopilot.js';
 
 const $ = (id) => document.getElementById(id);
 const ALL = 'all';
@@ -46,8 +47,10 @@ function renderFilter(villages, data) {
   const hero = data.account.hero || {};
   const lease = data.lease;
   const other = leaseIsFresh(lease) && data.device && lease.deviceId !== data.device.id;
-  const auto = !data.settings.botEnabled && !data.settings.watchEnabled ? t('ov.autoOff')
-    : other ? t('ov.autoOther', { name: lease.deviceName }) : data.settings.botEnabled ? t('ov.autoHere') : t('ov.watchHere');
+  const st = data.settings;
+  const auto = !st.botEnabled && !st.autopilot.enabled && !st.watchEnabled ? t('ov.autoOff')
+    : other ? t('ov.autoOther', { name: lease.deviceName })
+      : st.autopilot.enabled ? t('ov.autopilotHere') : st.botEnabled ? t('ov.autoHere') : t('ov.watchHere');
   $('ovAccount').innerHTML = [
     [t('ov.gold'), fmtNum(data.account.gold)],
     [t('ov.silver'), fmtNum(data.account.silver)],
@@ -286,22 +289,31 @@ function renderNext(scope, data, now) {
   const ids = new Set(scope.map((v) => v.id));
   const rows = [];
   const left = (at) => (at && at > now ? fmtDuration(at - now) : t('ov.now'));
-  if (s.watchEnabled || s.botEnabled) rows.push([t('ov.nextCheck'), left(sched.refreshAt)]);
+  const ap = s.autopilot;
+  const on = s.botEnabled || ap.enabled;
+  if (s.watchEnabled || on) rows.push([t('ov.nextCheck'), left(sched.refreshAt)]);
   for (const v of scope) {
     const list = data.tasks[v.id] || [];
-    if (!list.length) continue;
+    const pick = !list.length && ap.enabled && ap.build ? pickAutoUpgrade(v, s, now) : null;
+    if (!list.length && !pick) continue;
     const why = buildStatus(v, data, now);
-    rows.push([scope.length > 1 ? t('ov.nextBuild', { v: v.name }) : t('ov.nextBuildOne'), `${taskLabel(list[0], v)}${why ? ` — ${why.text}` : ''}`]);
+    const what = list.length ? taskLabel(list[0], v) : t('ov.autoPick', { name: buildingName(pick.gid), n: pick.level + 1 });
+    rows.push([scope.length > 1 ? t('ov.nextBuild', { v: v.name }) : t('ov.nextBuildOne'), `${what}${why ? ` — ${why.text}` : ''}`]);
+  }
+  const raids = data.raids.filter((r) => r.enabled !== false && ids.has(r.villageId));
+  if (raids.length && on) {
+    const r = raids.slice().sort((a, b) => (a.nextAt || 0) - (b.nextAt || 0))[0];
+    rows.push([t('ov.nextRaid'), t('ov.raidIn', { v: data.villages[r.villageId].name, t: left(r.nextAt) })]);
   }
   const rules = data.training.filter((r) => r.enabled !== false && ids.has(r.villageId));
-  if (rules.length && s.botEnabled) {
+  if (rules.length && on) {
     const r = rules.slice().sort((a, b) => (a.nextAt || 0) - (b.nextAt || 0))[0];
     const v = data.villages[r.villageId];
     const unit = (v.units && v.units[r.gid] && (v.units[r.gid].find((u) => u.field === r.troop) || {}).name) || t('troops.unitN', { n: r.troop.slice(1) });
     rows.push([t('ov.nextTrain'), t('ov.trainIn', { u: `${r.amount} × ${unit}`, v: v.name, t: left(r.nextAt) })]);
   }
-  if (s.botEnabled && s.farm.enabled) rows.push([t('ov.nextFarm'), left(sched.farmAt)]);
-  if (s.botEnabled && s.adventure.enabled) rows.push([t('ov.nextAdventure'), left(sched.adventureAt)]);
+  if (on && (s.farm.enabled || (ap.enabled && ap.farmLists))) rows.push([t('ov.nextFarm'), left(sched.farmAt)]);
+  if (on && (s.adventure.enabled || (ap.enabled && ap.adventures))) rows.push([t('ov.nextAdventure'), left(sched.adventureAt)]);
   $('ovNext').innerHTML = rows.length
     ? rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')
     : `<dd class="muted">${esc(t('ov.nothingPlanned'))}</dd>`;
@@ -315,6 +327,33 @@ function renderQueues(scope, now) {
     ? rows.map(({ v, b }) => `<li><span>${scope.length > 1 ? `<small class="muted">${esc(v.name)}</small><br>` : ''}${esc(b.name)} <small class="muted">${b.level != null ? esc(t('card.level', { n: b.level })) : ''}</small></span>
         <span class="feed-time"><b class="mono">${b.finishAt ? fmtDuration(b.finishAt - now) : '—'}</b><small class="muted">${b.finishAt ? fmtClock(b.finishAt) : ''}</small></span></li>`).join('')
     : `<li class="muted">${esc(t('ov.noQueues'))}</li>`;
+}
+
+// Troops at home and in training. One village: the unit lists; several:
+// a line per village.
+function renderTroops(scope, now) {
+  const infos = scope.map((v) => ({ v, info: troopInfo(v, now) }));
+  const total = infos.reduce((n, x) => n + x.info.total, 0);
+  const training = infos.reduce((n, x) => n + x.info.trainingTotal, 0);
+  $('ovTroopsMeta').textContent = infos.some((x) => x.info.seen) ? t('ov.troopsSummary', { n: fmtNum(total), m: fmtNum(training) }) : '';
+  if (scope.length > 1) {
+    $('ovTroops').innerHTML = `<ul class="feed">${infos.map(({ v, info }) => `<li>
+        <span><button type="button" class="link" data-filter="${esc(v.id)}">${esc(v.name)}</button><br><small class="muted">${esc(info.seen
+          ? info.home.filter((x) => x.unit !== 'hero').slice().sort((a, b) => b.count - a.count).slice(0, 3).map((x) => `${x.count} ${x.name}`).join(' · ') || t('ov.noTroops')
+          : t('ov.troopsNotSeen'))}</small></span>
+        <span class="feed-time"><b class="mono">${info.seen ? fmtNum(info.total) : '—'}</b>${info.trainingTotal ? `<small class="muted">${esc(t('card.inTraining', { n: fmtNum(info.trainingTotal) }))}</small>` : ''}</span>
+      </li>`).join('')}</ul>`;
+    return;
+  }
+  const { info } = infos[0];
+  const home = !info.seen ? `<p class="muted small">${esc(t('ov.troopsNotSeen'))}</p>`
+    : info.home.length ? `<ul class="unit-list">${info.home.map((x) => `<li><span>${esc(x.name || x.unit)}</span><b class="mono">${fmtNum(x.count)}</b></li>`).join('')}</ul>`
+      : `<p class="muted small">${esc(t('ov.noTroops'))}</p>`;
+  const queue = info.training.length
+    ? `<ul class="feed">${info.training.map((x) => `<li><span>${x.count} × ${esc(x.name || x.unit)} <small class="muted">· ${esc(buildingName(x.gid))}</small></span>
+        <span class="feed-time"><b class="mono">${x.finishAt ? fmtDuration(x.finishAt - now) : '—'}</b><small class="muted">${x.finishAt ? esc(t('ov.doneAt', { clock: fmtClock(x.finishAt) })) : ''}</small></span></li>`).join('')}</ul>`
+    : `<p class="muted small">${esc(t(info.trainingSeen ? 'ov.noTraining' : 'ov.trainingNotSeen'))}</p>`;
+  $('ovTroops').innerHTML = `<h3>${esc(t('ov.troopsHome'))}</h3>${home}<h3>${esc(t('ov.troopsTraining'))}</h3>${queue}`;
 }
 
 function renderMoves(scope, now) {
@@ -406,7 +445,8 @@ function renderPostcards(scope, now) {
 function renderHero(data) {
   const hero = data.account.hero || {};
   const s = data.settings;
-  const sig = JSON.stringify([hero, s.adventure.enabled, langNow]);
+  const auto = s.adventure.enabled || (s.autopilot.enabled && s.autopilot.adventures);
+  const sig = JSON.stringify([hero, auto, langNow]);
   if (artCache.hero === sig) return;
   artCache.hero = sig;
   const status = hero.home ? t('hero.home') : t('hero.away');
@@ -415,7 +455,7 @@ function renderHero(data) {
       <h2>${esc(t('hero.title'))}</h2>
       <span class="status-pill ${hero.home ? 'home' : 'away'}">${esc(status)}</span>
       <span class="hero-line"><b>${esc(String(hero.adventures ?? '—'))}</b> ${esc(t('hero.adventures'))}</span>
-      <span class="hero-line small muted">${esc(t('hero.auto'))}: ${esc(s.adventure.enabled ? t('ov.on') : t('ov.off'))}</span>
+      <span class="hero-line small muted">${esc(t('hero.auto'))}: ${esc(auto ? t('ov.on') : t('ov.off'))}</span>
     </div>`;
   const photo = $('ovHero').querySelector('.hero-photo');
   if (photo) photo.addEventListener('error', () => photo.remove(), { once: true });
@@ -437,6 +477,7 @@ export function renderOverview(data, now) {
   renderBanner(scope, now);
   renderPostcards(scope, now);
   renderHero(data);
+  renderTroops(scope, now);
   renderTips(scope, data, now);
   renderResources(scope, data, now);
   renderChart(scope, data);

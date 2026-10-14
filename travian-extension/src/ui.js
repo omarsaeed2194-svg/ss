@@ -5,7 +5,7 @@ import {
 } from './shared.js';
 import { t, setLanguage, coords, ltr } from './i18n.js';
 
-export const STORAGE_KEYS = ['settings', 'villages', 'account', 'tasks', 'training', 'schedule', 'status', 'log', 'device', 'syncState', 'history'];
+export const STORAGE_KEYS = ['settings', 'villages', 'account', 'tasks', 'training', 'raids', 'oases', 'schedule', 'status', 'log', 'device', 'syncState', 'history'];
 
 export async function loadAll() {
   const data = await chrome.storage.local.get(STORAGE_KEYS);
@@ -15,6 +15,8 @@ export async function loadAll() {
   data.account = data.account || {};
   data.tasks = data.tasks || {};
   data.training = data.training || [];
+  data.raids = data.raids || [];
+  data.oases = data.oases || {};
   data.schedule = data.schedule || {};
   data.status = data.status || {};
   data.log = data.log || [];
@@ -32,6 +34,37 @@ export async function command(name, args) {
   return res.result;
 }
 
+// Replace a <select>'s options only when they changed, keeping the choice.
+export function fillSelect(sel, options, selected) {
+  const sig = JSON.stringify(options);
+  if (sel.dataset.sig !== sig) {
+    const keep = selected ?? sel.value;
+    sel.innerHTML = options.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join('');
+    sel.dataset.sig = sig;
+    if (options.some(([v]) => String(v) === String(keep))) sel.value = keep;
+  } else if (selected != null && options.some(([v]) => String(v) === String(selected))) {
+    sel.value = selected;
+  }
+}
+
+// Troops in a village and what its barracks/stable/workshop are training.
+export function troopInfo(v, now = Date.now()) {
+  const home = (v.troops || []).filter((x) => x.count > 0);
+  const training = [];
+  for (const [gid, q] of Object.entries(v.trainingQueue || {})) {
+    for (const it of q.items || []) if (!it.finishAt || it.finishAt > now) training.push({ ...it, gid: Number(gid) });
+  }
+  training.sort((a, b) => (a.finishAt || Infinity) - (b.finishAt || Infinity));
+  return {
+    seen: !!v.troops,
+    home,
+    total: home.filter((x) => x.unit !== 'hero').reduce((n, x) => n + x.count, 0),
+    training,
+    trainingTotal: training.reduce((n, x) => n + x.count, 0),
+    trainingSeen: Object.values(v.trainingQueue || {}).some((q) => !q.unknown),
+  };
+}
+
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 
@@ -42,10 +75,11 @@ export function statusLine(data, now = Date.now()) {
   if (status.state === 'otherDevice') return { tone: 'warn', text: t('status.otherDevice', { name: status.note }) };
   if (status.state === 'working') return { tone: 'good', text: t('status.working', { note: status.note }) };
   if (status.state === 'paused') return { tone: 'warn', text: t('status.paused') };
-  if (!s.watchEnabled && !s.botEnabled) return { tone: 'muted', text: t('status.off') };
+  if (!s.watchEnabled && !s.botEnabled && !s.autopilot.enabled) return { tone: 'muted', text: t('status.off') };
   const next = schedule.refreshAt ? Math.max(0, schedule.refreshAt - now) : 0;
   const last = status.lastRunAt ? t('status.last', { ago: fmtAgo(status.lastRunAt, now) }) : '';
-  return { tone: 'good', text: t('status.next', { t: fmtDuration(next) }) + last };
+  const auto = s.autopilot.enabled ? `${t('status.autopilot')} · ` : '';
+  return { tone: 'good', text: auto + t('status.next', { t: fmtDuration(next) }) + last };
 }
 
 export function villageCard(v, data, now = Date.now()) {
@@ -85,6 +119,11 @@ export function villageCard(v, data, now = Date.now()) {
     attack = `<div class="attack">⚔ ${esc(n ? t('card.attacks', { n }) : t('card.attack'))}${first}</div>`;
   }
 
+  const troops = troopInfo(v, now);
+  const troopLine = troops.seen
+    ? `<p class="small muted troop-line">🛡 ${esc(t('card.troops', { n: fmtNum(troops.total) }))}${troops.trainingTotal ? ` · ${esc(t('card.inTraining', { n: fmtNum(troops.trainingTotal) }))}` : ''}</p>`
+    : '';
+
   const why = buildStatus(v, data, now);
   const chips = [];
   if (tasks) chips.push(t('card.buildTasks', { n: tasks }));
@@ -98,6 +137,7 @@ export function villageCard(v, data, now = Date.now()) {
     ${attack}
     <div class="res-grid">${resRows}</div>
     ${queue}
+    ${troopLine}
     ${chips.length ? `<p class="chips">${chips.map((c) => `<span>${esc(c)}</span>`).join('')}</p>` : ''}
     ${why ? `<p class="build-why ${why.tone}">${esc(why.text)}</p>` : ''}
   </article>`;

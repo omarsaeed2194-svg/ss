@@ -19,6 +19,7 @@
       <a href="#overview" data-tab="overview" data-i18n="nav.overview"></a>
       <a href="#build" data-tab="build" data-i18n="nav.build"></a>
       <a href="#troops" data-tab="troops" data-i18n="nav.troops"></a>
+      <a href="#autopilot" data-tab="autopilot" data-i18n="nav.autopilot"></a>
       <a href="#raids" data-tab="raids" data-i18n="nav.raids"></a>
       <a href="#alerts" data-tab="alerts" data-i18n="nav.alerts"></a>
       <a href="#settings" data-tab="settings" data-i18n="nav.settings"></a>
@@ -27,6 +28,7 @@
     <div class="side-toggles">
       <label class="switch"><input type="checkbox" data-setting="watchEnabled"> <span data-i18n="toggle.watch"></span></label>
       <label class="switch"><input type="checkbox" data-setting="botEnabled"> <span data-i18n="toggle.bot"></span></label>
+      <label class="switch"><input type="checkbox" data-setting="autopilot.enabled"> <span data-i18n="toggle.autopilot"></span></label>
       <button class="btn small" id="checkNow" data-i18n="btn.checkNow"></button>
     </div>
   </nav>
@@ -79,6 +81,10 @@
           </div>
           <aside class="dash-side">
             <section class="panel hero-card" id="ovHero"></section>
+            <section class="panel">
+              <header class="panel-head"><h2 data-i18n="ov.troopsTitle"></h2><span id="ovTroopsMeta" class="muted small"></span></header>
+              <div id="ovTroops"></div>
+            </section>
             <section class="panel">
               <header class="panel-head"><h2 data-i18n="ov.nextTitle"></h2></header>
               <dl id="ovNext" class="kv"></dl>
@@ -142,6 +148,11 @@
     <!-- Troops -->
     <section class="tab" id="tab-troops">
       <div class="panel">
+        <h2 data-i18n="troops.overview"></h2>
+        <p class="muted small" data-i18n="troops.overviewHelp"></p>
+        <div class="table-wrap"><table class="list" id="troopTable"></table></div>
+      </div>
+      <div class="panel">
         <h2 data-i18n="troops.rules"></h2>
         <p class="muted small" data-i18n="troops.help"></p>
         <table class="list" id="trainTable"></table>
@@ -157,6 +168,57 @@
           <button class="btn primary" id="addTrain" data-i18n="troops.addBtn"></button>
         </div>
         <p class="muted small" data-i18n="troops.unitHelp"></p>
+      </div>
+    </section>
+
+    <!-- Autopilot -->
+    <section class="tab" id="tab-autopilot">
+      <div class="cols">
+        <div class="panel">
+          <h2 data-i18n="ap.title"></h2>
+          <p class="muted small" data-i18n="ap.help"></p>
+          <label class="switch strong"><input type="checkbox" data-setting="autopilot.enabled"> <span data-i18n="ap.enable"></span></label>
+          <h3 class="gap" data-i18n="ap.what"></h3>
+          <label class="switch"><input type="checkbox" data-setting="autopilot.build"> <span data-i18n="ap.build"></span></label>
+          <div class="row indent"><label><span data-i18n="ap.fieldsMax"></span> <input type="number" min="1" max="20" data-setting="autopilot.fieldsMax" class="num"></label></div>
+          <p class="muted small indent" data-i18n="ap.buildHelp"></p>
+          <label class="switch"><input type="checkbox" data-setting="autopilot.adventures"> <span data-i18n="ap.adventures"></span></label>
+          <label class="switch"><input type="checkbox" data-setting="autopilot.farmLists"> <span data-i18n="ap.farmLists"></span></label>
+          <p class="muted small" data-i18n="ap.raidsNote"></p>
+          <p class="muted small" data-i18n="ap.pauseNote"></p>
+        </div>
+        <div class="panel">
+          <h2 data-i18n="ap.planTitle"></h2>
+          <p class="muted small" data-i18n="ap.planHelp"></p>
+          <ul id="apPlan" class="feed"></ul>
+        </div>
+      </div>
+      <div class="panel">
+        <h2 data-i18n="raid.title"></h2>
+        <p class="muted small" data-i18n="raid.help"></p>
+        <div class="table-wrap"><table class="list" id="raidTable"></table></div>
+        <h3 class="gap" data-i18n="raid.add"></h3>
+        <div class="row wrap">
+          <label><span data-i18n="troops.village"></span> <select id="raidVillage"></select></label>
+          <label><span data-i18n="troops.unit"></span> <select id="raidUnit"></select></label>
+          <label><span data-i18n="raid.amount"></span> <input type="number" id="raidAmount" min="1" value="5" class="num"></label>
+          <label><span data-i18n="raid.radius"></span> <input type="number" id="raidRadius" min="1" max="30" value="7" class="num"></label>
+          <label><span data-i18n="troops.every"></span> <input type="number" id="raidEvery" min="10" value="30" class="num"> <span data-i18n="troops.min"></span></label>
+          <label><span data-i18n="raid.maxPerRun"></span> <input type="number" id="raidMax" min="1" max="20" value="3" class="num"></label>
+          <button class="btn primary" id="addRaid" data-i18n="raid.addBtn"></button>
+        </div>
+        <p class="muted small" data-i18n="raid.unitHelp"></p>
+      </div>
+      <div class="panel">
+        <header class="panel-head"><h2 id="oasisTitle"></h2><span id="oasisMeta" class="muted small"></span></header>
+        <div class="row wrap">
+          <button class="btn" id="scanOases" data-i18n="raid.scan"></button>
+          <label><span data-i18n="raid.manual"></span> <input type="text" id="targetXY" placeholder="12|-34" dir="ltr" size="9"></label>
+          <button class="btn" id="addTarget" data-i18n="raid.addTarget"></button>
+          <span id="targetMsg" class="small muted"></span>
+        </div>
+        <div class="table-wrap"><table class="list" id="oasisTable"></table></div>
+        <p class="muted small" data-i18n="raid.safety"></p>
       </div>
     </section>
 

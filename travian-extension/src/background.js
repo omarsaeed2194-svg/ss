@@ -5,6 +5,7 @@ import {
   estimateStock, fmtDuration, fmtClock, withinActiveHours, sortedVillages, taskLabel, buildingName,
   buildBlock,
 } from './shared.js';
+import { pickAutoUpgrade, troopsHome, raidTargets, oasisKey } from './autopilot.js';
 import { t, setLanguage, coords, ltr } from './i18n.js';
 import {
   COMMAND_KEYS, commandsOf, schedulePush, pushCommands, pullCommands, mayRun, renewLease, getDevice,
@@ -17,6 +18,10 @@ const STORAGE_REALERT_MS = 6 * 3600 * 1000;
 const MAX_BUILD_ATTEMPTS = 6;
 const HISTORY_STEP_MS = 5 * 60 * 1000;
 const HISTORY_KEEP_MS = 24 * 3600 * 1000;
+const AUTO_IDLE_MS = 30 * 60 * 1000;      // autopilot found nothing to build: look again later
+const AUTO_SKIP_MS = 2 * 3600 * 1000;     // an upgrade the game refused: try others first
+const SCAN_EVERY_MS = 12 * 3600 * 1000;   // re-scan the map for oases
+const TROOP_BUILDINGS = [19, 20, 21, 29, 30];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -101,6 +106,7 @@ async function refreshBadge() {
   let text = '', color = '#16a34a';
   if (attacked) { text = String(attacked); color = '#dc2626'; }
   else if (status.loggedOut) { text = '!'; color = '#ea580c'; }
+  else if (s.autopilot.enabled) { text = 'AUTO'; }
   else if (s.botEnabled) { text = 'ON'; }
   await chrome.action.setBadgeText({ text });
   await chrome.action.setBadgeBackgroundColor({ color });
@@ -115,7 +121,7 @@ async function processPage(state, tabId) {
   const notes = [];
   const events = []; // [level, message, villageId] for the activity log
 
-  await update(['settings', 'villages', 'account', 'status', 'alertMemo', 'history'], (d) => {
+  await update(['settings', 'villages', 'account', 'status', 'alertMemo', 'history', 'oases'], (d) => {
     const s = mergeSettings(d.settings);
     setLanguage(s.language);
     d.status = d.status || {};
@@ -192,11 +198,16 @@ async function processPage(state, tabId) {
       };
       if (state.fields) { levelUps(v.fields, state.fields); v.fields = state.fields; v.fieldsAt = now; }
       if (state.buildings) { levelUps(v.buildings, state.buildings); v.buildings = state.buildings; v.buildingsAt = now; }
-      const trainable = state.buildPage && state.buildPage.trainable;
-      if (trainable && trainable.length) {
-        const slotBuilding = (v.buildings || []).find((b) => b.slot === state.buildPage.slot);
+      if (state.troops) { v.troops = state.troops; v.troopsAt = now; }
+      if (state.buildPage) {
+        const bp = state.buildPage;
+        const slotBuilding = (v.buildings || []).find((b) => b.slot === bp.slot);
         const gid = Number(new URL(state.url).searchParams.get('gid')) || (slotBuilding && slotBuilding.gid);
-        if (gid) v.units = { ...(v.units || {}), [gid]: trainable.map(({ field, name }) => ({ field, name })) };
+        if (gid && bp.trainable && bp.trainable.length) v.units = { ...(v.units || {}), [gid]: bp.trainable.map(({ field, name }) => ({ field, name })) };
+        if (gid && bp.trainingQueue) {
+          const items = bp.trainingQueue.map((q) => ({ unit: q.unit, name: q.name, count: q.count, finishAt: q.secondsLeft != null ? now + q.secondsLeft * 1000 : null }));
+          v.trainingQueue = { ...(v.trainingQueue || {}), [gid]: { at: now, items } };
+        }
       }
       if (state.movements) {
         v.movements = state.movements.map((m) => ({ ...m, arriveAt: m.secondsLeft != null ? now + m.secondsLeft * 1000 : null }));
@@ -246,6 +257,17 @@ async function processPage(state, tabId) {
       }
     }
     alerts.push(...Object.values(attackAlerts));
+
+    // A map tile: remember oases (and what guards them) for raids.
+    const tile = state.tile;
+    if (tile && tile.x != null && tile.y != null) {
+      d.oases = d.oases || {};
+      const key = oasisKey(tile.x, tile.y);
+      const prev = d.oases[key];
+      if (tile.isOasis || prev) {
+        d.oases[key] = { ...(prev || {}), x: tile.x, y: tile.y, owned: tile.owned, animals: tile.animals, checkedAt: now, notOasis: !tile.isOasis && !(prev && prev.fromScan) };
+      }
+    }
 
     d.account = d.account || {};
     if (state.account) {
@@ -389,6 +411,24 @@ const JOBS = {
         await sleep(rand(1200, 3000));
         await navigate(tabId, `${s.server}/dorf2.php?newdid=${encodeURIComponent(id)}`);
       }
+      // What's in training: look once, and again after a queue runs out.
+      ({ villages = {} } = await read(['villages']));
+      const fresh = villages[id];
+      for (const gid of TROOP_BUILDINGS) {
+        if (!fresh || !(fresh.buildings || []).some((b) => b.gid === gid && b.level > 0)) continue;
+        const q = (fresh.trainingQueue || {})[gid];
+        const done = q && q.items.length && q.items.every((i) => i.finishAt && i.finishAt < Date.now());
+        if (q && !done) continue;
+        await sleep(rand(1200, 3000));
+        const page = await navigate(tabId, `${s.server}/build.php?newdid=${encodeURIComponent(id)}&gid=${gid}`);
+        if (!(page.buildPage && page.buildPage.trainingQueue)) {
+          // Couldn't read a queue here; don't look again every refresh.
+          await update(['villages'], (d) => {
+            const vv = d.villages && d.villages[id];
+            if (vv) vv.trainingQueue = { ...(vv.trainingQueue || {}), [gid]: { at: Date.now(), items: [], unknown: true } };
+          });
+        }
+      }
       await sleep(rand(1500, 4000));
     }
     if (!job.villageIds) await patchSchedule({ refreshAt: Date.now() + jittered(s.refreshMinutes * 60000, s.jitterPercent) });
@@ -398,8 +438,32 @@ const JOBS = {
     const vid = job.villageId;
     let { villages = {}, tasks = {} } = await read(['villages', 'tasks']);
     let v = villages[vid];
-    const task = (tasks[vid] || [])[0];
-    if (!v || !task) return;
+    if (!v) return;
+    let task = job.auto ? null : (tasks[vid] || [])[0];
+    let why = null;
+    if (job.auto) {
+      // Autopilot: nothing queued by the player, so pick an upgrade now.
+      if (!v.fields || !v.fieldsAt) await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(vid)}`);
+      if (!v.buildings || !v.buildingsAt) await navigate(tabId, `${s.server}/dorf2.php?newdid=${encodeURIComponent(vid)}`);
+      ({ villages = {} } = await read(['villages']));
+      v = villages[vid];
+      const pick = pickAutoUpgrade(v, s, Date.now());
+      if (!pick) {
+        await patchVillage(vid, { autoIdleUntil: Date.now() + AUTO_IDLE_MS });
+        await log('info', t('log.autoNothing', { n: s.autopilot.fieldsMax }), vid);
+        return;
+      }
+      why = pick.why;
+      task = { kind: 'upgrade', slot: pick.slot, targetLevel: pick.level + 1, auto: true };
+    }
+    if (!task) return;
+    // Player tasks leave the queue when done; autopilot picks were never in it.
+    const finish = async () => { if (!task.auto) await removeTask(vid, task.id); };
+    const skipSlot = async (ms) => {
+      const now = Date.now();
+      const cur = v.autoSkip && v.autoSkip.until > now ? v.autoSkip.slots : [];
+      await patchVillage(vid, { autoSkip: { slots: [...cur, task.slot], until: now + ms } });
+    };
 
     let slot = task.slot;
     if (task.kind === 'fields') {
@@ -423,13 +487,15 @@ const JOBS = {
     const title = bp.title || t('task.slot', { n: slot });
     const now = Date.now();
 
-    if (task.kind === 'upgrade' && ((bp.level != null && bp.level >= task.targetLevel) || (bp.nextLevel != null && bp.nextLevel > task.targetLevel))) {
-      await removeTask(vid, task.id);
+    // Autopilot picks just want one more level, whatever the page says now.
+    if (!task.auto && task.kind === 'upgrade' && ((bp.level != null && bp.level >= task.targetLevel) || (bp.nextLevel != null && bp.nextLevel > task.targetLevel))) {
+      await finish();
       await log('success', t('log.done', { task: taskLabel(task, v) }), vid);
       return;
     }
     if (bp.maxLevel) {
-      await removeTask(vid, task.id);
+      if (task.auto) await skipSlot(24 * 3600000);
+      await finish();
       await log('info', t('log.maxLevel', { name: title }), vid);
       return;
     }
@@ -454,6 +520,12 @@ const JOBS = {
         return;
       }
       // Something else blocks it (storage too small, missing requirement…).
+      if (task.auto) {
+        await skipSlot(AUTO_SKIP_MS);
+        await patchVillage(vid, { buildWait: null });
+        await log('info', t('log.autoBlocked', { name: title, reason: bp.blockedReason || t('reason.cannotYet') }), vid);
+        return;
+      }
       const attempts = (task.attempts || 0) + 1;
       if (attempts >= MAX_BUILD_ATTEMPTS) {
         await removeTask(vid, task.id);
@@ -479,8 +551,10 @@ const JOBS = {
     }
     // Title reads "<name> Level N" in the server's language; drop the level part.
     const name = (bp.title || '').replace(/\s*\S*\s*\d+\s*$/, '') || title;
-    await log('success', t('log.upgrading', { name, n: bp.nextLevel ?? '?' }), vid);
+    if (task.auto) await log('success', t('log.autoUpgrading', { name, n: bp.nextLevel ?? '?', why: t(`auto.why.${why}`) }), vid);
+    else await log('success', t('log.upgrading', { name, n: bp.nextLevel ?? '?' }), vid);
     await patchVillage(vid, { buildWait: null });
+    if (task.auto) return;
     await update(['tasks'], (d) => {
       const saved = ((d.tasks || {})[vid] || []).find((x) => x.id === task.id);
       if (saved) saved.attempts = 0;
@@ -518,6 +592,122 @@ const JOBS = {
     });
   },
 
+  // Oases around a village, from the game's map. Results go into `oases`.
+  async scan(tabId, job, s) {
+    const vid = job.villageId;
+    const { villages = {} } = await read(['villages']);
+    const v = villages[vid];
+    await update(['schedule'], (d) => { if (d.schedule && d.schedule.scanVillage === vid) d.schedule.scanVillage = null; });
+    if (!v || v.x == null) return;
+    await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(vid)}`);
+    const { res } = await act(tabId, { kind: 'scanMap', x: v.x, y: v.y }, false);
+    await update(['raids'], (d) => {
+      for (const r of d.raids || []) if (r.villageId === vid) r.scannedAt = Date.now();
+    });
+    if (!res.ok) {
+      await log('error', t('log.scanFailed', { reason: res.status ? `HTTP ${res.status}` : reasonText(res) }), vid);
+      return;
+    }
+    const now = Date.now();
+    await update(['oases'], (d) => {
+      d.oases = d.oases || {};
+      for (const o of res.oases) {
+        const key = oasisKey(o.x, o.y);
+        const prev = d.oases[key] || {};
+        // A recent look at the tile itself beats the map's summary.
+        const fresh = prev.checkedAt && now - prev.checkedAt < 3600000;
+        d.oases[key] = { ...prev, x: o.x, y: o.y, fromScan: true, scannedAt: now, ...(fresh ? {} : { owned: o.owned, animals: o.animals }) };
+      }
+    });
+    await log('info', t('log.scanned', { n: res.oases.length }), vid);
+  },
+
+  // Raid empty oases near a village. Every target is checked right before
+  // sending: unoccupied, no animals, and the confirmation names it.
+  async raid(tabId, job, s) {
+    const rule = job.rule;
+    const vid = rule.villageId;
+    let next = jittered(rule.everyMinutes * 60000, s.jitterPercent);
+    try {
+      await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(vid)}`);
+      let { villages = {}, oases = {}, raids = [] } = await read(['villages', 'oases', 'raids']);
+      const v = villages[vid];
+      if (!v) return;
+      const unit = rule.unitName || t('troops.unitN', { n: rule.field.slice(1) });
+      if (v.underAttack) {
+        next = Math.min(next, 15 * 60000);
+        await log('info', t('log.raidSkipAttack'), vid);
+        return;
+      }
+      let home = troopsHome(v)[rule.field] || 0;
+      if (home < rule.amount) {
+        next = Math.min(next, 15 * 60000);
+        await log('info', t('log.raidNoTroops', { u: unit, have: home, need: rule.amount }), vid);
+        return;
+      }
+      const current = raids.find((r) => r.id === rule.id) || rule;
+      if (!current.scannedAt || Date.now() - current.scannedAt > SCAN_EVERY_MS) {
+        await JOBS.scan(tabId, { villageId: vid }, s);
+        ({ oases = {} } = await read(['oases']));
+      }
+      const targets = raidTargets(v, current, oases, Date.now());
+      if (!targets.length) {
+        await log('info', t('log.raidNoTargets', { r: rule.radius }), vid);
+        return;
+      }
+      let sent = 0;
+      for (const o of targets) {
+        if (sent >= rule.maxPerRun || home < rule.amount) break;
+        const xy = coords(o.x, o.y);
+        await sleep(rand(1200, 2800));
+        const tilePage = await navigate(tabId, `${s.server}/position_details.php?x=${o.x}&y=${o.y}`);
+        const tile = tilePage.tile;
+        if (!tile) { await log('error', t('log.raidNoTile', { xy }), vid); continue; }
+        if (tile.owned) { await log('info', t('log.raidOwned', { xy }), vid); continue; }
+        if (!tile.isOasis && !o.fromScan) { await log('info', t('log.raidNotOasis', { xy }), vid); continue; }
+        if (tile.animals == null) { await log('error', t('log.raidNoTile', { xy }), vid); continue; }
+        if (tile.animals > 0) { await log('info', t('log.raidAnimals', { xy, n: tile.animals }), vid); continue; }
+
+        await sleep(rand(1000, 2500));
+        const form = await navigate(tabId, `${s.server}/build.php?newdid=${encodeURIComponent(vid)}&gid=16&tt=2`);
+        const sp = form.sendPage;
+        if (!sp || sp.stage !== 'form') { await log('error', t('log.raidFailed', { xy, reason: t('reason.noSendForm') }), vid); break; }
+        if (sp.available[rule.field] != null) home = sp.available[rule.field];
+        if (home < rule.amount) { await log('info', t('log.raidNoTroops', { u: unit, have: home, need: rule.amount }), vid); break; }
+        const { res, page: confirm } = await act(tabId, { kind: 'raidForm', x: o.x, y: o.y, field: rule.field, amount: rule.amount }, true);
+        if (!res.ok) { await log('error', t('log.raidFailed', { xy, reason: reasonText(res) }), vid); break; }
+        const cp = confirm && confirm.sendPage;
+        if (!cp || cp.stage !== 'confirm') {
+          await log('error', t('log.raidFailed', { xy, reason: (cp && cp.error) || t('reason.noConfirmPage') }), vid);
+          break;
+        }
+        const { res: res2, page: after } = await act(tabId, { kind: 'raidConfirm', x: o.x, y: o.y }, true);
+        if (!res2.ok) { await log('error', t('log.raidFailed', { xy, reason: reasonText(res2) }), vid); break; }
+        if (after && after.sendPage && after.sendPage.stage === 'confirm') {
+          await log('error', t('log.raidFailed', { xy, reason: after.sendPage.error || t('reason.stillOnConfirm') }), vid);
+          break;
+        }
+        sent += 1;
+        home -= rule.amount;
+        await update(['oases'], (d) => {
+          d.oases = d.oases || {};
+          d.oases[o.key] = { ...(d.oases[o.key] || { x: o.x, y: o.y }), raidedAt: Date.now() };
+        });
+        await log('success', t('log.raidSent', { n: rule.amount, u: unit, xy, d: o.distance.toFixed(1) }), vid);
+      }
+      if (sent) {
+        // Pick up the troops that left and their movements.
+        await sleep(rand(1500, 3000));
+        await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(vid)}`);
+      }
+    } finally {
+      await update(['raids'], (d) => {
+        const r = (d.raids || []).find((x) => x.id === rule.id);
+        if (r) r.nextAt = Date.now() + next;
+      });
+    }
+  },
+
   async farm(tabId, job, s) {
     const prefix = s.farm.villageId ? `newdid=${encodeURIComponent(s.farm.villageId)}&` : '';
     await navigate(tabId, `${s.server}/build.php?${prefix}gid=16&tt=99`);
@@ -539,9 +729,11 @@ const JOBS = {
   },
 };
 
+const automationOn = (s) => s.botEnabled || s.autopilot.enabled;
+
 function planRefresh(s, data, now, force) {
   const { villages = {}, schedule = {} } = data;
-  if (!(s.watchEnabled || s.botEnabled || force)) return [];
+  if (!(s.watchEnabled || automationOn(s) || force)) return [];
   if (force || now >= (schedule.refreshAt || 0)) return [{ type: 'refresh', label: t('job.refresh') }];
   const ids = Object.values(villages).filter((v) => v.needsRefresh).map((v) => v.id);
   return ids.length ? [{ type: 'refresh', villageIds: ids, label: t('job.refreshAttacked') }] : [];
@@ -549,21 +741,34 @@ function planRefresh(s, data, now, force) {
 
 // Planned after any refresh, so decisions use what the game shows right now.
 function planActions(s, data, now) {
-  const { villages = {}, tasks = {}, training = [], schedule = {}, account = {} } = data;
+  const { villages = {}, tasks = {}, training = [], raids = [], schedule = {}, account = {} } = data;
   const jobs = [];
-  if (!s.botEnabled || !withinActiveHours(s.activeHours, new Date(now))) return jobs;
+  // Asked for from the dashboard: runs even with automation off.
+  if (schedule.scanVillage && villages[schedule.scanVillage]) {
+    jobs.push({ type: 'scan', villageId: schedule.scanVillage, label: t('job.scan', { v: villages[schedule.scanVillage].name }) });
+  }
+  if (!automationOn(s) || !withinActiveHours(s.activeHours, new Date(now))) return jobs;
+  const ap = s.autopilot;
+  const auto = ap.enabled;
 
   for (const v of sortedVillages(villages)) {
-    if ((tasks[v.id] || []).length && !buildBlock(v, s, now)) jobs.push({ type: 'build', villageId: v.id, label: t('job.build', { v: v.name }) });
+    if (buildBlock(v, s, now)) continue;
+    if ((tasks[v.id] || []).length) jobs.push({ type: 'build', villageId: v.id, label: t('job.build', { v: v.name }) });
+    else if (auto && ap.build && !((v.autoIdleUntil || 0) > now)) jobs.push({ type: 'build', villageId: v.id, auto: true, label: t('job.autoBuild', { v: v.name }) });
   }
   for (const rule of training) {
     if (rule.enabled !== false && villages[rule.villageId] && now >= (rule.nextAt || 0)) {
       jobs.push({ type: 'train', rule, label: t('job.train', { v: villages[rule.villageId].name }) });
     }
   }
-  if (s.farm.enabled && now >= (schedule.farmAt || 0)) jobs.push({ type: 'farm', label: t('job.farm') });
+  for (const rule of raids) {
+    if (rule.enabled !== false && villages[rule.villageId] && now >= (rule.nextAt || 0)) {
+      jobs.push({ type: 'raid', rule, label: t('job.raid', { v: villages[rule.villageId].name }) });
+    }
+  }
+  if ((s.farm.enabled || (auto && ap.farmLists)) && now >= (schedule.farmAt || 0)) jobs.push({ type: 'farm', label: t('job.farm') });
   const hero = account.hero || {};
-  if (s.adventure.enabled && hero.adventures > 0 && hero.home && now >= (schedule.adventureAt || 0)) {
+  if ((s.adventure.enabled || (auto && ap.adventures)) && hero.adventures > 0 && hero.home && now >= (schedule.adventureAt || 0)) {
     jobs.push({ type: 'adventure', label: t('job.adventure') });
   }
   return jobs;
@@ -596,12 +801,14 @@ async function runJobs(tabId, jobs, s, force) {
   return true;
 }
 
-const DATA_KEYS = ['settings', 'villages', 'tasks', 'training', 'schedule', 'account', 'status'];
+const DATA_KEYS = ['settings', 'villages', 'tasks', 'training', 'raids', 'schedule', 'account', 'status'];
 let running = false;
 let rerunForced = false; // "Check now" pressed while a run was in progress
-async function tick(force = false) {
+let rerunSoon = false;   // a dashboard request (e.g. map scan) arrived during a run
+async function tick(force = false, soon = false) {
   if (running) {
     if (force) rerunForced = true;
+    else if (soon) rerunSoon = true;
     return { busy: true };
   }
   running = true;
@@ -620,7 +827,7 @@ async function tick(force = false) {
       return {};
     }
     // Only one browser drives the game. "Check now" here takes over.
-    if (s.watchEnabled || s.botEnabled || force) {
+    if (s.watchEnabled || automationOn(s) || force) {
       const lease = await mayRun(now);
       if (!lease.ok && !force) {
         await setStatus({ state: 'otherDevice', note: lease.lease.deviceName });
@@ -650,7 +857,11 @@ async function tick(force = false) {
     await refreshBadge();
     if (rerunForced) {
       rerunForced = false;
+      rerunSoon = false;
       tick(true);
+    } else if (rerunSoon) {
+      rerunSoon = false;
+      tick();
     }
   }
 }
@@ -691,6 +902,36 @@ const COMMANDS = {
   async removeTraining({ id }) {
     await update(['training'], (d) => { d.training = (d.training || []).filter((x) => x.id !== id); });
   },
+  async addRaid({ rule }) {
+    await update(['raids'], (d) => { (d.raids = d.raids || []).push({ targets: [], ...rule, id: uid(), nextAt: 0, enabled: true }); });
+  },
+  async updateRaid({ id, patch }) {
+    await update(['raids'], (d) => {
+      const r = (d.raids || []).find((x) => x.id === id);
+      if (r) Object.assign(r, patch);
+    });
+  },
+  async removeRaid({ id }) {
+    await update(['raids'], (d) => { d.raids = (d.raids || []).filter((x) => x.id !== id); });
+  },
+  // Oases typed in by the player; raided even outside the rule's radius.
+  async addRaidTarget({ id, x, y }) {
+    if (!Number.isInteger(x) || !Number.isInteger(y) || Math.abs(x) > 400 || Math.abs(y) > 400) throw new Error(t('raid.badCoords'));
+    await update(['raids'], (d) => {
+      const r = (d.raids || []).find((z) => z.id === id);
+      if (r && !(r.targets || []).some((p) => p.x === x && p.y === y)) r.targets = [...(r.targets || []), { x, y }];
+    });
+  },
+  async removeRaidTarget({ id, x, y }) {
+    await update(['raids'], (d) => {
+      const r = (d.raids || []).find((z) => z.id === id);
+      if (r) r.targets = (r.targets || []).filter((p) => !(p.x === x && p.y === y));
+    });
+  },
+  async scanOases({ villageId }) {
+    await patchSchedule({ scanVillage: villageId });
+    tick(false, true);
+  },
   async runNow() {
     await patchSchedule({ refreshAt: 0 });
     // "Check now" should retry builds immediately, not after a scheduled wait.
@@ -722,7 +963,7 @@ const COMMANDS = {
   },
   // Accepts our backup file, or a raw storage dump from an older version.
   async importData({ data }) {
-    if (!data || typeof data !== 'object' || !(data.settings || data.tasks || data.training)) {
+    if (!data || typeof data !== 'object' || !(data.settings || data.tasks || data.training || data.raids)) {
       throw new Error(t('backup.invalid'));
     }
     const uidIfMissing = (x) => ({ ...x, id: x.id || uid() });
@@ -731,15 +972,17 @@ const COMMANDS = {
       if (Array.isArray(list) && list.length) tasks[vid] = list.map((x) => ({ ...uidIfMissing(x), attempts: 0 }));
     }
     const training = (Array.isArray(data.training) ? data.training : []).map((r) => ({ ...uidIfMissing(r), nextAt: 0 }));
-    await update(['settings', 'tasks', 'training', 'villages'], (d) => {
+    const raids = (Array.isArray(data.raids) ? data.raids : []).map((r) => ({ ...uidIfMissing(r), nextAt: 0 }));
+    await update(['settings', 'tasks', 'training', 'raids', 'villages'], (d) => {
       d.settings = mergeSettings({ ...mergeSettings(d.settings), ...(data.settings || {}) });
       d.tasks = tasks;
       d.training = training;
+      d.raids = raids;
       if (data.villages && !Object.keys(d.villages || {}).length) d.villages = data.villages;
     });
     await pushCommands();
     await refreshBadge();
-    return { tasks: Object.values(tasks).reduce((n, l) => n + l.length, 0), training: training.length };
+    return { tasks: Object.values(tasks).reduce((n, l) => n + l.length, 0), training: training.length + raids.length };
   },
   async takeOver() {
     await renewLease();
@@ -751,8 +994,8 @@ const COMMANDS = {
     return { pulled, pushed };
   },
   async resetData() {
-    await update(['villages', 'account', 'schedule', 'alertMemo', 'status', 'history'], (d) => {
-      d.villages = {}; d.account = {}; d.schedule = {}; d.alertMemo = {}; d.status = {}; d.history = {};
+    await update(['villages', 'account', 'schedule', 'alertMemo', 'status', 'history', 'oases'], (d) => {
+      d.villages = {}; d.account = {}; d.schedule = {}; d.alertMemo = {}; d.status = {}; d.history = {}; d.oases = {};
     });
     await refreshBadge();
   },

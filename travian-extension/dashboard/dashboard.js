@@ -1,5 +1,6 @@
-import { loadAll, command, statusLine, esc } from '../src/ui.js';
+import { loadAll, command, statusLine, esc, fillSelect, troopInfo } from '../src/ui.js';
 import { renderOverview } from './overview.js';
+import { renderAutopilot } from './autopilot.js';
 import { leaseIsFresh } from '../src/sync.js';
 import {
   sortedVillages, taskLabel, buildingName, fmtDuration, fmtAgo, TRAINING_BUILDINGS, buildStatus,
@@ -20,18 +21,6 @@ function showTab() {
 window.addEventListener('hashchange', showTab);
 
 // -------------------------------------------------------------- helpers ---
-function fillSelect(sel, options, selected) {
-  const sig = JSON.stringify(options);
-  if (sel.dataset.sig !== sig) {
-    const keep = selected ?? sel.value;
-    sel.innerHTML = options.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join('');
-    sel.dataset.sig = sig;
-    if (options.some(([v]) => String(v) === String(keep))) sel.value = keep;
-  } else if (selected != null && options.some(([v]) => String(v) === String(selected))) {
-    sel.value = selected;
-  }
-}
-
 const villageOptions = () => sortedVillages(data.villages).map((v) => [v.id, `${v.name} ${coords(v.x, v.y)}`]);
 const getPath = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
 
@@ -125,6 +114,7 @@ $('buildVillage').addEventListener('change', (e) => { buildVillageId = e.target.
 // Tips can open the Build tab on a specific village.
 window.addEventListener('tvh:select-village', (e) => { buildVillageId = e.detail; render(); });
 window.addEventListener('tvh:rerender', () => { if (data) renderTicking(Date.now()); });
+window.addEventListener('tvh:rerender-all', () => render());
 $('addFieldsTask').addEventListener('click', () => {
   if (!buildVillageId) return;
   const targetLevel = Number($('fieldsLevel').value);
@@ -158,6 +148,23 @@ function unitName(rule) {
   const v = data.villages[rule.villageId];
   const u = v && v.units && v.units[rule.gid] && v.units[rule.gid].find((x) => x.field === rule.troop);
   return u && u.name ? u.name : t('troops.unitN', { n: rule.troop.slice(1) });
+}
+
+// Troops at home and in training, per village.
+function renderTroopTable(now) {
+  const villages = sortedVillages(data.villages);
+  const head = ['th.village', 'th.home', 'th.training', 'th.updated'].map((k) => `<th>${esc(t(k))}</th>`).join('');
+  const rows = villages.map((v) => {
+    const info = troopInfo(v, now);
+    const home = !info.seen ? `<span class="muted">${esc(t('ov.troopsNotSeen'))}</span>`
+      : info.home.length ? info.home.map((x) => `<span class="unit-chip">${esc(x.name || x.unit)} <b class="mono">${x.count}</b></span>`).join('')
+        : `<span class="muted">${esc(t('ov.noTroops'))}</span>`;
+    const training = info.training.length
+      ? info.training.map((x) => `<span class="unit-chip">${x.count} × ${esc(x.name || x.unit)} <small class="mono muted">${x.finishAt ? fmtDuration(x.finishAt - now) : ''}</small></span>`).join('')
+      : `<span class="muted">${esc(t(info.trainingSeen ? 'ov.noTraining' : 'ov.trainingNotSeen'))}</span>`;
+    return `<tr><td>${esc(v.name)}<br><small class="muted">${coords(v.x, v.y)}</small></td><td>${home}</td><td>${training}</td><td class="muted small">${esc(fmtAgo(v.troopsAt, now))}</td></tr>`;
+  });
+  $('troopTable').innerHTML = villages.length ? `<tr>${head}</tr>${rows.join('')}` : `<tr><td class="muted">${esc(t('build.noVillages'))}</td></tr>`;
 }
 
 function renderTroops(now) {
@@ -327,6 +334,7 @@ function renderTicking(now) {
   renderOverview(data, now);
   renderBuildWhy(now);
   renderSync(now);
+  renderTroopTable(now);
 }
 
 function render() {
@@ -345,6 +353,7 @@ function render() {
   renderTicking(now);
   renderBuild(now, langChanged);
   renderTroops(now);
+  renderAutopilot(data, now);
   renderRaids(now);
   renderLog();
   fillSettings();

@@ -55,6 +55,9 @@ export const DEFAULT_SETTINGS = {
   activeHours: { enabled: false, from: '08:00', to: '23:30' },
   farm: { enabled: false, intervalMinutes: 30, listIds: [], villageId: '' },
   adventure: { enabled: false },
+  // Runs the villages without commands: picks upgrades when nothing is
+  // queued, and sends the hero / farm lists. Oasis raids have their own rules.
+  autopilot: { enabled: false, build: true, fieldsMax: 10, adventures: true, farmLists: false },
   alerts: { desktop: true, attacks: true, storage: true, storageHours: 1, starvation: true, loggedOut: true, botErrors: true },
   telegram: { token: '', chatId: '' },
   discord: { webhookUrl: '' },
@@ -172,16 +175,19 @@ export function buildBlock(v, s, now = Date.now()) {
 export function buildStatus(v, data, now = Date.now()) {
   const s = data.settings;
   const st = data.status || {};
-  if (!(data.tasks[v.id] || []).length) return null;
-  if (!s.botEnabled) return { tone: 'muted', text: t('why.botOff') };
+  const queued = (data.tasks[v.id] || []).length > 0;
+  const auto = s.autopilot.enabled && s.autopilot.build;
+  if (!queued && !auto) return null;
+  if (!s.botEnabled && !s.autopilot.enabled) return { tone: 'muted', text: t('why.botOff') };
   if (st.state === 'otherDevice') return { tone: 'muted', text: t('why.otherDevice', { name: st.note }) };
   if (st.loggedOut) return { tone: 'bad', text: t('why.loggedOut') };
   if (s.pauseWhenPlaying && (st.userActiveUntil || 0) > now) {
     return { tone: 'warn', text: t('why.paused', { t: fmtDuration(st.userActiveUntil - now) }) };
   }
   if (!withinActiveHours(s.activeHours, new Date(now))) return { tone: 'muted', text: t('why.hours') };
+  if (!queued && (v.autoIdleUntil || 0) > now) return { tone: 'muted', text: t('why.autoNothing') };
   const b = buildBlock(v, s, now);
-  if (!b) return { tone: 'good', text: t('why.ready') };
+  if (!b) return { tone: 'good', text: queued ? t('why.ready') : t('why.autoReady') };
   const left = b.until ? fmtDuration(b.until - now) : null;
   if (b.reason === 'queue') return { tone: 'muted', text: left ? t('why.queue', { t: left }) : t('why.queueUnknown') };
   if (b.reason === 'resources') return { tone: 'warn', text: t('why.resources', { t: left }) };

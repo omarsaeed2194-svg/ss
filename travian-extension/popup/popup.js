@@ -19,6 +19,7 @@ function render() {
   $('gold').textContent = data.account.gold != null ? t('gold', { n: fmtNum(data.account.gold) }) : '';
   $('watch').checked = s.watchEnabled;
   $('bot').checked = s.botEnabled;
+  $('autopilot').checked = s.autopilot.enabled;
   const st = statusLine(data, now);
   $('status').className = `status ${st.tone}`;
   $('status').textContent = st.text;
@@ -38,6 +39,7 @@ async function reload() {
 
 $('watch').addEventListener('change', (e) => command('saveSettings', { settings: { watchEnabled: e.target.checked } }));
 $('bot').addEventListener('change', (e) => command('saveSettings', { settings: { botEnabled: e.target.checked } }));
+$('autopilot').addEventListener('change', (e) => command('saveSettings', { settings: { autopilot: { ...data.settings.autopilot, enabled: e.target.checked } } }));
 $('checkNow').addEventListener('click', async (e) => {
   e.target.disabled = true;
   await command('runNow');

@@ -98,9 +98,18 @@ export function adviseVillage(v, data, now = Date.now()) {
     }
   }
 
+  // --- Troops ------------------------------------------------------------
+  // Barracks standing still while the warehouse fills: spend it on troops.
+  const barracks = (v.trainingQueue || {})[19];
+  if (barracks && !barracks.unknown && !barracks.items.some((i) => !i.finishAt || i.finishAt > now) && prod) {
+    const h = Math.min(...['wood', 'clay', 'iron'].map((k) => (prod[k] > 0 ? hoursUntilLimit(v, k, now) ?? Infinity : Infinity)));
+    if (h <= 2) add('info', 'shield', t('tip.barracksIdle'), { type: 'tab', tab: 'troops', villageId: v.id, label: t('tip.actTrain') });
+  }
+
   // --- Builders ----------------------------------------------------------
+  const ap = data.settings.autopilot;
   const active = (v.buildQueue || []).filter((b) => !b.finishAt || b.finishAt > now);
-  if (v.buildQueue && !active.length && !(data.tasks[v.id] || []).length) {
+  if (v.buildQueue && !active.length && !(data.tasks[v.id] || []).length && !(ap.enabled && ap.build)) {
     add('info', 'build', t('tip.idle'), { type: 'tab', tab: 'build', villageId: v.id, label: t('tip.actPlan') });
   }
 
@@ -150,16 +159,17 @@ export function adviseAccount(data, now = Date.now()) {
   const s = data.settings;
   const hero = data.account.hero || {};
   if (data.status.loggedOut) add('critical', 'alert', t('status.loggedOut'));
-  if (!s.watchEnabled && !s.botEnabled) {
+  if (!s.watchEnabled && !s.botEnabled && !s.autopilot.enabled) {
     add('warning', 'alert', t('tip.watchOff'), { type: 'setting', label: t('tip.actEnable'), patch: { watchEnabled: true } });
   } else if (!s.telegram.token && !s.discord.webhookUrl) {
     add('info', 'alert', t('tip.phone'), { type: 'tab', tab: 'alerts', label: t('tip.actSetup') });
   }
-  if (hero.adventures > 0 && hero.home && !s.adventure.enabled) {
+  const ap = s.autopilot;
+  if (hero.adventures > 0 && hero.home && !s.adventure.enabled && !(ap.enabled && ap.adventures)) {
     add('info', 'hero', t('tip.adventures', { n: hero.adventures }), { type: 'setting', label: t('tip.actEnable'), patch: { adventure: { ...s.adventure, enabled: true } } });
   }
   const lists = (data.account.farmLists || []).length;
-  if (lists && !s.farm.enabled) {
+  if (lists && !s.farm.enabled && !(ap.enabled && ap.farmLists)) {
     add('info', 'farm', t('tip.farm', { n: lists }), { type: 'setting', label: t('tip.actEnable'), patch: { farm: { ...s.farm, enabled: true } } });
   }
   return tips;

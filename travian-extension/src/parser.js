@@ -36,8 +36,10 @@
       const gid = url.searchParams.get('gid');
       const tt = url.searchParams.get('tt');
       if (gid === '16' && tt === '99') return 'farmlist';
+      if (tt === '2' && (gid === '16' || url.searchParams.get('id') === '39')) return 'send';
       return 'build';
     }
+    if (p.endsWith('/position_details.php')) return 'tile';
     if (p.startsWith('/hero/adventures')) return 'adventures';
     return 'other';
   }
@@ -206,6 +208,140 @@
     };
   }
 
+  // Unit icons carry the unit number as a class: u1..u10 Romans, u11..u20
+  // Teutons, u21..u30 Gauls, u31..u40 animals, and so on; uhero is the hero.
+  function unitOf(img) {
+    if (!img) return null;
+    for (const c of img.classList) {
+      if (c === 'uhero') return 'hero';
+      const m = c.match(/^u(\d+)$/);
+      if (m) return 'u' + m[1];
+    }
+    return null;
+  }
+
+  // "Troops" box on dorf1: everything currently in the village.
+  function parseTroops(doc) {
+    const table = doc.getElementById('troops');
+    if (!table) return null;
+    return qsa(table, 'tbody tr').map((tr) => {
+      const img = qs(tr, 'img.unit, i.unit');
+      const unit = unitOf(img);
+      if (!unit) return null;
+      return {
+        unit,
+        name: text(qs(tr, '.un')) || (img.getAttribute('alt') || ''),
+        count: num(text(qs(tr, '.num'))) || 0,
+      };
+    }).filter(Boolean);
+  }
+
+  // Units being trained, shown on barracks / stable / workshop pages. Each
+  // row is a batch; its timer counts down to the last unit of the batch.
+  function parseTrainingQueue(doc) {
+    const out = [];
+    for (const table of qsa(doc, 'table.under_progress')) {
+      for (const tr of qsa(table, 'tbody tr')) {
+        if (tr.classList.contains('next')) continue;
+        const img = qs(tr, 'img.unit, i.unit');
+        const unit = unitOf(img);
+        if (!unit) continue;
+        const desc = qs(tr, '.desc') || tr;
+        const timer = qs(tr, '.dur .timer') || qs(tr, '.timer');
+        out.push({
+          unit,
+          name: img.getAttribute('alt') || img.getAttribute('title') || '',
+          count: num(text(desc)) || 1,
+          secondsLeft: timer ? num(timer.getAttribute('value')) : null,
+        });
+      }
+    }
+    return out;
+  }
+
+  // position_details.php: a single map tile. For an oasis, the animals
+  // guarding it are listed in #troop_info (the reports table reuses that id
+  // with class "rep").
+  function parseTile(doc, url) {
+    const root = doc.getElementById('tileDetails') || doc.getElementById('content') || doc.body;
+    const troopTable = qsa(doc, 'table#troop_info').find((tb) => !tb.classList.contains('rep')) || null;
+    const animals = troopTable ? qsa(troopTable, 'tr').map((tr) => {
+      const unit = unitOf(qs(tr, 'img.unit, i.unit'));
+      if (!unit) return null;
+      return { unit, count: num(text(qs(tr, '.val'))) ?? num(text(tr)) ?? 0 };
+    }).filter(Boolean) : null;
+    const cls = (root && root.className) || '';
+    const animalUnits = (animals || []).some((a) => /^u(3[1-9]|40)$/.test(a.unit));
+    return {
+      x: num(url.searchParams.get('x')),
+      y: num(url.searchParams.get('y')),
+      // Villages have no animal table; an empty oasis lists "none".
+      isOasis: /oasis/i.test(cls) || animalUnits || !!troopTable,
+      // An owned oasis links to its owner's profile.
+      owned: !!qs(root, 'a[href*="/profile"], a[href*="spieler.php"]'),
+      animals: animals ? animals.reduce((n, a) => n + a.count, 0) : null,
+    };
+  }
+
+  // Rally point "send troops": first a form, then a confirmation page.
+  function parseSendPage(doc) {
+    const inputs = qsa(doc, 'input[name^="troop["], input[name^="troops["]')
+      .filter((i) => i.type !== 'hidden' && /\[t\d+\]$/.test(i.getAttribute('name')));
+    const error = text(qs(doc, '#content .error, #content p.error, #content .alert, #content .errorMessage'));
+    if (inputs.length) {
+      const available = {};
+      for (const input of inputs) {
+        const field = input.getAttribute('name').match(/\[(t\d+)\]$/)[1];
+        const cell = input.closest('td') || input.parentElement;
+        const link = qs(cell, 'a');
+        available[field] = link ? num(text(link)) ?? 0 : qs(cell, '.none') ? 0 : null;
+      }
+      return { stage: 'form', available, error };
+    }
+    const details = qs(doc, 'table.troop_details');
+    if (details) {
+      // Every place the page names, except the sending village (".role").
+      const root = doc.getElementById('content') || doc.body;
+      const targets = [];
+      for (const a of qsa(root, 'a[href*="karte.php"], a[href*="position_details.php"]')) {
+        if (a.closest('.role')) continue;
+        const u = new URL(a.getAttribute('href') || '', 'https://x.invalid/');
+        const d = num(u.searchParams.get('d'));
+        if (u.searchParams.has('x')) targets.push({ x: num(u.searchParams.get('x')), y: num(u.searchParams.get('y')) });
+        else if (d) targets.push({ x: ((d - 1) % 401) - 200, y: 200 - Math.floor((d - 1) / 401) }); // 401×401 map
+      }
+      for (const cx of qsa(root, '.coordinateX')) {
+        if (cx.closest('.role')) continue;
+        const cy = cx.parentElement && qs(cx.parentElement, '.coordinateY');
+        if (cy) targets.push({ x: num(text(cx)), y: num(text(cy)) });
+      }
+      const ev = qs(doc, 'input[type="hidden"][name="eventType"], input[type="hidden"][name="c"]');
+      return { stage: 'confirm', targets, eventType: ev ? num(ev.value) : null, error };
+    }
+    return { stage: 'other', error };
+  }
+
+  // Map tiles from the game's map API. Oasis titles are "{k.fo}" (free) or
+  // "{k.bt}" (occupied); the text lists the animals.
+  function oasesFromTiles(tiles) {
+    const out = [];
+    for (const tile of tiles || []) {
+      const pos = tile.position || tile;
+      const title = String(tile.title || '');
+      const body = String(tile.text || '');
+      const oasis = /\{k\.(fo|bt)\}/.test(title) || (tile.did === -1 && /unit u(3[1-9]|40)\b/.test(body));
+      if (!oasis || pos.x == null || pos.y == null) continue;
+      let animals = 0;
+      for (const m of body.matchAll(/unit u(\d+)\b[\s\S]*?class="value[^"]*"[^>]*>\s*([\d,.]+)/g)) animals += num(m[2]) || 0;
+      out.push({
+        x: Number(pos.x), y: Number(pos.y),
+        owned: /\{k\.bt\}/.test(title) || !!(tile.uid && tile.uid > 0),
+        animals,
+      });
+    }
+    return out;
+  }
+
   // build.php for an existing building / field / empty site.
   function parseBuildPage(doc, url) {
     const slot = num(url.searchParams.get('id'));
@@ -230,6 +366,8 @@
         ? { wood: num(text(costEls[0])), clay: num(text(costEls[1])), iron: num(text(costEls[2])), crop: num(text(costEls[3])) }
         : null,
       maxLevel: !upgrade && !error && !!qs(doc, '.upgradeBuilding .maxLevel, .maxLevelReached'),
+      // Training buildings: what's being trained now (null on other buildings).
+      trainingQueue: qs(doc, 'table.under_progress, .startTraining, #nonFavouriteTroops') ? parseTrainingQueue(doc) : null,
       trainable: qsa(doc, '.troop:not(.empty) .cta input.text[name^="t"]').map((input) => {
         const box = input.closest('.troop');
         const img = qs(box, 'img.unit');
@@ -274,14 +412,21 @@
     if (type === 'dorf1') {
       out.fields = parseFields(doc);
       out.movements = parseMovements(doc);
+      out.troops = parseTroops(doc);
     }
     if (type === 'dorf2') out.buildings = parseBuildings(doc);
     if (type === 'build') out.buildPage = parseBuildPage(doc, url);
     if (type === 'farmlist') out.farmLists = parseFarmLists(doc);
+    if (type === 'tile') out.tile = parseTile(doc, url);
+    if (type === 'send') out.sendPage = parseSendPage(doc);
     return out;
   }
 
-  const api = { num, parsePage, parseResources, parseVillages, parseBuildQueue, parseFields, parseBuildings, parseMovements, parseBuildPage, parseFarmLists, parseHero, pageType };
+  const api = {
+    num, parsePage, parseResources, parseVillages, parseBuildQueue, parseFields, parseBuildings, parseMovements,
+    parseBuildPage, parseFarmLists, parseHero, pageType, parseTroops, parseTrainingQueue, parseTile, parseSendPage,
+    oasesFromTiles, unitOf,
+  };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TravianParser = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

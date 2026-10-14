@@ -19,6 +19,21 @@ you're away:
 - **Farm lists** — presses "Start all" (or the lists you pick) every N minutes.
 - **Hero adventures** — sends the hero out whenever they're home and an
   adventure is available.
+- **Troops** — the troops in each village and what the barracks, stable and
+  workshop are training (with finish times), in the Overview, the Troops tab
+  and the popup.
+- **Autopilot** — one switch for when you're away. When a village's build
+  queue is empty it picks the next upgrade itself (warehouse/granary when
+  90% full → crop when the village is short of crop → Main Building up to the
+  fields' level → the lowest resource field, up to a level you choose). It also
+  sends the hero on adventures and starts farm lists if you tick them. The
+  Autopilot tab shows what it will do next in every village.
+- **Oasis raids** — raids empty oases near a village with the unit and number
+  you choose, every N minutes. It finds oases on the game map (or uses
+  coordinates you add), opens each oasis right before sending and only raids
+  when it has **no animals and no owner**, and only confirms when the
+  confirmation page names that same oasis. If a step fails, the Activity log
+  says which one (for example "could not find the Raid option").
 - **Overview dashboard** — filter by village; headline numbers (stock,
   production, net crop, time until storage is full, incoming attacks, builders);
   **alerts & tips** worked out from each village's state (attacks, starvation,
@@ -37,7 +52,8 @@ Works on Travian: Legends servers (`*.travian.com`, e.g.
 
 > **Heads-up:** Travian's game rules prohibit bots and scripts that play for
 > you, and accounts caught using them can be banned. The "Automate actions"
-> features are exactly that kind of tool, and even "Watch & alert" reloads
+> and Autopilot features are exactly that kind of tool (regular raids around
+> the clock are especially easy to spot), and even "Watch & alert" reloads
 > game pages on a timer. Use it on your own account at your own risk — and
 > consider leaving automation off on an account you care about.
 
@@ -157,9 +173,11 @@ src/shared.js          Constants and helpers (building names, projections, defau
 src/i18n.js            Arabic and English UI strings (Arabic is the default)
 src/sync.js            Saves commands to Chrome sync; one-browser-at-a-time lease
 src/advisor.js         Game tips worked out from each village's state
+src/autopilot.js       Autopilot choices: next upgrade, which oases to raid
 src/ui.js / ui.css     Village cards and styles shared by popup and dashboard
 popup/                 Toolbar popup
 dashboard/             Full dashboard (also the extension's options page); overview.js renders the
-                       Overview tab, chart.js the 24-hour stock chart, art.js the village/hero drawings
+                       Overview tab, autopilot.js the Autopilot tab, chart.js the 24-hour stock
+                       chart, art.js the village/hero drawings
 icons/                 Extension icons
 ```

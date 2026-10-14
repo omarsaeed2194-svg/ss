@@ -137,6 +137,7 @@ button, input, select { font: inherit; color: inherit; }
 
 .queue { list-style: none; margin: 8px 0 0; padding: 6px 0 0; border-top: 1px dashed var(--line); }
 .queue li { display: flex; justify-content: space-between; gap: 8px; }
+.troop-line { margin: 6px 0 0; }
 .chips { margin: 8px 0 0; display: flex; gap: 6px; flex-wrap: wrap; }
 .chips span { font-size: 11px; padding: 1px 7px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); color: var(--muted); }
 
