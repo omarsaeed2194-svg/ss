@@ -5,7 +5,7 @@ import {
 } from './shared.js';
 import { t, setLanguage, coords, ltr } from './i18n.js';
 
-export const STORAGE_KEYS = ['settings', 'villages', 'account', 'tasks', 'training', 'schedule', 'status', 'log'];
+export const STORAGE_KEYS = ['settings', 'villages', 'account', 'tasks', 'training', 'schedule', 'status', 'log', 'device', 'syncState'];
 
 export async function loadAll() {
   const data = await chrome.storage.local.get(STORAGE_KEYS);
@@ -18,6 +18,11 @@ export async function loadAll() {
   data.schedule = data.schedule || {};
   data.status = data.status || {};
   data.log = data.log || [];
+  try {
+    data.lease = (await chrome.storage.sync.get('lease')).lease || null;
+  } catch (e) {
+    data.lease = null;
+  }
   return data;
 }
 
@@ -34,6 +39,7 @@ export function statusLine(data, now = Date.now()) {
   const { settings: s, status, schedule } = data;
   if (!s.server) return { tone: 'muted', text: t('status.noServer') };
   if (status.loggedOut) return { tone: 'bad', text: t('status.loggedOut') };
+  if (status.state === 'otherDevice') return { tone: 'warn', text: t('status.otherDevice', { name: status.note }) };
   if (status.state === 'working') return { tone: 'good', text: t('status.working', { note: status.note }) };
   if (status.state === 'paused') return { tone: 'warn', text: t('status.paused') };
   if (!s.watchEnabled && !s.botEnabled) return { tone: 'muted', text: t('status.off') };

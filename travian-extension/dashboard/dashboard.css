@@ -92,3 +92,24 @@ table.list input.num { width: 56px; padding: 2px 6px; }
 #farmLists { display: flex; flex-direction: column; gap: 6px; }
 .log li > .mono { white-space: nowrap; }
 :root[dir="rtl"] .log .lvl { text-transform: none; letter-spacing: 0; font-size: 11px; }
+
+.summary .stat.bad b { color: var(--bad); }
+.summary .stat.good b { color: var(--good); }
+.summary .stat b { font-size: 15px; }
+.table-wrap { overflow-x: auto; }
+.ov-table td { vertical-align: top; }
+.ov-table td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ov-table td.num small { display: block; color: var(--muted); }
+.ov-table td.warn span { color: var(--warn); }
+.ov-table td.bad span, .ov-table .bad { color: var(--bad); }
+.ov-table small.warn { color: var(--warn); }
+.ov-table small.good { color: var(--good); }
+table.list tr.attacked td { background: var(--bad-bg); }
+.alert-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.alert-list li { padding: 5px 8px; border-radius: 6px; background: var(--bg); }
+.alert-list li.bad { color: var(--bad); background: var(--bad-bg); }
+.alert-list li.warn { color: var(--warn); }
+.alert-list li.muted { color: var(--muted); }
+.good-text { color: var(--good); margin: 0; }
+.section-title { font-size: 15px; margin-top: 4px; }
+.brand #version { display: block; }

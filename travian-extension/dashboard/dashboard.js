@@ -1,6 +1,8 @@
-import { loadAll, command, villageCard, statusLine, esc } from '../src/ui.js';
+import { loadAll, command, statusLine, esc } from '../src/ui.js';
+import { renderOverview } from './overview.js';
+import { leaseIsFresh } from '../src/sync.js';
 import {
-  sortedVillages, taskLabel, buildingName, fmtDuration, fmtAgo, fmtNum, TRAINING_BUILDINGS, buildStatus,
+  sortedVillages, taskLabel, buildingName, fmtDuration, fmtAgo, TRAINING_BUILDINGS, buildStatus,
 } from '../src/shared.js';
 import { t, applyI18n, coords, dateLocale, LANGUAGES } from '../src/i18n.js';
 
@@ -58,27 +60,6 @@ async function saveSetting(el) {
 
 for (const el of document.querySelectorAll('[data-setting]')) {
   el.addEventListener('change', () => saveSetting(el));
-}
-
-// ------------------------------------------------------------- overview ---
-function renderOverview(now) {
-  const villages = sortedVillages(data.villages);
-  const attacked = villages.filter((v) => v.underAttack).length;
-  const hero = data.account.hero || {};
-  const s = data.settings;
-  const stats = [
-    [villages.length, t('ov.villages')],
-    [attacked, t('ov.underAttack')],
-    [fmtNum(data.account.gold), t('ov.gold')],
-    [fmtNum(data.account.silver), t('ov.silver')],
-    [hero.adventures ?? '—', t('ov.adventures', { status: t(hero.home ? 'ov.heroHome' : 'ov.heroAway') })],
-  ];
-  if (s.botEnabled && s.farm.enabled) stats.push([fmtDuration(Math.max(0, (data.schedule.farmAt || now) - now)), t('ov.farmIn')]);
-  $('summary').innerHTML = stats.map(([b, span]) => `<div class="stat"><b>${esc(b)}</b><span>${esc(span)}</span></div>`).join('');
-  villages.sort((a, b) => Number(!!b.underAttack) - Number(!!a.underAttack));
-  $('villageGrid').innerHTML = villages.length
-    ? villages.map((v) => villageCard(v, data, now)).join('')
-    : `<div class="panel muted">${esc(t('ov.empty'))}</div>`;
 }
 
 // ---------------------------------------------------------------- build ---
@@ -269,6 +250,53 @@ $('resetData').addEventListener('click', () => {
   if (confirm(t('settings.resetConfirm'))) command('resetData');
 });
 
+// --------------------------------------------------------- save & sync ---
+function renderSync(now) {
+  const state = data.syncState || {};
+  const lease = data.lease;
+  const mine = data.device && lease && lease.deviceId === data.device.id;
+  $('syncDevice').textContent = data.device ? data.device.name : '—';
+  $('syncSaved').textContent = state.error ? t('sync.error', { e: state.error })
+    : state.savedAt ? fmtAgo(state.savedAt, now) : t('sync.never');
+  $('syncSaved').className = state.error ? 'bad' : '';
+  const otherActive = leaseIsFresh(lease, now) && !mine;
+  $('syncRunsOn').textContent = otherActive ? t('sync.other', { name: lease.deviceName, ago: fmtAgo(lease.at, now) })
+    : mine && leaseIsFresh(lease, now) ? t('sync.here') : t('sync.nobody');
+  $('takeOver').hidden = !otherActive;
+}
+
+$('takeOver').addEventListener('click', () => command('takeOver'));
+$('syncNow').addEventListener('click', async (e) => {
+  e.target.disabled = true;
+  try { await command('syncNow'); } finally { setTimeout(() => { e.target.disabled = false; }, 1500); }
+});
+
+$('exportData').addEventListener('click', async () => {
+  const backup = await command('exportData');
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `travian-helper-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+});
+$('importData').addEventListener('click', () => $('importFile').click());
+$('importFile').addEventListener('change', async (e) => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  try {
+    const parsed = JSON.parse(await file.text());
+    if (!confirm(t('sync.importConfirm'))) return;
+    const r = await command('importData', { data: parsed });
+    $('backupResult').textContent = t('sync.imported', { tasks: r.tasks, training: r.training });
+    $('backupResult').className = 'small good-text';
+  } catch (err) {
+    $('backupResult').textContent = t('sync.importFailed', { e: err.message });
+    $('backupResult').className = 'small bad';
+  }
+});
+
 // ------------------------------------------------------------------ log ---
 function renderLog() {
   const names = Object.fromEntries(Object.values(data.villages).map((v) => [v.id, v.name]));
@@ -293,8 +321,9 @@ function renderTicking(now) {
   const st = statusLine(data, now);
   $('status').className = `status ${st.tone}`;
   $('status').textContent = st.text;
-  renderOverview(now);
+  renderOverview(data, now);
   renderBuildWhy(now);
+  renderSync(now);
 }
 
 function render() {
@@ -308,6 +337,7 @@ function render() {
     fillSelect($('language'), LANGUAGES);
   }
   $('server').textContent = data.settings.server ? new URL(data.settings.server).host : t('server.none');
+  $('version').textContent = t('app.version', { v: chrome.runtime.getManifest().version });
   $('serverFull').textContent = data.settings.server || t('settings.notDetected');
   renderTicking(now);
   renderBuild(now, langChanged);
@@ -322,7 +352,7 @@ async function reload() {
   render();
 }
 
-chrome.storage.onChanged.addListener((changes, area) => { if (area === 'local') reload(); });
+chrome.storage.onChanged.addListener((changes, area) => { if (area === 'local' || area === 'sync') reload(); });
 setInterval(() => { if (data) renderTicking(Date.now()); }, 1000);
 showTab();
 reload();

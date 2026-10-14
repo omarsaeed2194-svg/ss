@@ -174,6 +174,7 @@ export function buildStatus(v, data, now = Date.now()) {
   const st = data.status || {};
   if (!(data.tasks[v.id] || []).length) return null;
   if (!s.botEnabled) return { tone: 'muted', text: t('why.botOff') };
+  if (st.state === 'otherDevice') return { tone: 'muted', text: t('why.otherDevice', { name: st.note }) };
   if (st.loggedOut) return { tone: 'bad', text: t('why.loggedOut') };
   if (s.pauseWhenPlaying && (st.userActiveUntil || 0) > now) {
     return { tone: 'warn', text: t('why.paused', { t: fmtDuration(st.userActiveUntil - now) }) };

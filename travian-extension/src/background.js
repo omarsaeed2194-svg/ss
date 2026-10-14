@@ -6,6 +6,9 @@ import {
   buildBlock,
 } from './shared.js';
 import { t, setLanguage, coords, ltr } from './i18n.js';
+import {
+  COMMAND_KEYS, commandsOf, schedulePush, pushCommands, pullCommands, mayRun, renewLease, getDevice,
+} from './sync.js';
 
 const LOG_LIMIT = 300;
 const PAGE_TIMEOUT_MS = 45000;
@@ -588,6 +591,15 @@ async function tick(force = false) {
       await setStatus({ state: 'blocked', note: '' });
       return {};
     }
+    // Only one browser drives the game. "Check now" here takes over.
+    if (s.watchEnabled || s.botEnabled || force) {
+      const lease = await mayRun(now);
+      if (!lease.ok && !force) {
+        await setStatus({ state: 'otherDevice', note: lease.lease.deviceName });
+        return {};
+      }
+      await renewLease();
+    }
     if (!force && s.pauseWhenPlaying && (status.userActiveUntil || 0) > now) {
       await setStatus({ state: 'paused', note: '' });
       return {};
@@ -666,6 +678,46 @@ const COMMANDS = {
     return sendRemote(s, t('test.remote'));
   },
   async clearLog() { await update(['log'], (d) => { d.log = []; }); },
+  async exportData() {
+    const local = await read([...COMMAND_KEYS, 'villages']);
+    return {
+      format: 'travian-helper-backup',
+      version: chrome.runtime.getManifest().version,
+      exportedAt: new Date().toISOString(),
+      ...commandsOf(local),
+      villages: local.villages || {},
+    };
+  },
+  // Accepts our backup file, or a raw storage dump from an older version.
+  async importData({ data }) {
+    if (!data || typeof data !== 'object' || !(data.settings || data.tasks || data.training)) {
+      throw new Error(t('backup.invalid'));
+    }
+    const uidIfMissing = (x) => ({ ...x, id: x.id || uid() });
+    const tasks = {};
+    for (const [vid, list] of Object.entries(data.tasks || {})) {
+      if (Array.isArray(list) && list.length) tasks[vid] = list.map((x) => ({ ...uidIfMissing(x), attempts: 0 }));
+    }
+    const training = (Array.isArray(data.training) ? data.training : []).map((r) => ({ ...uidIfMissing(r), nextAt: 0 }));
+    await update(['settings', 'tasks', 'training', 'villages'], (d) => {
+      d.settings = mergeSettings({ ...mergeSettings(d.settings), ...(data.settings || {}) });
+      d.tasks = tasks;
+      d.training = training;
+      if (data.villages && !Object.keys(d.villages || {}).length) d.villages = data.villages;
+    });
+    await pushCommands();
+    await refreshBadge();
+    return { tasks: Object.values(tasks).reduce((n, l) => n + l.length, 0), training: training.length };
+  },
+  async takeOver() {
+    await renewLease();
+    await setStatus({ state: 'idle', note: '' });
+  },
+  async syncNow() {
+    const pulled = await pullCommands();
+    const pushed = await pushCommands();
+    return { pulled, pushed };
+  },
   async resetData() {
     await update(['villages', 'account', 'schedule', 'alertMemo', 'status'], (d) => {
       d.villages = {}; d.account = {}; d.schedule = {}; d.alertMemo = {}; d.status = {};
@@ -699,8 +751,29 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 // ------------------------------------------------------------- lifecycle --
 async function setup() {
   await chrome.alarms.create('tick', { periodInMinutes: 1 });
+  await getDevice();
+  // Restore commands saved from another browser (or before a reinstall),
+  // then save this browser's commands.
+  const pulled = await pullCommands();
+  if (pulled.pulled) await log('info', t('log.syncRestored', { from: pulled.from }));
+  await pushCommands();
   await refreshBadge();
 }
+
+// Save commands to the Chrome account whenever they change here, and pick
+// up changes another browser saved.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && COMMAND_KEYS.some((k) => k in changes)) schedulePush();
+  if (area === 'sync' && changes.cmdMeta) {
+    pullCommands().then(async (r) => {
+      if (r.pulled) {
+        await getSettings();
+        await log('info', t('log.syncUpdated', { from: r.from }));
+        await refreshBadge();
+      }
+    });
+  }
+});
 chrome.runtime.onInstalled.addListener(setup);
 chrome.runtime.onStartup.addListener(setup);
 chrome.alarms.onAlarm.addListener((a) => { if (a.name === 'tick') tick(); });

@@ -40,6 +40,45 @@ Works on Travian: Legends servers (`*.travian.com`, e.g.
 4. Click **Load unpacked** and pick the `travian-extension` folder.
 5. Pin the extension (puzzle-piece icon → pin) so the castle icon is visible.
 
+## Updating without losing your commands
+
+From version 1.3 the extension has a fixed ID (`joghiimcpihpcnaanfcefiligknbbbgc`),
+so updates keep your build queue, training rules and settings:
+
+1. Unzip the new version **over the old folder** (replace the files).
+2. Open `chrome://extensions` and press the **reload ⟳** button on Travian Helper.
+
+Don't press **Remove** — that deletes the extension's data in this browser
+(it can still be restored from Chrome sync or a backup file, see below).
+
+### One-time move from version 1.2 or older
+
+Older versions had no fixed ID, so their commands can't carry over by
+themselves. Save them first:
+
+1. Open the **old** version's dashboard, press **F12**, open the **Console** tab.
+2. If Chrome asks, type `allow pasting` and press Enter. Then paste this line
+   and press Enter — it downloads `travian-helper-backup.json`:
+   ```
+   chrome.storage.local.get(null).then(d=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(d)]));a.download='travian-helper-backup.json';a.click()})
+   ```
+3. Remove the old version in `chrome://extensions`, then **Load unpacked** the new one.
+4. In the new dashboard: **Settings → Save & sync → Restore from backup**, and
+   pick the downloaded file.
+
+## Your commands in another browser
+
+- **Chrome sync:** commands are saved to your Chrome account automatically.
+  Install the extension in Chrome on another computer, signed in to the same
+  Google account with sync on (Settings → You and Google → Sync → make sure
+  **Extensions** is on), and your commands appear there.
+- **One browser runs the automation at a time.** The others show "running on
+  another browser". If that browser is closed, another one takes over within
+  3 minutes — or press **Run automation here** in Settings.
+- **Backup file:** Settings → Save & sync → **Download backup** /
+  **Restore from backup**. Use it for browsers without Chrome sync (e.g. Edge)
+  or just to keep a copy.
+
 ## First run
 
 1. Log in to your Travian server in the same browser and open your village.
@@ -107,8 +146,9 @@ src/content.js         Runs on Travian pages: reports state, performs clicks
 src/background.js      Service worker: storage, alerts, scheduler, bot jobs
 src/shared.js          Constants and helpers (building names, projections, defaults)
 src/i18n.js            Arabic and English UI strings (Arabic is the default)
+src/sync.js            Saves commands to Chrome sync; one-browser-at-a-time lease
 src/ui.js / ui.css     Village cards and styles shared by popup and dashboard
 popup/                 Toolbar popup
-dashboard/             Full dashboard (also the extension's options page)
+dashboard/             Full dashboard (also the extension's options page); overview.js renders the Overview tab
 icons/                 Extension icons
 ```

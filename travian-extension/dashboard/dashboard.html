@@ -13,6 +13,7 @@
     <div class="brand">
       <h1 data-i18n="app.name"></h1>
       <span id="server" class="muted small"></span>
+      <span id="version" class="muted small"></span>
     </div>
     <div class="tabs">
       <a href="#overview" data-tab="overview" data-i18n="nav.overview"></a>
@@ -36,6 +37,38 @@
     <!-- Overview -->
     <section class="tab" id="tab-overview">
       <div class="summary" id="summary"></div>
+      <div class="cols">
+        <div class="panel">
+          <h2 data-i18n="ov.alertsTitle"></h2>
+          <div id="ovAlerts"></div>
+        </div>
+        <div class="panel">
+          <h2 data-i18n="ov.nextTitle"></h2>
+          <dl id="ovNext" class="kv"></dl>
+        </div>
+      </div>
+      <div class="panel">
+        <h2 data-i18n="ov.villagesTitle"></h2>
+        <div class="table-wrap"><table class="list ov-table" id="ovTable"></table></div>
+      </div>
+      <div class="cols">
+        <div class="panel">
+          <h2 data-i18n="ov.queuesTitle"></h2>
+          <div class="table-wrap"><table class="list" id="ovQueues"></table></div>
+        </div>
+        <div class="panel">
+          <h2 data-i18n="ov.movesTitle"></h2>
+          <div class="table-wrap"><table class="list" id="ovMoves"></table></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="row between">
+          <h2 data-i18n="ov.activityTitle"></h2>
+          <a href="#log" class="small" data-i18n="ov.allActivity"></a>
+        </div>
+        <ul id="ovActivity" class="log"></ul>
+      </div>
+      <h2 class="section-title" id="ovCardsTitle" data-i18n="ov.cardsTitle"></h2>
       <div class="grid" id="villageGrid"></div>
     </section>
 
@@ -159,6 +192,27 @@
 
     <!-- Settings -->
     <section class="tab" id="tab-settings">
+      <div class="panel">
+        <h2 data-i18n="sync.title"></h2>
+        <p class="muted small" data-i18n="sync.help"></p>
+        <dl class="kv">
+          <dt data-i18n="sync.thisDevice"></dt><dd id="syncDevice"></dd>
+          <dt data-i18n="sync.savedAt"></dt><dd id="syncSaved"></dd>
+          <dt data-i18n="sync.runsOn"></dt><dd id="syncRunsOn"></dd>
+        </dl>
+        <div class="row wrap">
+          <button class="btn primary" id="takeOver" data-i18n="sync.takeOver" hidden></button>
+          <button class="btn" id="syncNow" data-i18n="sync.syncNow"></button>
+        </div>
+        <h3 class="gap" data-i18n="sync.backupTitle"></h3>
+        <p class="muted small" data-i18n="sync.backupHelp"></p>
+        <div class="row wrap">
+          <button class="btn" id="exportData" data-i18n="sync.export"></button>
+          <button class="btn" id="importData" data-i18n="sync.import"></button>
+          <input type="file" id="importFile" accept=".json,application/json" hidden>
+          <span id="backupResult" class="small muted"></span>
+        </div>
+      </div>
       <div class="cols">
         <div class="panel">
           <h2 data-i18n="settings.language"></h2>
