@@ -269,3 +269,100 @@ svg.chart .hit { fill: transparent; }
   main { padding: 16px; }
   .tip { grid-template-columns: 1fr; }
 }
+
+/* ------------------------------------------------------ illustrations --- */
+:root {
+  --art-sky-top: #bfe0f7; --art-sky-bottom: #eef7fd; --art-sun: #fab219; --art-cloud: #ffffff;
+  --art-hill: #b9d7a6; --art-ground: #9cc77f; --art-tree: #3f7d3a; --art-trunk: #7a5230;
+  --art-clay: #c8714a; --art-wheat: #e7c24f; --art-wheat-line: #b9922a; --art-rock: #8c97a3;
+  --art-house: #f4ead6; --art-roof: #b5543a; --art-window: #5b4632; --art-keep: #ddd3c1;
+  --art-door: #6b4a2e; --art-wall: #a99f8c; --art-pole: #5b4632; --art-flag: #2f7d32; --art-scaffold: #8a6a45;
+  --hero-bg: #e8f2e8; --hero-cape: #b42323; --hero-armor: #8c97a3; --hero-skin: #f0c9a0;
+  --hero-helmet: #6b7682; --hero-crest: #d03b3b; --hero-shield: #2a78d6; --hero-emblem: #fab219; --hero-eye: #2b2b2b;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --art-sky-top: #0f2236; --art-sky-bottom: #1c3046; --art-sun: #e8e4d4; --art-cloud: #33465a;
+    --art-hill: #22381f; --art-ground: #2c4a26; --art-tree: #4f8f47; --art-trunk: #6b4a2e;
+    --art-clay: #a95f3f; --art-wheat: #b99a3e; --art-wheat-line: #8a7230; --art-rock: #6c7682;
+    --art-house: #c9bda5; --art-roof: #8f4330; --art-window: #f1d98b; --art-keep: #a89e8c;
+    --art-door: #4a3320; --art-wall: #7d7566; --art-pole: #c9bda5; --art-flag: #4caf50; --art-scaffold: #a5835a;
+    --hero-bg: #1b2a1b;
+  }
+}
+.art { display: block; width: 100%; }
+.art .sky-top { stop-color: var(--art-sky-top); }
+.art .sky-bottom { stop-color: var(--art-sky-bottom); }
+.art .sun { fill: var(--art-sun); }
+.art .cloud { fill: var(--art-cloud); opacity: .85; }
+.art .hill-far { fill: var(--art-hill); }
+.art .ground { fill: var(--art-ground); }
+.art .tree path { fill: var(--art-tree); }
+.art .trunk { fill: var(--art-trunk); }
+.art .clay { fill: var(--art-clay); }
+.art .wheat rect { fill: var(--art-wheat); }
+.art .wheat path { stroke: var(--art-wheat-line); stroke-width: 1; }
+.art .rock { fill: var(--art-rock); }
+.art .house rect { fill: var(--art-house); }
+.art .roof { fill: var(--art-roof); }
+.art .window { fill: var(--art-window); }
+.art .keep rect { fill: var(--art-keep); }
+.art .keep .window { fill: var(--art-window); }
+.art .door { fill: var(--art-door); }
+.art .wall path, .art .wall rect { fill: var(--art-wall); }
+.art .pole { stroke: var(--art-pole); stroke-width: 1.5; }
+.art .flag { fill: var(--art-flag); }
+.art .flag.bad { fill: var(--bad-mark); }
+.art .scaffold path { stroke: var(--art-scaffold); stroke-width: 1.5; fill: none; }
+.art .crate { fill: var(--art-scaffold); }
+.art .attack-tint { fill: var(--bad-mark); opacity: .16; }
+.art .attack-badge circle { fill: var(--bad-mark); }
+.art .attack-badge text { fill: #fff; font-size: 15px; }
+.hero-art .hero-bg { fill: var(--hero-bg); }
+.hero-art .cape { fill: var(--hero-cape); }
+.hero-art .armor { fill: var(--hero-armor); }
+.hero-art .belt { fill: var(--art-door); }
+.hero-art .skin { fill: var(--hero-skin); }
+.hero-art .helmet { fill: var(--hero-helmet); }
+.hero-art .crest { fill: var(--hero-crest); }
+.hero-art .eye { fill: var(--hero-eye); }
+.hero-art .mouth { stroke: var(--hero-eye); stroke-width: 1.5; fill: none; stroke-linecap: round; }
+.hero-art .shield { fill: var(--hero-shield); }
+.hero-art .emblem { fill: var(--hero-emblem); }
+.hero-art .away-badge circle { fill: var(--info-mark); }
+.hero-art .away-badge path { fill: #fff; fill-rule: evenodd; }
+
+.village-banner { padding: 0; overflow: hidden; position: relative; gap: 0; }
+.village-banner .village-art { height: 170px; }
+.banner-caption {
+  position: absolute; inset-inline: 12px; inset-block-start: 12px;
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.art-chip {
+  background: color-mix(in srgb, var(--panel) 88%, transparent); backdrop-filter: blur(4px);
+  border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; font-size: 12px;
+}
+.art-chip small { color: var(--text-2); }
+
+.postcards { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(200px, 230px); gap: 12px; overflow-x: auto; padding-block-end: 4px; }
+.postcard {
+  text-align: start; display: flex; flex-direction: column; gap: 4px; padding: 0 0 10px; cursor: pointer;
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; color: var(--text);
+}
+.postcard:hover { border-color: var(--muted); }
+.postcard.attacked { border-color: var(--bad-mark); box-shadow: 0 0 0 1px var(--bad-mark); }
+.postcard .village-art { height: 96px; }
+.pc-name { font-weight: 600; padding-inline: 12px; margin-top: 4px; }
+.pc-line { padding-inline: 12px; font-size: 12px; color: var(--text-2); }
+.pc-status.bad { color: var(--bad); font-weight: 600; }
+.pc-status.warn { color: var(--warn); }
+
+.hero-card { flex-direction: row; align-items: center; gap: 14px; }
+.hero-avatar { position: relative; width: 84px; height: 84px; flex: none; }
+.hero-avatar .hero-art { width: 84px; height: 84px; }
+.hero-photo { position: absolute; inset: 6px; width: 72px; height: 72px; border-radius: 50%; object-fit: cover; background: var(--hero-bg); }
+.hero-info { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.status-pill { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; }
+.status-pill.home { background: var(--good-bg); color: var(--good); }
+.status-pill.away { background: var(--info-bg); color: var(--info); }
+.hero-line b { font-size: 16px; }

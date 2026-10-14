@@ -15,6 +15,7 @@ const CRANNY = 23;
 const MARKETPLACE = 17;
 const RALLY_POINT = 16;
 const WALLS = [31, 32, 33, 42, 43];
+const WALL_SLOT = 40; // every tribe's wall sits here, whatever it's called
 const STALE_MS = 60 * 60 * 1000;
 
 // Resource bonus buildings and what they need (Travian Legends rules).
@@ -29,6 +30,10 @@ const BONUS_BUILDINGS = [
 const buildingsOf = (v) => v.buildings || [];
 const best = (v, gid) => buildingsOf(v).filter((b) => b.gid === gid).sort((a, b) => b.level - a.level)[0] || null;
 const levelOf = (v, gid) => { const b = best(v, gid); return b ? b.level : 0; };
+// The village wall: whatever stands in the wall slot (City Wall, Palisade,
+// Defensive Wall, …), or a known wall type anywhere.
+export const wallOf = (v) => buildingsOf(v).find((b) => b.slot === WALL_SLOT && b.gid > 0 && (b.level > 0 || b.underConstruction))
+  || buildingsOf(v).find((b) => WALLS.includes(b.gid) && (b.level > 0 || b.underConstruction)) || null;
 const queued = (data, v, slot) => (data.tasks[v.id] || []).some((task) => task.slot === slot);
 
 function fieldStats(v) {
@@ -62,8 +67,7 @@ export function adviseVillage(v, data, now = Date.now()) {
     const first = (v.movements || []).filter((m) => m.kind === 'att1' && m.arriveAt > now).map((m) => m.arriveAt).sort((a, b) => a - b)[0];
     add('critical', 'attack', t('tip.attack', { when: first ? t('tip.attackIn', { t: fmtDuration(first - now) }) : t('tip.attackSoon') }));
     if (scanned && !levelOf(v, CRANNY)) add('warning', 'shield', t('tip.crannyUrgent'));
-    const wall = WALLS.map((g) => best(v, g)).find(Boolean);
-    if (scanned && !wall) add('warning', 'shield', t('tip.wallUrgent'));
+    if (scanned && !wallOf(v)) add('warning', 'shield', t('tip.wallUrgent'));
   }
 
   // --- Food --------------------------------------------------------------
@@ -128,7 +132,7 @@ export function adviseVillage(v, data, now = Date.now()) {
       add('info', 'build', t('tip.mainBuilding', { lvl: main.level }), upgradeAction(data, v, main, t('tip.actUpgrade', { b: buildingName(MAIN_BUILDING) })));
     }
     if (!v.underAttack && !levelOf(v, CRANNY)) add('info', 'shield', t('tip.cranny'));
-    if (!v.underAttack && !WALLS.some((g) => best(v, g))) add('info', 'shield', t('tip.wall'));
+    if (!v.underAttack && !wallOf(v)) add('info', 'shield', t('tip.wall'));
     const rally = buildingsOf(v).find((b) => b.slot === 39);
     if (rally && rally.level === 0 && !rally.underConstruction) add('info', 'build', t('tip.rally'));
     if (Object.keys(data.villages).length > 1 && !best(v, MARKETPLACE)) add('info', 'build', t('tip.market'));

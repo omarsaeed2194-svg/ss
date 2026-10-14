@@ -10,6 +10,8 @@ import { t, coords, ltr } from '../src/i18n.js';
 import { leaseIsFresh } from '../src/sync.js';
 import { adviseAll } from '../src/advisor.js';
 import { renderStockChart } from './chart.js';
+import { villageArt, heroArt } from './art.js';
+import { wallOf } from '../src/advisor.js';
 
 const $ = (id) => document.getElementById(id);
 const ALL = 'all';
@@ -237,8 +239,10 @@ function renderFields(scope) {
       <span class="lv-avg">${esc(t('ov.avgLevel', { n: avg.toFixed(1) }))}</span>
     </div>`;
   }).join('');
-  const key = (v.buildings || []).filter((b) => b.gid && (KEY_BUILDINGS.includes(b.gid) || WALLS.includes(b.gid)))
-    .sort((a, b) => KEY_BUILDINGS.indexOf(a.gid) - KEY_BUILDINGS.indexOf(b.gid));
+  // The wall is whatever stands in slot 40 (its name and type differ by tribe).
+  const order = (b) => (b.slot === 40 ? 0.5 : KEY_BUILDINGS.indexOf(b.gid));
+  const key = (v.buildings || []).filter((b) => b.gid && (KEY_BUILDINGS.includes(b.gid) || b.slot === 40 || WALLS.includes(b.gid)))
+    .sort((a, b) => order(a) - order(b));
   const buildings = v.buildings
     ? `<ul class="key-buildings">${key.map((b) => `<li><span>${esc(buildingName(b.gid, b.name))}</span><b class="mono">${b.level}</b></li>`).join('') || `<li class="muted">—</li>`}</ul>`
     : `<p class="muted small">${esc(t('build.notScannedBuildings'))}</p>`;
@@ -306,8 +310,90 @@ function renderActivity(scope, data, now) {
     : `<li class="muted">${esc(t('log.empty'))}</li>`;
 }
 
+// ----------------------------------------------------------- illustrations ---
+// Pictures only redraw when what they show changes.
+const artCache = {};
+function artSig(v, now) {
+  const active = (v.buildQueue || []).some((b) => !b.finishAt || b.finishAt > now);
+  const w = wallOf(v);
+  return JSON.stringify([v.name, v.underAttack, active, w && w.level, (v.buildings || []).map((b) => [b.gid, b.level]), (v.fields || []).map((f) => f.level), langNow]);
+}
+let langNow = '';
+
+function bannerChips(v) {
+  const chip = (label, value) => `<span class="art-chip"><small>${esc(label)}</small> <b>${esc(value)}</b></span>`;
+  const lvl = (gid) => { const b = (v.buildings || []).filter((x) => x.gid === gid).sort((a, b) => b.level - a.level)[0]; return b && b.level ? b.level : '—'; };
+  const wall = wallOf(v);
+  return [
+    chip(buildingName(15), lvl(15)),
+    chip(wall ? buildingName(wall.gid, wall.name) : t('ov.wall'), wall ? wall.level : '—'),
+    chip(buildingName(23), lvl(23)),
+    chip(buildingName(10), lvl(10)),
+    chip(buildingName(11), lvl(11)),
+  ].join('');
+}
+
+function renderBanner(scope, now) {
+  const single = scope.length === 1;
+  $('ovBanner').hidden = !single;
+  if (!single) return;
+  const v = scope[0];
+  const sig = `banner|${v.id}|${artSig(v, now)}|${v.buildings ? 1 : 0}`;
+  if (artCache.banner === sig) return;
+  artCache.banner = sig;
+  $('ovBanner').innerHTML = `${villageArt(v, { label: esc(v.name), now, wide: true })}
+    <div class="banner-caption">${v.buildings ? bannerChips(v) : `<span class="art-chip"><small>${esc(t('build.notScannedBuildings'))}</small></span>`}</div>`;
+}
+
+function postcardStatus(v, now) {
+  if (v.underAttack) return `<span class="pc-status bad">⚔ ${esc(t('ov.pcAttack'))}</span>`;
+  const active = (v.buildQueue || []).filter((b) => !b.finishAt || b.finishAt > now);
+  if (active.length) return `<span class="pc-status">🏗 ${esc(active[0].name)} · <span class="mono">${fmtDuration(active[0].finishAt ? active[0].finishAt - now : 0)}</span></span>`;
+  if (v.buildQueue) return `<span class="pc-status warn">${esc(t('card.idle'))}</span>`;
+  return `<span class="pc-status muted">${esc(fmtAgo(v.updatedAt, now))}</span>`;
+}
+
+function renderPostcards(scope, now) {
+  const show = scope.length > 1;
+  $('ovPostcards').hidden = !show;
+  if (!show) return;
+  const sig = scope.map((v) => `${v.id}:${artSig(v, now)}`).join('|');
+  if (artCache.cards !== sig) {
+    artCache.cards = sig;
+    $('ovPostcards').innerHTML = scope.map((v) => `<button type="button" class="postcard${v.underAttack ? ' attacked' : ''}" data-filter="${esc(v.id)}">
+        ${villageArt(v, { label: esc(v.name), now })}
+        <span class="pc-name">${esc(v.name)} <small class="muted">${coords(v.x, v.y)}</small></span>
+        <span class="pc-line" data-pc="${esc(v.id)}"></span>
+      </button>`).join('');
+  }
+  // Status lines tick every second without redrawing the pictures.
+  for (const v of scope) {
+    const el = $('ovPostcards').querySelector(`[data-pc="${CSS.escape(v.id)}"]`);
+    if (el) el.innerHTML = postcardStatus(v, now);
+  }
+}
+
+function renderHero(data) {
+  const hero = data.account.hero || {};
+  const s = data.settings;
+  const sig = JSON.stringify([hero, s.adventure.enabled, langNow]);
+  if (artCache.hero === sig) return;
+  artCache.hero = sig;
+  const status = hero.home ? t('hero.home') : t('hero.away');
+  $('ovHero').innerHTML = `<div class="hero-avatar">${heroArt({ home: hero.home !== false })}${hero.image ? `<img class="hero-photo" alt="" src="${esc(hero.image)}">` : ''}</div>
+    <div class="hero-info">
+      <h2>${esc(t('hero.title'))}</h2>
+      <span class="status-pill ${hero.home ? 'home' : 'away'}">${esc(status)}</span>
+      <span class="hero-line"><b>${esc(String(hero.adventures ?? '—'))}</b> ${esc(t('hero.adventures'))}</span>
+      <span class="hero-line small muted">${esc(t('hero.auto'))}: ${esc(s.adventure.enabled ? t('ov.on') : t('ov.off'))}</span>
+    </div>`;
+  const photo = $('ovHero').querySelector('.hero-photo');
+  if (photo) photo.addEventListener('error', () => photo.remove(), { once: true });
+}
+
 // ---------------------------------------------------------------- render ---
 export function renderOverview(data, now) {
+  langNow = data.settings.language;
   const villages = sortedVillages(data.villages);
   if (filter !== ALL && !data.villages[filter]) setFilter(ALL);
   const scope = villages.length === 1 ? villages : filter === ALL ? villages : [data.villages[filter]];
@@ -318,6 +404,9 @@ export function renderOverview(data, now) {
   $('ovScopeTitle').textContent = scope.length === 1 ? `${scope[0].name} ${coords(scope[0].x, scope[0].y)}` : t('ov.allVillages');
   $('ovScopeSub').textContent = scope.length === 1 ? t('ov.updated', { ago: fmtAgo(scope[0].updatedAt, now) }) : t('ov.villageCount', { n: scope.length });
   renderKpis(scope, data, now);
+  renderBanner(scope, now);
+  renderPostcards(scope, now);
+  renderHero(data);
   renderTips(scope, data, now);
   renderResources(scope, data, now);
   renderChart(scope, data);

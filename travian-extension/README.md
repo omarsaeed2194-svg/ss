@@ -26,7 +26,9 @@ you're away:
   buildings you can now build, hero adventures, farm lists…) with one-click
   actions; resource meters, a 24-hour stock chart, field levels and key
   buildings, plus construction, troop movements and activity. It updates live
-  as things happen (finished upgrades, attacks starting and ending).
+  as things happen (finished upgrades, attacks starting and ending). Each
+  village is drawn from its real state (keep height, wall, fields, scaffolding
+  while building, red flag under attack), with a hero card beside it.
 - **Popup** — live resources, time until storage is full, build queue
   countdowns and attack warnings at a glance.
 
@@ -158,6 +160,6 @@ src/advisor.js         Game tips worked out from each village's state
 src/ui.js / ui.css     Village cards and styles shared by popup and dashboard
 popup/                 Toolbar popup
 dashboard/             Full dashboard (also the extension's options page); overview.js renders the
-                       Overview tab, chart.js the 24-hour stock chart
+                       Overview tab, chart.js the 24-hour stock chart, art.js the village/hero drawings
 icons/                 Extension icons
 ```

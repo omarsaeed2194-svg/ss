@@ -197,7 +197,9 @@
   function parseHero(doc) {
     const adv = qs(doc, 'a.adventure.round');
     const status = qs(doc, '.heroStatus');
+    const img = qs(doc, '#topBarHero img.heroImage, img.heroImage');
     return {
+      image: img && /^https?:/.test(img.src || '') ? img.src : null,
       adventures: adv ? num(text(qs(adv, '.content'))) || 0 : 0,
       home: !!qs(status, 'i.heroHome'),
       statusText: status ? (qs(status, 'a') ? qs(status, 'a').getAttribute('title') || '' : '') : '',
