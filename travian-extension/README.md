@@ -19,9 +19,16 @@ you're away:
 - **Farm lists** — presses "Start all" (or the lists you pick) every N minutes.
 - **Hero adventures** — sends the hero out whenever they're home and an
   adventure is available.
-- **Popup + dashboard** — live resources (projected forward between checks),
-  time until storage is full, build queue countdowns, attack warnings, and an
-  activity log of everything the bot did.
+- **Overview dashboard** — filter by village; headline numbers (stock,
+  production, net crop, time until storage is full, incoming attacks, builders);
+  **alerts & tips** worked out from each village's state (attacks, starvation,
+  full storage, idle builders, unbalanced fields, missing cranny/wall, bonus
+  buildings you can now build, hero adventures, farm lists…) with one-click
+  actions; resource meters, a 24-hour stock chart, field levels and key
+  buildings, plus construction, troop movements and activity. It updates live
+  as things happen (finished upgrades, attacks starting and ending).
+- **Popup** — live resources, time until storage is full, build queue
+  countdowns and attack warnings at a glance.
 
 Works on Travian: Legends servers (`*.travian.com`, e.g.
 `ts3.x1.arabics.travian.com`). It does **not** support Travian: Kingdoms.
@@ -147,8 +154,10 @@ src/background.js      Service worker: storage, alerts, scheduler, bot jobs
 src/shared.js          Constants and helpers (building names, projections, defaults)
 src/i18n.js            Arabic and English UI strings (Arabic is the default)
 src/sync.js            Saves commands to Chrome sync; one-browser-at-a-time lease
+src/advisor.js         Game tips worked out from each village's state
 src/ui.js / ui.css     Village cards and styles shared by popup and dashboard
 popup/                 Toolbar popup
-dashboard/             Full dashboard (also the extension's options page); overview.js renders the Overview tab
+dashboard/             Full dashboard (also the extension's options page); overview.js renders the
+                       Overview tab, chart.js the 24-hour stock chart
 icons/                 Extension icons
 ```

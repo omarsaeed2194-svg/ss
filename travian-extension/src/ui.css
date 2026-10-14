@@ -1,40 +1,73 @@
 :root {
-  --bg: #f6f4ef;
-  --panel: #ffffff;
-  --text: #1f2328;
-  --muted: #6b6f76;
-  --line: #e3e0d8;
+  /* Surfaces and ink */
+  --bg: #f4f3ef;
+  --panel: #fcfcfb;
+  --text: #0b0b0b;
+  --text-2: #52514e;
+  --muted: #6b6a66;
+  --line: #e1e0d9;
+  --border: rgba(11, 11, 11, 0.10);
+  --shadow: 0 1px 2px rgba(11, 11, 11, 0.04), 0 2px 8px rgba(11, 11, 11, 0.04);
   --accent: #2f7d32;
   --accent-ink: #ffffff;
-  --good: #2f7d32;
-  --warn: #c27c0e;
-  --bad: #c62828;
-  --bad-bg: #fdecea;
+  --accent-wash: #e8f2e8;
+  /* Status: text tones, marks, washes (always paired with an icon + label) */
+  --good: #006300;
+  --good-mark: #0ca30c;
+  --good-bg: #e7f4e7;
+  --warn: #8a5a00;
+  --warn-mark: #fab219;
+  --warn-bg: #fdf3dc;
+  --bad: #b42323;
+  --bad-mark: #d03b3b;
+  --bad-bg: #fbeaea;
+  --info: #1c5cab;
+  --info-mark: #2a78d6;
+  --info-bg: #eaf2fc;
+  /* Chart series (validated categorical slots 1-4) */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  /* Popup resource bars */
   --wood: #8d6e3f;
   --clay: #c0643a;
   --iron: #7c8a96;
   --crop: #d4a514;
-  --radius: 10px;
+  --radius: 12px;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #15171a;
-    --panel: #1e2125;
-    --text: #e8e6e1;
-    --muted: #9aa0a6;
-    --line: #2f3338;
+    --bg: #0d0d0d;
+    --panel: #1a1a19;
+    --text: #f0efec;
+    --text-2: #c3c2b7;
+    --muted: #9a9890;
+    --line: #2c2c2a;
+    --border: rgba(255, 255, 255, 0.10);
+    --shadow: none;
     --accent: #4caf50;
     --accent-ink: #0b1a0c;
-    --good: #66bb6a;
-    --warn: #e0a030;
-    --bad: #ef5350;
-    --bad-bg: #3a1f1f;
+    --accent-wash: #1b2a1b;
+    --good: #0ca30c;
+    --good-bg: #13260f;
+    --warn: #fab219;
+    --warn-bg: #2e2510;
+    --bad: #e66767;
+    --bad-bg: #3a1d1d;
+    --info: #86b6ef;
+    --info-bg: #142336;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
     color-scheme: dark;
   }
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   margin: 0;
   background: var(--bg);

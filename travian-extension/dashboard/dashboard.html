@@ -36,40 +36,69 @@
 
     <!-- Overview -->
     <section class="tab" id="tab-overview">
-      <div class="summary" id="summary"></div>
-      <div class="cols">
-        <div class="panel">
-          <h2 data-i18n="ov.alertsTitle"></h2>
-          <div id="ovAlerts"></div>
+      <div class="filter-bar" id="ovFilterBar" role="toolbar">
+        <span class="filter-label" data-i18n="ov.filter"></span>
+        <div id="ovFilter" class="chip-row"></div>
+      </div>
+      <div class="scope-head">
+        <div>
+          <h2 id="ovScopeTitle"></h2>
+          <span id="ovScopeSub" class="muted small"></span>
         </div>
-        <div class="panel">
-          <h2 data-i18n="ov.nextTitle"></h2>
-          <dl id="ovNext" class="kv"></dl>
+        <div id="ovAccount" class="account-strip"></div>
+      </div>
+      <div id="ovEmpty" class="panel empty-state" hidden>
+        <p data-i18n="ov.empty"></p>
+      </div>
+      <div id="ovBody">
+        <div class="kpis" id="summary"></div>
+        <div class="dash-grid">
+          <div class="dash-main">
+            <section class="panel">
+              <header class="panel-head">
+                <h2><span aria-hidden="true">💡</span> <span data-i18n="ov.tipsTitle"></span></h2>
+                <span id="ovTipsMeta" class="muted small"></span>
+              </header>
+              <ul id="ovTips" class="tips"></ul>
+              <button type="button" class="btn small ghost" id="ovTipsMore" hidden></button>
+            </section>
+            <section class="panel">
+              <header class="panel-head"><h2 id="ovResTitle"></h2></header>
+              <div id="ovRes"></div>
+            </section>
+            <section class="panel" id="ovChartPanel" hidden>
+              <header class="panel-head"><h2 data-i18n="chart.title"></h2><span class="muted small" data-i18n="chart.sub"></span></header>
+              <div id="ovChart" class="chart-root"></div>
+            </section>
+            <section class="panel" id="ovFieldsPanel" hidden>
+              <header class="panel-head"><h2 data-i18n="ov.fieldsTitle"></h2></header>
+              <div id="ovFields"></div>
+            </section>
+          </div>
+          <aside class="dash-side">
+            <section class="panel">
+              <header class="panel-head"><h2 data-i18n="ov.nextTitle"></h2></header>
+              <dl id="ovNext" class="kv"></dl>
+            </section>
+            <section class="panel">
+              <header class="panel-head"><h2 data-i18n="ov.queuesTitle"></h2></header>
+              <ul id="ovQueues" class="feed"></ul>
+            </section>
+            <section class="panel">
+              <header class="panel-head"><h2 data-i18n="ov.movesTitle"></h2></header>
+              <ul id="ovMoves" class="feed"></ul>
+            </section>
+            <section class="panel">
+              <header class="panel-head">
+                <h2 data-i18n="ov.activityTitle"></h2>
+                <a href="#log" class="small" data-i18n="ov.allActivity"></a>
+              </header>
+              <ul id="ovActivity" class="feed"></ul>
+            </section>
+          </aside>
         </div>
       </div>
-      <div class="panel">
-        <h2 data-i18n="ov.villagesTitle"></h2>
-        <div class="table-wrap"><table class="list ov-table" id="ovTable"></table></div>
-      </div>
-      <div class="cols">
-        <div class="panel">
-          <h2 data-i18n="ov.queuesTitle"></h2>
-          <div class="table-wrap"><table class="list" id="ovQueues"></table></div>
-        </div>
-        <div class="panel">
-          <h2 data-i18n="ov.movesTitle"></h2>
-          <div class="table-wrap"><table class="list" id="ovMoves"></table></div>
-        </div>
-      </div>
-      <div class="panel">
-        <div class="row between">
-          <h2 data-i18n="ov.activityTitle"></h2>
-          <a href="#log" class="small" data-i18n="ov.allActivity"></a>
-        </div>
-        <ul id="ovActivity" class="log"></ul>
-      </div>
-      <h2 class="section-title" id="ovCardsTitle" data-i18n="ov.cardsTitle"></h2>
-      <div class="grid" id="villageGrid"></div>
+      <div id="ovToast" class="toast" role="status" hidden></div>
     </section>
 
     <!-- Build queue -->

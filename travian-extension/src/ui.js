@@ -5,7 +5,7 @@ import {
 } from './shared.js';
 import { t, setLanguage, coords, ltr } from './i18n.js';
 
-export const STORAGE_KEYS = ['settings', 'villages', 'account', 'tasks', 'training', 'schedule', 'status', 'log', 'device', 'syncState'];
+export const STORAGE_KEYS = ['settings', 'villages', 'account', 'tasks', 'training', 'schedule', 'status', 'log', 'device', 'syncState', 'history'];
 
 export async function loadAll() {
   const data = await chrome.storage.local.get(STORAGE_KEYS);

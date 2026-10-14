@@ -15,6 +15,8 @@ const PAGE_TIMEOUT_MS = 45000;
 const BUILDINGS_RESCAN_MS = 3 * 3600 * 1000;
 const STORAGE_REALERT_MS = 6 * 3600 * 1000;
 const MAX_BUILD_ATTEMPTS = 6;
+const HISTORY_STEP_MS = 5 * 60 * 1000;
+const HISTORY_KEEP_MS = 24 * 3600 * 1000;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -59,10 +61,10 @@ async function setStatus(patch) {
 }
 
 // ----------------------------------------------------------------- alerts --
-async function sendAlert({ title, body, kind, sticky }) {
+async function sendAlert({ title, body, kind, sticky, villageId }) {
   const s = await getSettings();
   if (kind && s.alerts[kind] === false) return;
-  await log('alert', `${title} — ${body}`);
+  await log('alert', `${title} — ${body}`, villageId);
   if (s.alerts.desktop) {
     chrome.notifications.create(`tvh-${Date.now()}-${uid()}`, {
       type: 'basic', iconUrl: chrome.runtime.getURL('icons/icon128.png'),
@@ -111,8 +113,9 @@ async function processPage(state, tabId) {
   const fromWorker = tabId != null && tabId === workerTabId;
   const alerts = [];
   const notes = [];
+  const events = []; // [level, message, villageId] for the activity log
 
-  await update(['settings', 'villages', 'account', 'status', 'alertMemo'], (d) => {
+  await update(['settings', 'villages', 'account', 'status', 'alertMemo', 'history'], (d) => {
     const s = mergeSettings(d.settings);
     setLanguage(s.language);
     d.status = d.status || {};
@@ -146,13 +149,15 @@ async function processPage(state, tabId) {
       Object.assign(v, { name: vi.name, x: vi.x, y: vi.y, order, underAttack: vi.underAttack });
       if (vi.underAttack && !wasAttacked) {
         v.needsRefresh = true; // fetch arrival times on the next tick
-        attackAlerts[vi.id] = { kind: 'attacks', sticky: true, title: t('alert.attack.title', { v: vi.name }), body: t('alert.attack.body', { xy: coords(vi.x, vi.y) }) };
+        attackAlerts[vi.id] = { villageId: vi.id, kind: 'attacks', sticky: true, title: t('alert.attack.title', { v: vi.name }), body: t('alert.attack.body', { xy: coords(vi.x, vi.y) }) };
       }
+      if (!vi.underAttack && wasAttacked) events.push(['info', t('log.attackOver', { v: vi.name }), vi.id]);
       if (!vi.underAttack) v.incomingAttacks = 0;
     });
     if (listed.length) {
       const ids = new Set(listed.map((v) => v.id));
       for (const id of Object.keys(d.villages)) if (!ids.has(id)) delete d.villages[id];
+      for (const id of Object.keys(d.history || {})) if (!ids.has(id)) delete d.history[id];
     }
 
     const v = state.villageId && d.villages[state.villageId];
@@ -160,6 +165,14 @@ async function processPage(state, tabId) {
       if (state.resources) {
         v.resources = state.resources;
         v.resourcesAt = now;
+        // A point every few minutes, kept for a day, for the dashboard chart.
+        const r = state.resources;
+        d.history = d.history || {};
+        const h = d.history[v.id] || (d.history[v.id] = []);
+        if (r.stock && (!h.length || now - h[h.length - 1].t >= HISTORY_STEP_MS)) {
+          h.push({ t: now, s: [r.stock.wood, r.stock.clay, r.stock.iron, r.stock.crop], c: [r.capacity.warehouse, r.capacity.granary] });
+          while (h.length && now - h[0].t > HISTORY_KEEP_MS) h.shift();
+        }
       }
       if (state.type === 'dorf1' || state.type === 'dorf2') {
         v.queueAt = now;
@@ -167,8 +180,18 @@ async function processPage(state, tabId) {
           name: b.name, level: b.level, finishAt: b.secondsLeft != null ? now + b.secondsLeft * 1000 : null,
         }));
       }
-      if (state.fields) { v.fields = state.fields; v.fieldsAt = now; }
-      if (state.buildings) { v.buildings = state.buildings; v.buildingsAt = now; }
+      // Report finished upgrades: compare levels with what we saw last time.
+      const levelUps = (before, after) => {
+        const old = Object.fromEntries((before || []).map((b) => [b.slot, b]));
+        for (const b of after) {
+          const prev = old[b.slot];
+          if (prev && prev.gid === b.gid && b.level > prev.level) {
+            events.push(['success', t('log.levelUp', { name: buildingName(b.gid, b.name), n: b.level }), v.id]);
+          }
+        }
+      };
+      if (state.fields) { levelUps(v.fields, state.fields); v.fields = state.fields; v.fieldsAt = now; }
+      if (state.buildings) { levelUps(v.buildings, state.buildings); v.buildings = state.buildings; v.buildingsAt = now; }
       const trainable = state.buildPage && state.buildPage.trainable;
       if (trainable && trainable.length) {
         const slotBuilding = (v.buildings || []).find((b) => b.slot === state.buildPage.slot);
@@ -183,7 +206,7 @@ async function processPage(state, tabId) {
         if (count > (v.incomingAttacks || 0)) {
           const first = incoming.map((m) => m.arriveAt).filter(Boolean).sort((a, b) => a - b)[0];
           attackAlerts[v.id] = {
-            kind: 'attacks', sticky: true,
+            villageId: v.id, kind: 'attacks', sticky: true,
             title: t('alert.attacks.title', { n: count, v: v.name }),
             body: first ? t('alert.attacks.first', { t: fmtDuration(first - now), clock: fmtClock(first) }) : t('alert.attacks.noTime', { xy: coords(v.x, v.y) }),
           };
@@ -213,12 +236,12 @@ async function processPage(state, tabId) {
             const key = `starve:${v.id}`;
             if (hours <= 3 && now - (d.alertMemo[key] || 0) > STORAGE_REALERT_MS) {
               d.alertMemo[key] = now;
-              alerts.push({ kind: 'starvation', title: t('alert.starve.title', { v: v.name }), body: t('alert.starve.body', { t: fmtDuration(hours * 3600000), p: ltr(prod) }), sticky: true });
+              alerts.push({ villageId: v.id, kind: 'starvation', title: t('alert.starve.title', { v: v.name }), body: t('alert.starve.body', { t: fmtDuration(hours * 3600000), p: ltr(prod) }), sticky: true });
             }
           }
         }
         if (filling.length) {
-          alerts.push({ kind: 'storage', title: t('alert.storage.title', { v: v.name }), body: t('alert.storage.body', { list: filling.join(t('list.sep')) }) });
+          alerts.push({ villageId: v.id, kind: 'storage', title: t('alert.storage.title', { v: v.name }), body: t('alert.storage.body', { list: filling.join(t('list.sep')) }) });
         }
       }
     }
@@ -235,6 +258,7 @@ async function processPage(state, tabId) {
   });
 
   for (const n of notes) await log('info', n);
+  for (const [level, msg, vid] of events) await log(level, msg, vid);
   for (const a of alerts) await sendAlert(a);
   await refreshBadge();
   return fromWorker ? { worker: true, badge: t('badge.worker') } : { worker: false };
@@ -574,8 +598,12 @@ async function runJobs(tabId, jobs, s, force) {
 
 const DATA_KEYS = ['settings', 'villages', 'tasks', 'training', 'schedule', 'account', 'status'];
 let running = false;
+let rerunForced = false; // "Check now" pressed while a run was in progress
 async function tick(force = false) {
-  if (running) return { busy: true };
+  if (running) {
+    if (force) rerunForced = true;
+    return { busy: true };
+  }
   running = true;
   try {
     const data = await read(DATA_KEYS);
@@ -620,6 +648,10 @@ async function tick(force = false) {
   } finally {
     running = false;
     await refreshBadge();
+    if (rerunForced) {
+      rerunForced = false;
+      tick(true);
+    }
   }
 }
 
@@ -719,8 +751,8 @@ const COMMANDS = {
     return { pulled, pushed };
   },
   async resetData() {
-    await update(['villages', 'account', 'schedule', 'alertMemo', 'status'], (d) => {
-      d.villages = {}; d.account = {}; d.schedule = {}; d.alertMemo = {}; d.status = {};
+    await update(['villages', 'account', 'schedule', 'alertMemo', 'status', 'history'], (d) => {
+      d.villages = {}; d.account = {}; d.schedule = {}; d.alertMemo = {}; d.status = {}; d.history = {};
     });
     await refreshBadge();
   },

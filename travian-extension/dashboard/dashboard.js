@@ -122,6 +122,9 @@ function renderBuild(now, force) {
 }
 
 $('buildVillage').addEventListener('change', (e) => { buildVillageId = e.target.value; render(); });
+// Tips can open the Build tab on a specific village.
+window.addEventListener('tvh:select-village', (e) => { buildVillageId = e.detail; render(); });
+window.addEventListener('tvh:rerender', () => { if (data) renderTicking(Date.now()); });
 $('addFieldsTask').addEventListener('click', () => {
   if (!buildVillageId) return;
   const targetLevel = Number($('fieldsLevel').value);
