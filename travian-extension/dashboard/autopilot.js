@@ -58,6 +58,13 @@ function renderPlan(now) {
     const next = r.nextAt && r.nextAt > now ? fmtDuration(r.nextAt - now) : t('troops.due');
     rows.push(`<li><span>⚔ ${esc(t('ap.planRaid', { v: v.name, n: r.amount, u: r.unitName || unitNameFor(v, r.field) }))}</span><span class="feed-time"><b class="mono">${esc(next)}</b></span></li>`);
   }
+  for (const l of data.farms || []) {
+    const v = data.villages[l.villageId];
+    const on = (l.targets || []).filter((x) => x.enabled !== false).length;
+    if (!v || l.enabled === false || !on) continue;
+    const next = l.nextAt && l.nextAt > now ? fmtDuration(l.nextAt - now) : t('troops.due');
+    rows.push(`<li><span>🐎 ${esc(t('ap.planFarmList', { list: l.name, n: on, m: l.everyMinutes }))}</span><span class="feed-time"><b class="mono">${esc(next)}</b></span></li>`);
+  }
   const hero = data.account.hero || {};
   if (ap.adventures) rows.push(`<li><span>🧭 ${esc(t('ap.planAdventures', { n: hero.adventures ?? 0 }))}</span></li>`);
   if (ap.farmLists) rows.push(`<li><span>🐎 ${esc(t('ap.planFarm', { n: s.farm.intervalMinutes }))}</span></li>`);

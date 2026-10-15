@@ -99,3 +99,43 @@ export function raidTargets(v, rule, oases, now = Date.now()) {
   for (const o of Object.values(oases || {})) add(o);
   return out.sort((a, b) => a.distance - b.distance);
 }
+
+// ------------------------------------------------------------ farm lists ---
+// Troops for one target: { t1: 5, t4: 2 } with whole positive numbers only
+// (t1..t10; the hero never goes on farm runs).
+export function cleanTroops(troops) {
+  const out = {};
+  for (const [f, n] of Object.entries(troops || {})) {
+    const m = /^t(\d+)$/.exec(f);
+    const v = Math.floor(Number(n));
+    if (m && Number(m[1]) >= 1 && Number(m[1]) <= 10 && v > 0) out[f] = v;
+  }
+  return out;
+}
+
+export const coversTroops = (home, troops) => Object.entries(troops).every(([f, n]) => (home[f] || 0) >= n);
+
+// Targets to send to this round: switched on, with troops set, the ones
+// waiting longest first (never sent = first), then in list order.
+export function farmTargets(list) {
+  return (list.targets || [])
+    .map((tg, i) => ({ ...tg, order: i }))
+    .filter((tg) => tg.enabled !== false && Object.keys(cleanTroops(tg.troops)).length)
+    .sort((a, b) => (a.lastSentAt || 0) - (b.lastSentAt || 0) || a.order - b.order);
+}
+
+// Coordinates pasted one per line: "12|-34", "(12|−34) Name", "12,-34 name"…
+// Travian copies coordinates with direction marks and a real minus sign.
+export function parseCoordList(text) {
+  const out = [];
+  for (const raw of String(text || '').split(/\r?\n/)) {
+    const line = raw.replace(/[‎‏‪-‮⁦-⁩]/g, '').replace(/[−–]/g, '-').trim();
+    if (!line) continue;
+    const m = /^\(?\s*(-?\d{1,3})\s*[|,;/\s]\s*(-?\d{1,3})\s*\)?\s*(.*)$/.exec(line);
+    if (!m) { out.push({ error: raw.trim() }); continue; }
+    const x = Number(m[1]), y = Number(m[2]);
+    if (Math.abs(x) > 400 || Math.abs(y) > 400) { out.push({ error: raw.trim() }); continue; }
+    out.push({ x, y, name: m[3].replace(/^[-–:·\s]+/, '').slice(0, 40) });
+  }
+  return out;
+}

@@ -312,6 +312,11 @@ function renderNext(scope, data, now) {
     const unit = (v.units && v.units[r.gid] && (v.units[r.gid].find((u) => u.field === r.troop) || {}).name) || t('troops.unitN', { n: r.troop.slice(1) });
     rows.push([t('ov.nextTrain'), t('ov.trainIn', { u: `${r.amount} × ${unit}`, v: v.name, t: left(r.nextAt) })]);
   }
+  const lists = (data.farms || []).filter((l) => l.enabled !== false && ids.has(l.villageId) && (l.targets || []).some((x) => x.enabled !== false));
+  if (lists.length && on) {
+    const l = lists.slice().sort((a, b) => (a.nextAt || 0) - (b.nextAt || 0))[0];
+    rows.push([t('ov.nextFarmList'), t('ov.farmListIn', { list: l.name, t: left(l.nextAt) })]);
+  }
   if (on && (s.farm.enabled || (ap.enabled && ap.farmLists))) rows.push([t('ov.nextFarm'), left(sched.farmAt)]);
   if (on && (s.adventure.enabled || (ap.enabled && ap.adventures))) rows.push([t('ov.nextAdventure'), left(sched.adventureAt)]);
   $('ovNext').innerHTML = rows.length

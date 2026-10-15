@@ -224,6 +224,48 @@
 
     <!-- Farms & hero -->
     <section class="tab" id="tab-raids">
+      <div class="panel">
+        <h2 data-i18n="farm.title"></h2>
+        <p class="muted small" data-i18n="farm.help"></p>
+        <div class="table-wrap"><table class="list" id="farmListTable"></table></div>
+        <h3 class="gap" data-i18n="farm.newList"></h3>
+        <div class="row wrap">
+          <label><span data-i18n="farm.name"></span> <input type="text" id="flName" size="14" maxlength="40"></label>
+          <label><span data-i18n="troops.village"></span> <select id="flVillage"></select></label>
+          <label><span data-i18n="troops.every"></span> <input type="number" id="flEvery" min="5" value="30" class="num"> <span data-i18n="troops.min"></span></label>
+          <label><span data-i18n="farm.mission"></span> <select id="flType"><option value="4" data-i18n="farm.raid"></option><option value="3" data-i18n="farm.attack"></option></select></label>
+          <button class="btn primary" id="flAdd" data-i18n="farm.create"></button>
+        </div>
+      </div>
+
+      <div class="panel" id="ftPanel" hidden>
+        <header class="panel-head"><h2 id="ftTitle"></h2><span id="ftMeta" class="muted small"></span></header>
+        <div class="row wrap">
+          <label><span data-i18n="farm.name"></span> <input type="text" data-fl="name" size="14" maxlength="40"></label>
+          <label><span data-i18n="troops.every"></span> <input type="number" data-fl="everyMinutes" min="5" class="num"> <span data-i18n="troops.min"></span></label>
+          <label><span data-i18n="farm.mission"></span> <select data-fl="eventType"><option value="4" data-i18n="farm.raid"></option><option value="3" data-i18n="farm.attack"></option></select></label>
+          <label><span data-i18n="farm.maxPerRound"></span> <input type="number" data-fl="maxPerRound" min="1" class="num"></label>
+          <label class="switch"><input type="checkbox" data-fl="skipWhenAttacked"> <span data-i18n="farm.skipAttacked"></span></label>
+        </div>
+        <div class="table-wrap"><table class="list" id="ftTable"></table></div>
+        <h3 class="gap" id="ftFormTitle"></h3>
+        <div class="ft-form">
+          <label class="field"><span data-i18n="farm.coords"></span>
+            <textarea id="ftCoords" rows="3" dir="ltr" placeholder="12|-34 Farm&#10;(15|−30)"></textarea></label>
+          <div class="row wrap">
+            <label><span data-i18n="farm.type"></span> <select id="ftType"><option value="village" data-i18n="farm.typeVillage"></option><option value="oasis" data-i18n="farm.typeOasis"></option></select></label>
+          </div>
+          <div class="troop-editor" id="ftTroops"></div>
+          <div class="row wrap">
+            <button class="btn primary" id="ftSave"></button>
+            <button class="btn" id="ftApplyAll" data-i18n="farm.applyAll"></button>
+            <button class="btn ghost" id="ftCancel" data-i18n="farm.cancelEdit" hidden></button>
+            <span id="ftMsg" class="small muted"></span>
+          </div>
+          <p class="muted small" data-i18n="farm.formHelp"></p>
+        </div>
+      </div>
+
       <div class="cols">
         <div class="panel">
           <h2 data-i18n="raids.farmLists"></h2>

@@ -5,7 +5,7 @@ import {
 } from './shared.js';
 import { t, setLanguage, coords, ltr } from './i18n.js';
 
-export const STORAGE_KEYS = ['settings', 'villages', 'account', 'tasks', 'training', 'raids', 'oases', 'schedule', 'status', 'log', 'device', 'syncState', 'history'];
+export const STORAGE_KEYS = ['settings', 'villages', 'account', 'tasks', 'training', 'raids', 'farms', 'oases', 'schedule', 'status', 'log', 'device', 'syncState', 'history'];
 
 export async function loadAll() {
   const data = await chrome.storage.local.get(STORAGE_KEYS);
@@ -16,6 +16,7 @@ export async function loadAll() {
   data.tasks = data.tasks || {};
   data.training = data.training || [];
   data.raids = data.raids || [];
+  data.farms = data.farms || [];
   data.oases = data.oases || {};
   data.schedule = data.schedule || {};
   data.status = data.status || {};

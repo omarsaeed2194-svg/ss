@@ -5,7 +5,7 @@ import {
   estimateStock, fmtDuration, fmtClock, withinActiveHours, sortedVillages, taskLabel, buildingName,
   buildBlock,
 } from './shared.js';
-import { pickAutoUpgrade, troopsHome, raidTargets, oasisKey } from './autopilot.js';
+import { pickAutoUpgrade, troopsHome, raidTargets, oasisKey, farmTargets, coversTroops, cleanTroops } from './autopilot.js';
 import { t, setLanguage, coords, ltr } from './i18n.js';
 import {
   COMMAND_KEYS, commandsOf, schedulePush, pushCommands, pullCommands, mayRun, renewLease, getDevice,
@@ -395,6 +395,49 @@ async function patchSchedule(patch) {
   await update(['schedule'], (d) => { d.schedule = { ...(d.schedule || {}), ...patch }; });
 }
 
+// ------------------------------------------------------------ sending ------
+// Problems with the page itself: later sends in the same round would fail too.
+const FATAL_SEND = new Set(['noCoordInput', 'noRaidOption', 'noSendButton', 'notLoaded', 'noResponse', 'unknownAction']);
+
+// Rally point → fill in `troops` for (x, y) → confirm. Returns { ok } or
+// { ok: false, reason, short?, fatal? }. `available` is what the form showed
+// before this send (troops at home that can actually leave).
+async function sendTroops(tabId, s, vid, { x, y, troops, eventType = 4 }) {
+  const form = await navigate(tabId, `${s.server}/build.php?newdid=${encodeURIComponent(vid)}&gid=16&tt=2`);
+  const sp = form.sendPage;
+  if (!sp || sp.stage !== 'form') return { ok: false, fatal: true, reason: t('reason.noSendForm') };
+  const available = sp.available;
+  if (Object.entries(troops).some(([f, n]) => available[f] != null && available[f] < n)) {
+    return { ok: false, short: true, available, reason: t('reason.notEnoughTroops') };
+  }
+  const { res, page: confirm } = await act(tabId, { kind: 'sendForm', x, y, troops, eventType }, true);
+  if (!res.ok) return { ok: false, fatal: FATAL_SEND.has(res.code), available, reason: reasonText(res) };
+  const cp = confirm && confirm.sendPage;
+  // The game shows the form again with its own message (beginner's
+  // protection, no village there…): that target fails, others may not.
+  if (!cp || cp.stage !== 'confirm') return { ok: false, available, reason: (cp && cp.error) || t('reason.noConfirmPage') };
+  const { res: res2, page: after } = await act(tabId, { kind: 'sendConfirm', x, y, eventType }, true);
+  if (!res2.ok) return { ok: false, available, reason: reasonText(res2) };
+  if (after && after.sendPage && after.sendPage.stage === 'confirm') {
+    return { ok: false, available, reason: after.sendPage.error || t('reason.stillOnConfirm') };
+  }
+  return { ok: true, available };
+}
+
+// Opens an oasis right before raiding it. Only an unoccupied oasis with no
+// animals passes. `trusted`: the player (or the map) already said it is one.
+async function checkOasis(tabId, s, x, y, trusted) {
+  const xy = coords(x, y);
+  const page = await navigate(tabId, `${s.server}/position_details.php?x=${x}&y=${y}`);
+  const tile = page.tile;
+  if (!tile) return { ok: false, level: 'error', msg: t('log.raidNoTile', { xy }) };
+  if (tile.owned) return { ok: false, level: 'info', msg: t('log.raidOwned', { xy }) };
+  if (!tile.isOasis && !trusted) return { ok: false, level: 'info', msg: t('log.raidNotOasis', { xy }) };
+  if (tile.animals == null) return { ok: false, level: 'error', msg: t('log.raidNoTile', { xy }) };
+  if (tile.animals > 0) return { ok: false, level: 'info', msg: t('log.raidAnimals', { xy, n: tile.animals }) };
+  return { ok: true };
+}
+
 const JOBS = {
   async refresh(tabId, job, s) {
     let { villages = {} } = await read(['villages']);
@@ -660,33 +703,13 @@ const JOBS = {
         if (sent >= rule.maxPerRun || home < rule.amount) break;
         const xy = coords(o.x, o.y);
         await sleep(rand(1200, 2800));
-        const tilePage = await navigate(tabId, `${s.server}/position_details.php?x=${o.x}&y=${o.y}`);
-        const tile = tilePage.tile;
-        if (!tile) { await log('error', t('log.raidNoTile', { xy }), vid); continue; }
-        if (tile.owned) { await log('info', t('log.raidOwned', { xy }), vid); continue; }
-        if (!tile.isOasis && !o.fromScan) { await log('info', t('log.raidNotOasis', { xy }), vid); continue; }
-        if (tile.animals == null) { await log('error', t('log.raidNoTile', { xy }), vid); continue; }
-        if (tile.animals > 0) { await log('info', t('log.raidAnimals', { xy, n: tile.animals }), vid); continue; }
-
+        const chk = await checkOasis(tabId, s, o.x, o.y, !!o.fromScan);
+        if (!chk.ok) { await log(chk.level, chk.msg, vid); continue; }
         await sleep(rand(1000, 2500));
-        const form = await navigate(tabId, `${s.server}/build.php?newdid=${encodeURIComponent(vid)}&gid=16&tt=2`);
-        const sp = form.sendPage;
-        if (!sp || sp.stage !== 'form') { await log('error', t('log.raidFailed', { xy, reason: t('reason.noSendForm') }), vid); break; }
-        if (sp.available[rule.field] != null) home = sp.available[rule.field];
-        if (home < rule.amount) { await log('info', t('log.raidNoTroops', { u: unit, have: home, need: rule.amount }), vid); break; }
-        const { res, page: confirm } = await act(tabId, { kind: 'raidForm', x: o.x, y: o.y, field: rule.field, amount: rule.amount }, true);
-        if (!res.ok) { await log('error', t('log.raidFailed', { xy, reason: reasonText(res) }), vid); break; }
-        const cp = confirm && confirm.sendPage;
-        if (!cp || cp.stage !== 'confirm') {
-          await log('error', t('log.raidFailed', { xy, reason: (cp && cp.error) || t('reason.noConfirmPage') }), vid);
-          break;
-        }
-        const { res: res2, page: after } = await act(tabId, { kind: 'raidConfirm', x: o.x, y: o.y }, true);
-        if (!res2.ok) { await log('error', t('log.raidFailed', { xy, reason: reasonText(res2) }), vid); break; }
-        if (after && after.sendPage && after.sendPage.stage === 'confirm') {
-          await log('error', t('log.raidFailed', { xy, reason: after.sendPage.error || t('reason.stillOnConfirm') }), vid);
-          break;
-        }
+        const r = await sendTroops(tabId, s, vid, { x: o.x, y: o.y, troops: { [rule.field]: rule.amount }, eventType: 4 });
+        if (r.available && r.available[rule.field] != null) home = r.available[rule.field];
+        if (r.short) { await log('info', t('log.raidNoTroops', { u: unit, have: home, need: rule.amount }), vid); break; }
+        if (!r.ok) { await log('error', t('log.raidFailed', { xy, reason: r.reason }), vid); if (r.fatal) break; continue; }
         sent += 1;
         home -= rule.amount;
         await update(['oases'], (d) => {
@@ -704,6 +727,85 @@ const JOBS = {
       await update(['raids'], (d) => {
         const r = (d.raids || []).find((x) => x.id === rule.id);
         if (r) r.nextAt = Date.now() + next;
+      });
+    }
+  },
+
+  // A farm list kept in the extension: send each target its troops, the
+  // targets waiting longest first, as long as troops last.
+  async farmList(tabId, job, s) {
+    const listId = job.listId;
+    let next = null;
+    const patchTarget = (targetId, patch) => update(['farms'], (d) => {
+      const l = (d.farms || []).find((x) => x.id === listId);
+      const tg = l && (l.targets || []).find((x) => x.id === targetId);
+      if (tg) Object.assign(tg, patch);
+    });
+    // A "Send now" for this list is used up by this round; pressing it again
+    // while the round runs queues another one.
+    await update(['schedule'], (d) => {
+      if (d.schedule && Array.isArray(d.schedule.farmNow)) d.schedule.farmNow = d.schedule.farmNow.filter((id) => id !== listId);
+    });
+    try {
+      const { farms = [] } = await read(['farms']);
+      const list = farms.find((l) => l.id === listId);
+      if (!list) return;
+      next = jittered(list.everyMinutes * 60000, s.jitterPercent);
+      const vid = list.villageId;
+      await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(vid)}`);
+      const { villages = {} } = await read(['villages']);
+      const v = villages[vid];
+      if (!v) return;
+      if (v.underAttack && list.skipWhenAttacked !== false) {
+        next = Math.min(next, 15 * 60000);
+        await log('info', t('log.farmSkipAttack', { list: list.name }), vid);
+        return;
+      }
+      const eventType = list.eventType === 3 ? 3 : 4;
+      let home = troopsHome(v);
+      const due = farmTargets(list);
+      let sent = 0, short = 0, failed = 0;
+      for (const tg of due) {
+        if (sent >= (list.maxPerRound || 50)) break;
+        const troops = cleanTroops(tg.troops);
+        if (!coversTroops(home, troops)) { short += 1; continue; }
+        const xy = coords(tg.x, tg.y);
+        await sleep(rand(800, 2000));
+        if (tg.type === 'oasis') {
+          const chk = await checkOasis(tabId, s, tg.x, tg.y, true);
+          if (!chk.ok) {
+            await log(chk.level, chk.msg, vid);
+            await patchTarget(tg.id, { lastResult: chk.msg, lastTriedAt: Date.now() });
+            continue;
+          }
+          await sleep(rand(800, 1800));
+        }
+        const r = await sendTroops(tabId, s, vid, { x: tg.x, y: tg.y, troops, eventType });
+        if (r.available) home = { ...home, ...Object.fromEntries(Object.entries(r.available).filter(([, n]) => n != null)) };
+        if (r.ok) {
+          for (const [f, n] of Object.entries(troops)) home[f] = (home[f] || 0) - n;
+          sent += 1;
+          await patchTarget(tg.id, { lastSentAt: Date.now(), lastTriedAt: Date.now(), lastResult: 'ok', fails: 0, sent: (tg.sent || 0) + 1 });
+          continue;
+        }
+        if (r.short) { short += 1; continue; }
+        failed += 1;
+        // Three failures in a row (protection, village gone…): switch it off.
+        const fails = (tg.fails || 0) + 1;
+        const off = fails >= 3;
+        await patchTarget(tg.id, { lastResult: r.reason, lastTriedAt: Date.now(), fails, ...(off ? { enabled: false } : {}) });
+        await log('error', t(off ? 'log.farmTargetOff' : 'log.farmTargetFailed', { xy, reason: r.reason, list: list.name }), vid);
+        if (r.fatal) break;
+      }
+      await log(sent ? 'success' : 'info', t('log.farmRound', { list: list.name, sent, total: due.length, short, failed }), vid);
+      if (sent) {
+        await sleep(rand(1500, 3000));
+        await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(vid)}`);
+      }
+    } finally {
+      await update(['farms'], (d) => {
+        const l = (d.farms || []).find((x) => x.id === listId);
+        if (l && next != null) l.nextAt = Date.now() + next;
       });
     }
   },
@@ -741,11 +843,15 @@ function planRefresh(s, data, now, force) {
 
 // Planned after any refresh, so decisions use what the game shows right now.
 function planActions(s, data, now) {
-  const { villages = {}, tasks = {}, training = [], raids = [], schedule = {}, account = {} } = data;
+  const { villages = {}, tasks = {}, training = [], raids = [], farms = [], schedule = {}, account = {} } = data;
   const jobs = [];
   // Asked for from the dashboard: runs even with automation off.
   if (schedule.scanVillage && villages[schedule.scanVillage]) {
     jobs.push({ type: 'scan', villageId: schedule.scanVillage, label: t('job.scan', { v: villages[schedule.scanVillage].name }) });
+  }
+  const farmNow = new Set(schedule.farmNow || []);
+  for (const list of farms) {
+    if (farmNow.has(list.id) && villages[list.villageId]) jobs.push({ type: 'farmList', listId: list.id, label: t('job.farmList', { list: list.name }) });
   }
   if (!automationOn(s) || !withinActiveHours(s.activeHours, new Date(now))) return jobs;
   const ap = s.autopilot;
@@ -765,6 +871,11 @@ function planActions(s, data, now) {
     if (rule.enabled !== false && villages[rule.villageId] && now >= (rule.nextAt || 0)) {
       jobs.push({ type: 'raid', rule, label: t('job.raid', { v: villages[rule.villageId].name }) });
     }
+  }
+  for (const list of farms) {
+    if (farmNow.has(list.id) || list.enabled === false || !villages[list.villageId] || now < (list.nextAt || 0)) continue;
+    if (!farmTargets(list).length) continue;
+    jobs.push({ type: 'farmList', listId: list.id, label: t('job.farmList', { list: list.name }) });
   }
   if ((s.farm.enabled || (auto && ap.farmLists)) && now >= (schedule.farmAt || 0)) jobs.push({ type: 'farm', label: t('job.farm') });
   const hero = account.hero || {};
@@ -801,7 +912,7 @@ async function runJobs(tabId, jobs, s, force) {
   return true;
 }
 
-const DATA_KEYS = ['settings', 'villages', 'tasks', 'training', 'raids', 'schedule', 'account', 'status'];
+const DATA_KEYS = ['settings', 'villages', 'tasks', 'training', 'raids', 'farms', 'schedule', 'account', 'status'];
 let running = false;
 let rerunForced = false; // "Check now" pressed while a run was in progress
 let rerunSoon = false;   // a dashboard request (e.g. map scan) arrived during a run
@@ -928,6 +1039,86 @@ const COMMANDS = {
       if (r) r.targets = (r.targets || []).filter((p) => !(p.x === x && p.y === y));
     });
   },
+  // Farm lists kept in the extension.
+  async addFarmList({ list }) {
+    const name = String(list.name || '').trim().slice(0, 40) || t('farm.defaultName');
+    const id = uid();
+    await update(['farms'], (d) => {
+      (d.farms = d.farms || []).push({
+        id, name, villageId: String(list.villageId), everyMinutes: Math.max(5, Number(list.everyMinutes) || 30),
+        eventType: list.eventType === 3 ? 3 : 4, maxPerRound: Math.max(1, Number(list.maxPerRound) || 50),
+        skipWhenAttacked: list.skipWhenAttacked !== false, enabled: true, targets: [], nextAt: 0,
+      });
+    });
+    return { id };
+  },
+  async updateFarmList({ id, patch }) {
+    await update(['farms'], (d) => {
+      const l = (d.farms || []).find((x) => x.id === id);
+      if (l) Object.assign(l, patch);
+    });
+  },
+  async removeFarmList({ id }) {
+    await update(['farms'], (d) => { d.farms = (d.farms || []).filter((x) => x.id !== id); });
+  },
+  async addFarmTargets({ listId, targets }) {
+    let added = 0, skipped = 0;
+    await update(['farms'], (d) => {
+      const l = (d.farms || []).find((x) => x.id === listId);
+      if (!l) return;
+      l.targets = l.targets || [];
+      for (const tg of targets || []) {
+        const x = Number(tg.x), y = Number(tg.y);
+        const troops = cleanTroops(tg.troops);
+        if (!Number.isInteger(x) || !Number.isInteger(y) || Math.abs(x) > 400 || Math.abs(y) > 400 || !Object.keys(troops).length ||
+          l.targets.some((o) => o.x === x && o.y === y)) { skipped += 1; continue; }
+        l.targets.push({ id: uid(), x, y, name: String(tg.name || '').slice(0, 40), type: tg.type === 'oasis' ? 'oasis' : 'village', troops, enabled: true });
+        added += 1;
+      }
+    });
+    return { added, skipped };
+  },
+  async updateFarmTarget({ listId, targetId, patch }) {
+    const clean = { ...patch };
+    if (clean.troops) {
+      clean.troops = cleanTroops(clean.troops);
+      if (!Object.keys(clean.troops).length) throw new Error(t('farm.needTroops'));
+    }
+    if ('x' in clean || 'y' in clean) {
+      clean.x = Number(clean.x); clean.y = Number(clean.y);
+      if (!Number.isInteger(clean.x) || !Number.isInteger(clean.y) || Math.abs(clean.x) > 400 || Math.abs(clean.y) > 400) throw new Error(t('raid.badCoords'));
+    }
+    if ('name' in clean) clean.name = String(clean.name || '').slice(0, 40);
+    if ('type' in clean) clean.type = clean.type === 'oasis' ? 'oasis' : 'village';
+    if (clean.enabled) clean.fails = 0;
+    await update(['farms'], (d) => {
+      const l = (d.farms || []).find((x) => x.id === listId);
+      const tg = l && (l.targets || []).find((x) => x.id === targetId);
+      if (tg) Object.assign(tg, clean);
+    });
+  },
+  async removeFarmTarget({ listId, targetId }) {
+    await update(['farms'], (d) => {
+      const l = (d.farms || []).find((x) => x.id === listId);
+      if (l) l.targets = (l.targets || []).filter((x) => x.id !== targetId);
+    });
+  },
+  // Same troops for every target in the list.
+  async setFarmTroops({ listId, troops }) {
+    const clean = cleanTroops(troops);
+    if (!Object.keys(clean).length) throw new Error(t('farm.needTroops'));
+    await update(['farms'], (d) => {
+      const l = (d.farms || []).find((x) => x.id === listId);
+      for (const tg of (l && l.targets) || []) tg.troops = { ...clean };
+    });
+  },
+  async sendFarmNow({ id }) {
+    await update(['schedule'], (d) => {
+      d.schedule = d.schedule || {};
+      d.schedule.farmNow = [...new Set([...(d.schedule.farmNow || []), id])];
+    });
+    tick(false, true);
+  },
   async scanOases({ villageId }) {
     await patchSchedule({ scanVillage: villageId });
     tick(false, true);
@@ -963,7 +1154,7 @@ const COMMANDS = {
   },
   // Accepts our backup file, or a raw storage dump from an older version.
   async importData({ data }) {
-    if (!data || typeof data !== 'object' || !(data.settings || data.tasks || data.training || data.raids)) {
+    if (!data || typeof data !== 'object' || !(data.settings || data.tasks || data.training || data.raids || data.farms)) {
       throw new Error(t('backup.invalid'));
     }
     const uidIfMissing = (x) => ({ ...x, id: x.id || uid() });
@@ -973,11 +1164,13 @@ const COMMANDS = {
     }
     const training = (Array.isArray(data.training) ? data.training : []).map((r) => ({ ...uidIfMissing(r), nextAt: 0 }));
     const raids = (Array.isArray(data.raids) ? data.raids : []).map((r) => ({ ...uidIfMissing(r), nextAt: 0 }));
-    await update(['settings', 'tasks', 'training', 'raids', 'villages'], (d) => {
+    const farms = (Array.isArray(data.farms) ? data.farms : []).map((l) => ({ ...uidIfMissing(l), nextAt: 0, targets: (l.targets || []).map(uidIfMissing) }));
+    await update(['settings', 'tasks', 'training', 'raids', 'farms', 'villages'], (d) => {
       d.settings = mergeSettings({ ...mergeSettings(d.settings), ...(data.settings || {}) });
       d.tasks = tasks;
       d.training = training;
       d.raids = raids;
+      d.farms = farms;
       if (data.villages && !Object.keys(d.villages || {}).length) d.villages = data.villages;
     });
     await pushCommands();

@@ -124,27 +124,34 @@
       return { ok: true, started: startedAll ? 'all' : buttons.length };
     },
 
-    // Rally point: fill the "send troops" form as a raid and press Send.
-    async raidForm({ x, y, field, amount }) {
-      if (!/^t\d+$/.test(field) || !Number.isInteger(x) || !Number.isInteger(y) || !(amount >= 1)) return { ok: false, code: 'badField' };
-      const input = troopInput(document, field);
-      const form = input && input.closest('form');
-      if (!form || input.disabled) return { ok: false, code: 'noUnitInput' };
+    // Rally point: fill the "send troops" form (a raid, or a normal attack)
+    // with exactly these troops and press Send.
+    async sendForm({ x, y, troops, eventType = 4 }) {
+      const fields = Object.entries(troops || {}).filter(([, n]) => n > 0);
+      if (!fields.length || !fields.every(([f, n]) => /^t\d+$/.test(f) && Number.isInteger(n)) ||
+        !Number.isInteger(x) || !Number.isInteger(y) || ![3, 4].includes(eventType)) return { ok: false, code: 'badField' };
+      const inputs = fields.map(([f, n]) => [troopInput(document, f), n]);
+      if (inputs.some(([input]) => !input || input.disabled)) return { ok: false, code: 'noUnitInput' };
+      const form = inputs[0][0].closest('form');
+      if (!form) return { ok: false, code: 'noUnitInput' };
       const xIn = form.querySelector('input[name="x"], #xCoordInput');
       const yIn = form.querySelector('input[name="y"], #yCoordInput');
       if (!xIn || !yIn) return { ok: false, code: 'noCoordInput' };
-      const raid = form.querySelector('input[type="radio"][name="eventType"][value="4"], input[type="radio"][name="c"][value="4"]');
-      if (!raid) return { ok: false, code: 'noRaidOption' };
-      // Only the chosen unit goes; clear anything else that was pre-filled.
+      const mission = form.querySelector(`input[type="radio"][name="eventType"][value="${eventType}"], input[type="radio"][name="c"][value="${eventType}"]`);
+      if (!mission) return { ok: false, code: 'noRaidOption' };
+      // Only the chosen units go; clear anything else that was pre-filled.
+      const chosen = new Set(inputs.map(([input]) => input));
       for (const other of form.querySelectorAll('input[name^="troop["], input[name^="troops["]')) {
-        if (other !== input && other.type !== 'hidden' && other.value) setValue(other, '');
+        if (!chosen.has(other) && other.type !== 'hidden' && other.value) setValue(other, '');
       }
-      setValue(input, amount);
-      await sleep(rand(200, 500));
+      for (const [input, n] of inputs) {
+        setValue(input, n);
+        await sleep(rand(150, 400));
+      }
       setValue(xIn, x);
       setValue(yIn, y);
-      raid.click();
-      if (!raid.checked) { raid.checked = true; raid.dispatchEvent(new Event('change', { bubbles: true })); }
+      mission.click();
+      if (!mission.checked) { mission.checked = true; mission.dispatchEvent(new Event('change', { bubbles: true })); }
       const btn = form.querySelector('button#ok, button#btn_ok, button[type="submit"][name="ok"], button[type="submit"][name="s1"]') ||
         form.querySelector('button[type="submit"]');
       if (!usable(btn)) return { ok: false, code: 'noSendButton' };
@@ -153,12 +160,13 @@
       return { ok: true, navigating: true };
     },
 
-    // Confirmation page: only confirm when it names our target and is a raid.
-    async raidConfirm({ x, y }) {
+    // Confirmation page: only confirm when it names our target and the
+    // mission we asked for.
+    async sendConfirm({ x, y, eventType = 4 }) {
       const info = P.parseSendPage(document);
       if (info.stage !== 'confirm') return { ok: false, code: 'noConfirmPage' };
       if (!info.targets.some((p) => p.x === x && p.y === y)) return { ok: false, code: 'targetMismatch' };
-      if (info.eventType != null && info.eventType !== 4) return { ok: false, code: 'notRaid' };
+      if (info.eventType != null && info.eventType !== eventType) return { ok: false, code: 'notRaid' };
       const details = document.querySelector('table.troop_details');
       const form = details && details.closest('form');
       const btn = document.querySelector('#confirmSendTroops, button#btn_ok, button.rallyPointConfirm, .rallyPointConfirm button[type="submit"]') ||

@@ -16,7 +16,16 @@ you're away:
   using the game's own "enough resources at…" timer to know when to retry.
 - **Troop training** — rules like "train 20 Legionnaires in Barracks every
   60 minutes" (trains as many as you can afford, up to that number).
-- **Farm lists** — presses "Start all" (or the lists you pick) every N minutes.
+- **Farm lists kept in the extension** — your farms are saved in the extension,
+  not in the game's farm list. Make lists (village, every N minutes, raid or
+  normal attack), paste targets one per line (`12|-34 Name`), and set the
+  troops per target (any mix of units). Each round sends to the targets
+  waiting longest first while troops last; oases are checked for animals
+  first; a target that fails three times in a row (beginner's protection,
+  village gone…) is switched off. "Send now" works any time, and the lists
+  sync to your other browsers with the rest of your commands.
+- **Game farm lists** — can also press "Start all" (or the lists you pick) on
+  the game's own farm lists every N minutes.
 - **Hero adventures** — sends the hero out whenever they're home and an
   adventure is available.
 - **Troops** — the troops in each village and what the barracks, stable and
@@ -177,7 +186,7 @@ src/autopilot.js       Autopilot choices: next upgrade, which oases to raid
 src/ui.js / ui.css     Village cards and styles shared by popup and dashboard
 popup/                 Toolbar popup
 dashboard/             Full dashboard (also the extension's options page); overview.js renders the
-                       Overview tab, autopilot.js the Autopilot tab, chart.js the 24-hour stock
-                       chart, art.js the village/hero drawings
+                       Overview tab, autopilot.js the Autopilot tab, farms.js the farm lists,
+                       chart.js the 24-hour stock chart, art.js the village/hero drawings
 icons/                 Extension icons
 ```

@@ -1,6 +1,7 @@
 import { loadAll, command, statusLine, esc, fillSelect, troopInfo } from '../src/ui.js';
 import { renderOverview } from './overview.js';
 import { renderAutopilot } from './autopilot.js';
+import { renderFarms } from './farms.js';
 import { leaseIsFresh } from '../src/sync.js';
 import {
   sortedVillages, taskLabel, buildingName, fmtDuration, fmtAgo, TRAINING_BUILDINGS, buildStatus,
@@ -354,6 +355,7 @@ function render() {
   renderBuild(now, langChanged);
   renderTroops(now);
   renderAutopilot(data, now);
+  renderFarms(data, now);
   renderRaids(now);
   renderLog();
   fillSettings();

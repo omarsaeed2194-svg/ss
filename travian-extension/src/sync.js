@@ -9,7 +9,7 @@ const CHUNK_CHARS = 2000;           // well under the 8 KB per-item sync limit
 const LEASE_TTL_MS = 3 * 60 * 1000; // a browser that stops renewing loses the lease
 const PUSH_DELAY_MS = 4000;
 
-export const COMMAND_KEYS = ['settings', 'tasks', 'training', 'raids'];
+export const COMMAND_KEYS = ['settings', 'tasks', 'training', 'raids', 'farms'];
 
 // JSON with sorted keys, so equal data always gives the same string.
 export function stableStringify(value) {
@@ -33,6 +33,10 @@ export function commandsOf(data) {
     tasks,
     training: (data.training || []).map(({ nextAt, ...rest }) => rest),
     raids: (data.raids || []).map(({ nextAt, scannedAt, ...rest }) => rest),
+    farms: (data.farms || []).map(({ nextAt, targets, ...rest }) => ({
+      ...rest,
+      targets: (targets || []).map(({ lastSentAt, lastTriedAt, lastResult, fails, sent, ...tg }) => tg),
+    })),
   };
 }
 
@@ -112,7 +116,21 @@ export function mergeCommands(local, remote) {
   const training = (remote.training || []).map((r) => ({ ...r, nextAt: nextAt[r.id] || 0 }));
   const raidState = Object.fromEntries((local.raids || []).map((r) => [r.id, r]));
   const raids = (remote.raids || []).map((r) => ({ ...r, nextAt: (raidState[r.id] || {}).nextAt || 0, scannedAt: (raidState[r.id] || {}).scannedAt || 0 }));
-  return { settings: { ...(local.settings || {}), ...(remote.settings || {}) }, tasks, training, raids };
+  // Farm lists: keep this browser's run times and per-target results.
+  const localLists = Object.fromEntries((local.farms || []).map((l) => [l.id, l]));
+  const farms = (remote.farms || []).map((l) => {
+    const mine = localLists[l.id] || {};
+    const mineTargets = Object.fromEntries((mine.targets || []).map((tg) => [tg.id, tg]));
+    return {
+      ...l,
+      nextAt: mine.nextAt || 0,
+      targets: (l.targets || []).map((tg) => {
+        const { lastSentAt, lastTriedAt, lastResult, fails, sent } = mineTargets[tg.id] || {};
+        return { ...tg, lastSentAt, lastTriedAt, lastResult, fails, sent };
+      }),
+    };
+  });
+  return { settings: { ...(local.settings || {}), ...(remote.settings || {}) }, tasks, training, raids, farms };
 }
 
 // Pull commands another browser saved. `force` applies them even when this
@@ -126,7 +144,8 @@ export async function pullCommands({ force = false } = {}) {
   if (remote.json === state.json) return { pulled: false };
   const fromElsewhere = remote.meta.deviceId !== device.id;
   const newer = remote.meta.updatedAt > (state.savedAt || 0);
-  const empty = !local.settings && !Object.keys(local.tasks || {}).length && !(local.training || []).length && !(local.raids || []).length;
+  const empty = !local.settings && !Object.keys(local.tasks || {}).length && !(local.training || []).length &&
+    !(local.raids || []).length && !(local.farms || []).length;
   if (!force && !empty && !(fromElsewhere && newer)) return { pulled: false };
   const merged = mergeCommands(local, remote.data);
   await chrome.storage.local.set({
