@@ -9,7 +9,7 @@ const CHUNK_CHARS = 2000;           // well under the 8 KB per-item sync limit
 const LEASE_TTL_MS = 3 * 60 * 1000; // a browser that stops renewing loses the lease
 const PUSH_DELAY_MS = 4000;
 
-export const COMMAND_KEYS = ['settings', 'tasks', 'training', 'raids', 'farms'];
+export const COMMAND_KEYS = ['settings', 'tasks', 'training', 'raids', 'farms', 'escapes'];
 
 // JSON with sorted keys, so equal data always gives the same string.
 export function stableStringify(value) {
@@ -37,6 +37,7 @@ export function commandsOf(data) {
       ...rest,
       targets: (targets || []).map(({ lastSentAt, lastTriedAt, lastResult, fails, sent, ...tg }) => tg),
     })),
+    escapes: data.escapes || [],
   };
 }
 
@@ -130,7 +131,7 @@ export function mergeCommands(local, remote) {
       }),
     };
   });
-  return { settings: { ...(local.settings || {}), ...(remote.settings || {}) }, tasks, training, raids, farms };
+  return { settings: { ...(local.settings || {}), ...(remote.settings || {}) }, tasks, training, raids, farms, escapes: remote.escapes || [] };
 }
 
 // Pull commands another browser saved. `force` applies them even when this
@@ -145,7 +146,7 @@ export async function pullCommands({ force = false } = {}) {
   const fromElsewhere = remote.meta.deviceId !== device.id;
   const newer = remote.meta.updatedAt > (state.savedAt || 0);
   const empty = !local.settings && !Object.keys(local.tasks || {}).length && !(local.training || []).length &&
-    !(local.raids || []).length && !(local.farms || []).length;
+    !(local.raids || []).length && !(local.farms || []).length && !(local.escapes || []).length;
   if (!force && !empty && !(fromElsewhere && newer)) return { pulled: false };
   const merged = mergeCommands(local, remote.data);
   await chrome.storage.local.set({

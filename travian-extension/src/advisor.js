@@ -5,6 +5,7 @@ import {
   RESOURCES, FIELD_RESOURCE, resLabel, hoursUntilLimit, buildingName, fmtDuration, fmtAgo,
 } from './shared.js';
 import { t, ltr } from './i18n.js';
+import { escapeStatus } from './escape.js';
 
 export const SEVERITY_ORDER = { critical: 0, warning: 1, info: 2, good: 3 };
 
@@ -65,7 +66,11 @@ export function adviseVillage(v, data, now = Date.now()) {
   // --- Defence -----------------------------------------------------------
   if (v.underAttack) {
     const first = (v.movements || []).filter((m) => m.kind === 'att1' && m.arriveAt > now).map((m) => m.arriveAt).sort((a, b) => a - b)[0];
-    add('critical', 'attack', t('tip.attack', { when: first ? t('tip.attackIn', { t: fmtDuration(first - now) }) : t('tip.attackSoon') }));
+    const plan = (data.escapes || []).find((p) => p.villageId === v.id && p.enabled !== false);
+    const escape = escapeStatus(v, plan, data.villages, now);
+    add('critical', 'attack', t('tip.attack', { when: first ? t('tip.attackIn', { t: fmtDuration(first - now) }) : t('tip.attackSoon') }) +
+      (escape ? ` ${t('tip.escapePart', { s: escape.text })}` : ''),
+    escape ? null : { type: 'tab', tab: 'troops', villageId: v.id, label: t('tip.actEscape') });
     if (scanned && !levelOf(v, CRANNY)) add('warning', 'shield', t('tip.crannyUrgent'));
     if (scanned && !wallOf(v)) add('warning', 'shield', t('tip.wallUrgent'));
   }

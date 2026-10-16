@@ -6,6 +6,7 @@ import {
   buildBlock,
 } from './shared.js';
 import { pickAutoUpgrade, troopsHome, raidTargets, oasisKey, farmTargets, coversTroops, cleanTroops } from './autopilot.js';
+import { firstAttack, escapeTiming, escapeDone, escapeDue, escapeTarget, escapeTroops, TOO_LATE_MS } from './escape.js';
 import { t, setLanguage, coords, ltr } from './i18n.js';
 import {
   COMMAND_KEYS, commandsOf, schedulePush, pushCommands, pullCommands, mayRun, renewLease, getDevice,
@@ -283,8 +284,81 @@ async function processPage(state, tabId) {
   for (const [level, msg, vid] of events) await log(level, msg, vid);
   for (const a of alerts) await sendAlert(a);
   await refreshBadge();
+  await armEscapes();
   return fromWorker ? { worker: true, badge: t('badge.worker') } : { worker: false };
 }
+
+// ---------------------------------------------------------- troop escape --
+// An escape due now interrupts whatever the bot is doing (see runJobs).
+let urgent = false;
+const kicked = new Set(); // escapes already started from a page report
+
+// Keep one alarm per protected village at the moment its troops must start
+// leaving, and tell the player when an attack their troops dodged is over.
+async function armEscapes() {
+  const { villages = {}, escapes = [] } = await read(['villages', 'escapes']);
+  const now = Date.now();
+  const wanted = new Map();
+  for (const plan of escapes) {
+    const v = villages[plan.villageId];
+    if (!v || plan.enabled === false) continue;
+    const tm = escapeTiming(v, plan, now);
+    if (!tm || tm.first - now < TOO_LATE_MS || escapeDone(v, tm.first)) continue;
+    if (tm.startAt > now + 1000) wanted.set(`escape:${v.id}`, tm.startAt);
+    else if (!kicked.has(`${v.id}:${tm.first}`)) {
+      kicked.add(`${v.id}:${tm.first}`);
+      urgent = true;
+      tick(false, true);
+    }
+  }
+  const alarms = await chrome.alarms.getAll();
+  for (const a of alarms) if (a.name.startsWith('escape:') && !wanted.has(a.name)) await chrome.alarms.clear(a.name);
+  for (const [name, when] of wanted) {
+    const have = alarms.find((a) => a.name === name);
+    if (!have || Math.abs(have.scheduledTime - when) > 1000) await chrome.alarms.create(name, { when });
+  }
+  // Attack over: the troops are still sitting in the other village.
+  for (const plan of escapes) {
+    const v = villages[plan.villageId];
+    const st = v && v.escape;
+    if (!st || st.status !== 'sent' || st.overNotified || v.underAttack || firstAttack(v, now)) continue;
+    await update(['villages'], (d) => { const x = d.villages && d.villages[v.id]; if (x && x.escape) x.escape.overNotified = true; });
+    const to = villages[st.to];
+    await sendAlert({ kind: 'attacks', villageId: v.id, title: t('alert.escapeOver.title', { v: v.name }), body: t('alert.escapeOver.body', { to: to ? to.name : '?' }) });
+  }
+}
+
+// Villages with an escape plan that are under attack but whose arrival time
+// isn't known (or is old): read their main page first.
+function escapeRefreshIds(data, now) {
+  const { villages = {}, escapes = [] } = data;
+  return escapes.filter((p) => p.enabled !== false).map((p) => villages[p.villageId]).filter((v) => v && v.underAttack &&
+    (v.needsRefresh || (!firstAttack(v, now) && (!v.movementsAt || now - v.movementsAt > 5 * 60000)))).map((v) => v.id);
+}
+
+function planEscapes(data, now) {
+  const { villages = {}, escapes = [] } = data;
+  return escapes.filter((p) => villages[p.villageId] && escapeDue(villages[p.villageId], p, now))
+    .map((p) => ({ type: 'escape', planId: p.id, label: t('job.escape', { v: villages[p.villageId].name }) }));
+}
+
+// Runs before anything else and ignores "pause while playing", active hours
+// and the automation switches: the plan itself is the player's go-ahead.
+async function runEscapeStage(tabId, s) {
+  urgent = false;
+  let data = await read(DATA_KEYS);
+  const ids = escapeRefreshIds(data, Date.now());
+  if (ids.length) await runJobs(tabId, [{ type: 'refresh', villageIds: ids, quick: true, label: t('job.refreshAttacked') }], s, true);
+  data = await read(DATA_KEYS);
+  const jobs = planEscapes(data, Date.now());
+  if (jobs.length) await runJobs(tabId, jobs, s, true);
+}
+
+const troopsText = (v, troops) => {
+  const names = {};
+  for (const x of v.troops || []) names[x.unit === 'hero' ? 't11' : `t${((Number(x.unit.slice(1)) - 1) % 10) + 1}`] = x.name;
+  return Object.entries(troops).map(([f, n]) => `${n} ${names[f] || f}`).join(t('list.sep'));
+};
 
 // ------------------------------------------------------------- bot tab ----
 const waiters = new Map(); // tabId -> { resolve, reject, timer }
@@ -397,31 +471,33 @@ async function patchSchedule(patch) {
 
 // ------------------------------------------------------------ sending ------
 // Problems with the page itself: later sends in the same round would fail too.
-const FATAL_SEND = new Set(['noCoordInput', 'noRaidOption', 'noSendButton', 'notLoaded', 'noResponse', 'unknownAction']);
+const FATAL_SEND = new Set(['noCoordInput', 'noRaidOption', 'noReinforceOption', 'noSendButton', 'notLoaded', 'noResponse', 'unknownAction']);
 
 // Rally point → fill in `troops` for (x, y) → confirm. Returns { ok } or
 // { ok: false, reason, short?, fatal? }. `available` is what the form showed
 // before this send (troops at home that can actually leave).
-async function sendTroops(tabId, s, vid, { x, y, troops, eventType = 4 }) {
+async function sendTroops(tabId, s, vid, { x, y, troops, mission = 'raid' }) {
   const form = await navigate(tabId, `${s.server}/build.php?newdid=${encodeURIComponent(vid)}&gid=16&tt=2`);
   const sp = form.sendPage;
   if (!sp || sp.stage !== 'form') return { ok: false, fatal: true, reason: t('reason.noSendForm') };
   const available = sp.available;
+  if (typeof troops === 'function') troops = troops(available);
+  if (!Object.keys(troops).length) return { ok: false, empty: true, available, reason: t('reason.notEnoughTroops') };
   if (Object.entries(troops).some(([f, n]) => available[f] != null && available[f] < n)) {
     return { ok: false, short: true, available, reason: t('reason.notEnoughTroops') };
   }
-  const { res, page: confirm } = await act(tabId, { kind: 'sendForm', x, y, troops, eventType }, true);
+  const { res, page: confirm } = await act(tabId, { kind: 'sendForm', x, y, troops, mission }, true);
   if (!res.ok) return { ok: false, fatal: FATAL_SEND.has(res.code), available, reason: reasonText(res) };
   const cp = confirm && confirm.sendPage;
   // The game shows the form again with its own message (beginner's
   // protection, no village there…): that target fails, others may not.
   if (!cp || cp.stage !== 'confirm') return { ok: false, available, reason: (cp && cp.error) || t('reason.noConfirmPage') };
-  const { res: res2, page: after } = await act(tabId, { kind: 'sendConfirm', x, y, eventType }, true);
+  const { res: res2, page: after } = await act(tabId, { kind: 'sendConfirm', x, y, mission }, true);
   if (!res2.ok) return { ok: false, available, reason: reasonText(res2) };
   if (after && after.sendPage && after.sendPage.stage === 'confirm') {
     return { ok: false, available, reason: after.sendPage.error || t('reason.stillOnConfirm') };
   }
-  return { ok: true, available };
+  return { ok: true, available, sent: troops };
 }
 
 // Opens an oasis right before raiding it. Only an unoccupied oasis with no
@@ -439,6 +515,51 @@ async function checkOasis(tabId, s, x, y, trusted) {
 }
 
 const JOBS = {
+  // Move the village's troops out before the attack lands.
+  async escape(tabId, job, s) {
+    const { escapes = [] } = await read(['escapes']);
+    const plan = escapes.find((p) => p.id === job.planId);
+    if (!plan) return;
+    const vid = plan.villageId;
+    await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(vid)}`); // fresh arrival times
+    const { villages = {} } = await read(['villages']);
+    const v = villages[vid];
+    if (!v) return;
+    const tm = escapeDue(v, plan, Date.now());
+    if (!tm) return; // attack recalled, or already handled
+    const setState = (patch) => update(['villages'], (d) => {
+      const x = d.villages && d.villages[vid];
+      if (x) x.escape = { ...(x.escape && x.escape.forAttack === tm.first ? x.escape : {}), forAttack: tm.first, at: Date.now(), ...patch };
+    });
+    const lands = fmtClock(tm.first);
+    const dest = escapeTarget(v, plan, villages);
+    if (!dest) {
+      await setState({ status: 'failed', tries: 99, reason: t('reason.noSafeVillage') });
+      await sendAlert({ kind: 'attacks', sticky: true, villageId: vid, title: t('alert.escapeFailed.title', { v: v.name }), body: t('alert.escapeFailed.body', { reason: t('reason.noSafeVillage'), clock: lands }) });
+      return;
+    }
+    const r = await sendTroops(tabId, s, vid, { x: dest.village.x, y: dest.village.y, troops: (available) => escapeTroops(plan, available), mission: 'reinforce' });
+    if (r.empty) {
+      await setState({ status: 'nothing', to: dest.village.id });
+      await log('info', t('log.escapeNothing', { lands }), vid);
+      return;
+    }
+    if (r.ok) {
+      const what = troopsText(v, r.sent);
+      await setState({ status: 'sent', to: dest.village.id, sent: r.sent, fallback: dest.fallback, overNotified: false });
+      await log('success', t('log.escaped', { what, to: dest.village.name, lands }), vid);
+      await sendAlert({
+        kind: 'attacks', villageId: vid, title: t('alert.escaped.title', { v: v.name }),
+        body: t(dest.fallback ? 'alert.escaped.bodyFallback' : 'alert.escaped.body', { what, to: dest.village.name, lands }),
+      });
+      return;
+    }
+    const tries = ((v.escape && v.escape.forAttack === tm.first && v.escape.tries) || 0) + 1;
+    await setState({ status: 'failed', tries, reason: r.reason, to: dest.village.id });
+    await log('error', t('log.escapeFailed', { reason: r.reason }), vid);
+    await sendAlert({ kind: 'attacks', sticky: true, villageId: vid, title: t('alert.escapeFailed.title', { v: v.name }), body: t('alert.escapeFailed.body', { reason: r.reason, clock: lands }) });
+  },
+
   async refresh(tabId, job, s) {
     let { villages = {} } = await read(['villages']);
     let ids = job.villageIds || sortedVillages(villages).map((v) => v.id);
@@ -447,7 +568,9 @@ const JOBS = {
       ids = (first.villages || []).map((v) => v.id).filter((id) => id !== first.villageId);
     }
     for (const id of ids) {
+      if (urgent && !job.quick) break; // an escape is due: let it run first
       await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(id)}`);
+      if (job.quick) continue;
       ({ villages = {} } = await read(['villages']));
       const v = villages[id];
       if (v && (!v.buildingsAt || Date.now() - v.buildingsAt > BUILDINGS_RESCAN_MS)) {
@@ -474,7 +597,7 @@ const JOBS = {
       }
       await sleep(rand(1500, 4000));
     }
-    if (!job.villageIds) await patchSchedule({ refreshAt: Date.now() + jittered(s.refreshMinutes * 60000, s.jitterPercent) });
+    if (!job.villageIds && !urgent) await patchSchedule({ refreshAt: Date.now() + jittered(s.refreshMinutes * 60000, s.jitterPercent) });
   },
 
   async build(tabId, job, s) {
@@ -700,13 +823,13 @@ const JOBS = {
       }
       let sent = 0;
       for (const o of targets) {
-        if (sent >= rule.maxPerRun || home < rule.amount) break;
+        if (urgent || sent >= rule.maxPerRun || home < rule.amount) break;
         const xy = coords(o.x, o.y);
         await sleep(rand(1200, 2800));
         const chk = await checkOasis(tabId, s, o.x, o.y, !!o.fromScan);
         if (!chk.ok) { await log(chk.level, chk.msg, vid); continue; }
         await sleep(rand(1000, 2500));
-        const r = await sendTroops(tabId, s, vid, { x: o.x, y: o.y, troops: { [rule.field]: rule.amount }, eventType: 4 });
+        const r = await sendTroops(tabId, s, vid, { x: o.x, y: o.y, troops: { [rule.field]: rule.amount }, mission: 'raid' });
         if (r.available && r.available[rule.field] != null) home = r.available[rule.field];
         if (r.short) { await log('info', t('log.raidNoTroops', { u: unit, have: home, need: rule.amount }), vid); break; }
         if (!r.ok) { await log('error', t('log.raidFailed', { xy, reason: r.reason }), vid); if (r.fatal) break; continue; }
@@ -761,12 +884,12 @@ const JOBS = {
         await log('info', t('log.farmSkipAttack', { list: list.name }), vid);
         return;
       }
-      const eventType = list.eventType === 3 ? 3 : 4;
+      const mission = list.eventType === 3 ? 'attack' : 'raid';
       let home = troopsHome(v);
       const due = farmTargets(list);
       let sent = 0, short = 0, failed = 0;
       for (const tg of due) {
-        if (sent >= (list.maxPerRound || 50)) break;
+        if (urgent || sent >= (list.maxPerRound || 50)) break;
         const troops = cleanTroops(tg.troops);
         if (!coversTroops(home, troops)) { short += 1; continue; }
         const xy = coords(tg.x, tg.y);
@@ -780,7 +903,7 @@ const JOBS = {
           }
           await sleep(rand(800, 1800));
         }
-        const r = await sendTroops(tabId, s, vid, { x: tg.x, y: tg.y, troops, eventType });
+        const r = await sendTroops(tabId, s, vid, { x: tg.x, y: tg.y, troops, mission });
         if (r.available) home = { ...home, ...Object.fromEntries(Object.entries(r.available).filter(([, n]) => n != null)) };
         if (r.ok) {
           for (const [f, n] of Object.entries(troops)) home[f] = (home[f] || 0) - n;
@@ -889,6 +1012,7 @@ function planActions(s, data, now) {
 // or the player started clicking around in the game).
 async function runJobs(tabId, jobs, s, force) {
   for (const job of jobs) {
+    if (urgent && job.type !== 'escape' && !job.quick) await runEscapeStage(tabId, s);
     await setStatus({ state: 'working', note: job.label });
     try {
       await JOBS[job.type](tabId, job, s);
@@ -912,7 +1036,7 @@ async function runJobs(tabId, jobs, s, force) {
   return true;
 }
 
-const DATA_KEYS = ['settings', 'villages', 'tasks', 'training', 'raids', 'farms', 'schedule', 'account', 'status'];
+const DATA_KEYS = ['settings', 'villages', 'tasks', 'training', 'raids', 'farms', 'escapes', 'schedule', 'account', 'status'];
 let running = false;
 let rerunForced = false; // "Check now" pressed while a run was in progress
 let rerunSoon = false;   // a dashboard request (e.g. map scan) arrived during a run
@@ -937,8 +1061,9 @@ async function tick(force = false, soon = false) {
       await setStatus({ state: 'blocked', note: '' });
       return {};
     }
+    const escapeWork = escapeRefreshIds(data, now).length > 0 || planEscapes(data, now).length > 0;
     // Only one browser drives the game. "Check now" here takes over.
-    if (s.watchEnabled || automationOn(s) || force) {
+    if (s.watchEnabled || automationOn(s) || force || escapeWork) {
       const lease = await mayRun(now);
       if (!lease.ok && !force) {
         await setStatus({ state: 'otherDevice', note: lease.lease.deviceName });
@@ -946,6 +1071,7 @@ async function tick(force = false, soon = false) {
       }
       await renewLease();
     }
+    if (escapeWork || urgent) await runEscapeStage(await ensureWorkerTab(s.server), s);
     if (!force && s.pauseWhenPlaying && (status.userActiveUntil || 0) > now) {
       await setStatus({ state: 'paused', note: '' });
       return {};
@@ -966,6 +1092,7 @@ async function tick(force = false, soon = false) {
   } finally {
     running = false;
     await refreshBadge();
+    await armEscapes();
     if (rerunForced) {
       rerunForced = false;
       rerunSoon = false;
@@ -1119,6 +1246,38 @@ const COMMANDS = {
     });
     tick(false, true);
   },
+  // Escape plans: one per protected village.
+  async saveEscape({ plan }) {
+    const villageId = String(plan.villageId || '');
+    if (!villageId) throw new Error(t('escape.needVillage'));
+    const clean = {
+      villageId,
+      targetVillageId: plan.targetVillageId && plan.targetVillageId !== villageId ? String(plan.targetVillageId) : '',
+      units: Array.isArray(plan.units) ? plan.units.filter((f) => /^t([1-9]|10)$/.test(f)) : 'all',
+      hero: !!plan.hero,
+      leadSeconds: Math.min(3600, Math.max(30, Math.round(Number(plan.leadSeconds) || 120))),
+      enabled: plan.enabled !== false,
+    };
+    if (Array.isArray(clean.units) && !clean.units.length) throw new Error(t('escape.needUnits'));
+    await update(['escapes'], (d) => {
+      d.escapes = d.escapes || [];
+      const i = d.escapes.findIndex((p) => p.villageId === villageId);
+      if (i >= 0) d.escapes[i] = { ...d.escapes[i], ...clean };
+      else d.escapes.push({ id: uid(), ...clean });
+    });
+    await armEscapes();
+  },
+  async updateEscape({ id, patch }) {
+    await update(['escapes'], (d) => {
+      const p = (d.escapes || []).find((x) => x.id === id);
+      if (p) Object.assign(p, patch);
+    });
+    await armEscapes();
+  },
+  async removeEscape({ id }) {
+    await update(['escapes'], (d) => { d.escapes = (d.escapes || []).filter((x) => x.id !== id); });
+    await armEscapes();
+  },
   async scanOases({ villageId }) {
     await patchSchedule({ scanVillage: villageId });
     tick(false, true);
@@ -1154,7 +1313,7 @@ const COMMANDS = {
   },
   // Accepts our backup file, or a raw storage dump from an older version.
   async importData({ data }) {
-    if (!data || typeof data !== 'object' || !(data.settings || data.tasks || data.training || data.raids || data.farms)) {
+    if (!data || typeof data !== 'object' || !(data.settings || data.tasks || data.training || data.raids || data.farms || data.escapes)) {
       throw new Error(t('backup.invalid'));
     }
     const uidIfMissing = (x) => ({ ...x, id: x.id || uid() });
@@ -1165,12 +1324,14 @@ const COMMANDS = {
     const training = (Array.isArray(data.training) ? data.training : []).map((r) => ({ ...uidIfMissing(r), nextAt: 0 }));
     const raids = (Array.isArray(data.raids) ? data.raids : []).map((r) => ({ ...uidIfMissing(r), nextAt: 0 }));
     const farms = (Array.isArray(data.farms) ? data.farms : []).map((l) => ({ ...uidIfMissing(l), nextAt: 0, targets: (l.targets || []).map(uidIfMissing) }));
-    await update(['settings', 'tasks', 'training', 'raids', 'farms', 'villages'], (d) => {
+    const escapes = (Array.isArray(data.escapes) ? data.escapes : []).map(uidIfMissing);
+    await update(['settings', 'tasks', 'training', 'raids', 'farms', 'escapes', 'villages'], (d) => {
       d.settings = mergeSettings({ ...mergeSettings(d.settings), ...(data.settings || {}) });
       d.tasks = tasks;
       d.training = training;
       d.raids = raids;
       d.farms = farms;
+      d.escapes = escapes;
       if (data.villages && !Object.keys(d.villages || {}).length) d.villages = data.villages;
     });
     await pushCommands();
@@ -1226,6 +1387,7 @@ async function setup() {
   if (pulled.pulled) await log('info', t('log.syncRestored', { from: pulled.from }));
   await pushCommands();
   await refreshBadge();
+  await armEscapes();
 }
 
 // Save commands to the Chrome account whenever they change here, and pick
@@ -1244,7 +1406,10 @@ chrome.storage.onChanged.addListener((changes, area) => {
 });
 chrome.runtime.onInstalled.addListener(setup);
 chrome.runtime.onStartup.addListener(setup);
-chrome.alarms.onAlarm.addListener((a) => { if (a.name === 'tick') tick(); });
+chrome.alarms.onAlarm.addListener((a) => {
+  if (a.name === 'tick') tick();
+  else if (a.name.startsWith('escape:')) { urgent = true; tick(false, true); }
+});
 chrome.notifications.onClicked.addListener(async () => {
   const s = await getSettings();
   if (s.server) chrome.tabs.create({ url: `${s.server}/dorf1.php` });

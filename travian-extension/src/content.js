@@ -74,6 +74,16 @@
     return null;
   }
 
+  // The send form's mission radios: name="eventType" on current servers
+  // (5 reinforcement, 3 attack, 4 raid), name="c" on older ones (2, 3, 4).
+  const MISSIONS = {
+    reinforce: { radios: [['eventType', 5], ['eventType', 2], ['c', 2]], values: [5, 2] },
+    attack: { radios: [['eventType', 3], ['c', 3]], values: [3] },
+    raid: { radios: [['eventType', 4], ['c', 4]], values: [4] },
+  };
+  const missionRadio = (form, mission) => MISSIONS[mission].radios
+    .map(([name, value]) => form.querySelector(`input[type="radio"][name="${name}"][value="${value}"]`)).find(Boolean) || null;
+
   const troopInput = (root, field) =>
     Array.from(root.querySelectorAll('input[name^="troop["], input[name^="troops["]'))
       .find((i) => i.type !== 'hidden' && i.getAttribute('name').endsWith(`[${field}]`));
@@ -126,10 +136,10 @@
 
     // Rally point: fill the "send troops" form (a raid, or a normal attack)
     // with exactly these troops and press Send.
-    async sendForm({ x, y, troops, eventType = 4 }) {
+    async sendForm({ x, y, troops, mission = 'raid' }) {
       const fields = Object.entries(troops || {}).filter(([, n]) => n > 0);
       if (!fields.length || !fields.every(([f, n]) => /^t\d+$/.test(f) && Number.isInteger(n)) ||
-        !Number.isInteger(x) || !Number.isInteger(y) || ![3, 4].includes(eventType)) return { ok: false, code: 'badField' };
+        !Number.isInteger(x) || !Number.isInteger(y) || !MISSIONS[mission]) return { ok: false, code: 'badField' };
       const inputs = fields.map(([f, n]) => [troopInput(document, f), n]);
       if (inputs.some(([input]) => !input || input.disabled)) return { ok: false, code: 'noUnitInput' };
       const form = inputs[0][0].closest('form');
@@ -137,8 +147,8 @@
       const xIn = form.querySelector('input[name="x"], #xCoordInput');
       const yIn = form.querySelector('input[name="y"], #yCoordInput');
       if (!xIn || !yIn) return { ok: false, code: 'noCoordInput' };
-      const mission = form.querySelector(`input[type="radio"][name="eventType"][value="${eventType}"], input[type="radio"][name="c"][value="${eventType}"]`);
-      if (!mission) return { ok: false, code: 'noRaidOption' };
+      const radio = missionRadio(form, mission);
+      if (!radio) return { ok: false, code: mission === 'reinforce' ? 'noReinforceOption' : 'noRaidOption' };
       // Only the chosen units go; clear anything else that was pre-filled.
       const chosen = new Set(inputs.map(([input]) => input));
       for (const other of form.querySelectorAll('input[name^="troop["], input[name^="troops["]')) {
@@ -150,8 +160,8 @@
       }
       setValue(xIn, x);
       setValue(yIn, y);
-      mission.click();
-      if (!mission.checked) { mission.checked = true; mission.dispatchEvent(new Event('change', { bubbles: true })); }
+      radio.click();
+      if (!radio.checked) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
       const btn = form.querySelector('button#ok, button#btn_ok, button[type="submit"][name="ok"], button[type="submit"][name="s1"]') ||
         form.querySelector('button[type="submit"]');
       if (!usable(btn)) return { ok: false, code: 'noSendButton' };
@@ -162,11 +172,11 @@
 
     // Confirmation page: only confirm when it names our target and the
     // mission we asked for.
-    async sendConfirm({ x, y, eventType = 4 }) {
+    async sendConfirm({ x, y, mission = 'raid' }) {
       const info = P.parseSendPage(document);
       if (info.stage !== 'confirm') return { ok: false, code: 'noConfirmPage' };
       if (!info.targets.some((p) => p.x === x && p.y === y)) return { ok: false, code: 'targetMismatch' };
-      if (info.eventType != null && info.eventType !== eventType) return { ok: false, code: 'notRaid' };
+      if (!MISSIONS[mission] || (info.eventType != null && !MISSIONS[mission].values.includes(info.eventType))) return { ok: false, code: 'notRaid' };
       const details = document.querySelector('table.troop_details');
       const form = details && details.closest('form');
       const btn = document.querySelector('#confirmSendTroops, button#btn_ok, button.rallyPointConfirm, .rallyPointConfirm button[type="submit"]') ||

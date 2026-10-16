@@ -4,8 +4,11 @@ import {
   fmtDuration, fmtAgo, fmtNum, fmtClock, buildStatus,
 } from './shared.js';
 import { t, setLanguage, coords, ltr } from './i18n.js';
+import { escapeStatus } from './escape.js';
 
-export const STORAGE_KEYS = ['settings', 'villages', 'account', 'tasks', 'training', 'raids', 'farms', 'oases', 'schedule', 'status', 'log', 'device', 'syncState', 'history'];
+export { escapeStatus };
+
+export const STORAGE_KEYS = ['settings', 'villages', 'account', 'tasks', 'training', 'raids', 'farms', 'escapes', 'oases', 'schedule', 'status', 'log', 'device', 'syncState', 'history'];
 
 export async function loadAll() {
   const data = await chrome.storage.local.get(STORAGE_KEYS);
@@ -17,6 +20,7 @@ export async function loadAll() {
   data.training = data.training || [];
   data.raids = data.raids || [];
   data.farms = data.farms || [];
+  data.escapes = data.escapes || [];
   data.oases = data.oases || {};
   data.schedule = data.schedule || {};
   data.status = data.status || {};
@@ -119,6 +123,9 @@ export function villageCard(v, data, now = Date.now()) {
     const first = firsts[0] ? esc(t('card.firstIn', { t: '\u0000', clock: fmtClock(firsts[0]) })).replace('\u0000', `<b class="mono">${fmtDuration(firsts[0] - now)}</b>`) : '';
     attack = `<div class="attack">⚔ ${esc(n ? t('card.attacks', { n }) : t('card.attack'))}${first}</div>`;
   }
+  const plan = (data.escapes || []).find((p) => p.villageId === v.id);
+  const esc_ = escapeStatus(v, plan, data.villages, now);
+  if (esc_ && (v.underAttack || esc_.tone !== 'muted')) attack += `<p class="small escape-line ${esc_.tone}">🏃 ${esc(esc_.text)}</p>`;
 
   const troops = troopInfo(v, now);
   const troopLine = troops.seen

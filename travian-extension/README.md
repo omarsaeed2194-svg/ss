@@ -28,6 +28,16 @@ you're away:
   the game's own farm lists every N minutes.
 - **Hero adventures** — sends the hero out whenever they're home and an
   adventure is available.
+- **Troop escape (no Gold Club)** — per village, a plan: when an attack is on
+  its way, the village's troops (all units or the ones you pick, optionally
+  the hero) leave as reinforcement to another of your villages a set number
+  of seconds before it lands. If that village is under attack too, they go to
+  your nearest safe village. It runs on a precise timer, interrupts anything
+  else the bot is doing, and works with automation off and while you play — it
+  only needs "Watch & alert". You get an alert when the troops leave, if it
+  fails, and when the attack is over (send them back from the rally point; they
+  eat the other village's crop meanwhile). Attacks are noticed at each check,
+  so keep "Check every" shorter than your attackers' travel time.
 - **Troops** — the troops in each village and what the barracks, stable and
   workshop are training (with finish times), in the Overview, the Troops tab
   and the popup.
@@ -182,11 +192,13 @@ src/shared.js          Constants and helpers (building names, projections, defau
 src/i18n.js            Arabic and English UI strings (Arabic is the default)
 src/sync.js            Saves commands to Chrome sync; one-browser-at-a-time lease
 src/advisor.js         Game tips worked out from each village's state
-src/autopilot.js       Autopilot choices: next upgrade, which oases to raid
+src/autopilot.js       Autopilot choices: next upgrade, which oases to raid, farm targets
+src/escape.js          Troop escape: when to leave, where to, which troops
 src/ui.js / ui.css     Village cards and styles shared by popup and dashboard
 popup/                 Toolbar popup
 dashboard/             Full dashboard (also the extension's options page); overview.js renders the
                        Overview tab, autopilot.js the Autopilot tab, farms.js the farm lists,
+                       escape.js the escape plans,
                        chart.js the 24-hour stock chart, art.js the village/hero drawings
 icons/                 Extension icons
 ```

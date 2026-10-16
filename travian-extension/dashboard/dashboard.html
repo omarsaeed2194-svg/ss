@@ -152,6 +152,28 @@
         <p class="muted small" data-i18n="troops.overviewHelp"></p>
         <div class="table-wrap"><table class="list" id="troopTable"></table></div>
       </div>
+      <div class="panel" id="escapePanel">
+        <h2 data-i18n="escape.title"></h2>
+        <p class="muted small" data-i18n="escape.help"></p>
+        <div class="table-wrap"><table class="list" id="escapeTable"></table></div>
+        <h3 class="gap" id="escFormTitle"></h3>
+        <div class="row wrap">
+          <label><span data-i18n="escape.village"></span> <select id="escVillage"></select></label>
+          <label><span data-i18n="escape.to"></span> <select id="escTarget"></select></label>
+          <label><span data-i18n="escape.lead"></span> <input type="number" id="escLead" min="30" max="3600" value="120" class="num"> <span data-i18n="escape.seconds"></span></label>
+          <label class="switch"><input type="checkbox" id="escHero"> <span data-i18n="escape.hero"></span></label>
+        </div>
+        <div class="row wrap">
+          <label class="switch"><input type="checkbox" id="escAll" checked> <span data-i18n="escape.allUnits"></span></label>
+          <div id="escUnits" class="row wrap" hidden></div>
+        </div>
+        <div class="row wrap">
+          <button class="btn primary" id="escSave" data-i18n="escape.save"></button>
+          <span id="escMsg" class="small muted"></span>
+        </div>
+        <p class="muted small" data-i18n="escape.notes"></p>
+        <p id="escWarn" class="small warn-text" hidden></p>
+      </div>
       <div class="panel">
         <h2 data-i18n="troops.rules"></h2>
         <p class="muted small" data-i18n="troops.help"></p>
