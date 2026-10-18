@@ -4,6 +4,7 @@ import { command, esc, fillSelect } from '../src/ui.js';
 import { sortedVillages, fmtDuration, fmtAgo } from '../src/shared.js';
 import { unitField, distance, parseCoordList, cleanTroops } from '../src/autopilot.js';
 import { t, coords } from '../src/i18n.js';
+import { fieldKind, kindIcon, tribeBase } from '../src/units.js';
 
 const $ = (id) => document.getElementById(id);
 const FIELDS = Array.from({ length: 10 }, (_, i) => `t${i + 1}`);
@@ -35,7 +36,7 @@ function unitNames(v) {
 
 // One chip per unit, so mixed Arabic/Latin unit names keep their order.
 function troopsHtml(troops, names) {
-  const parts = Object.entries(cleanTroops(troops)).map(([f, n]) => `<span class="unit-chip"><b class="mono">${n}</b> ${esc(names[f] || t('troops.unitN', { n: f.slice(1) }))}</span>`);
+  const parts = Object.entries(cleanTroops(troops)).map(([f, n]) => `<span class="unit-chip">${kindIcon(fieldKind(f, tribeBase(data.villages)))} <b class="mono">${n}</b> ${esc(names[f] || t('troops.unitN', { n: f.slice(1) }))}</span>`);
   return parts.join('') || '—';
 }
 
@@ -115,7 +116,7 @@ function renderTargets(now) {
     const keep = readTroops();
     $('ftTroops').dataset.sig = sig;
     $('ftTroops').innerHTML = FIELDS.map((f) => `<label class="troop-box">
-        <span>${esc(names[f] || t('troops.unitN', { n: f.slice(1) }))}${home[f] ? ` <small class="muted">(${home[f]})</small>` : ''}</span>
+        <span>${kindIcon(fieldKind(f, tribeBase(data.villages)))} ${esc(names[f] || t('troops.unitN', { n: f.slice(1) }))}${home[f] ? ` <small class="muted">(${home[f]})</small>` : ''}</span>
         <input type="number" min="0" class="num" data-troop="${f}" value="${keep[f] || ''}">
       </label>`).join('');
   }

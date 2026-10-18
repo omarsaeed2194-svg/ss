@@ -6,13 +6,16 @@ import {
   RESOURCES, FIELD_RESOURCE, resLabel, sortedVillages, estimateStock, hoursUntilLimit, capacityFor, buildStatus,
   buildingName, taskLabel, fmtDuration, fmtAgo, fmtNum, fmtClock, earliestQueueFinish,
 } from '../src/shared.js';
-import { t, coords, ltr } from '../src/i18n.js';
+import { t, coords, ltr, dateLocale } from '../src/i18n.js';
 import { leaseIsFresh } from '../src/sync.js';
 import { adviseAll } from '../src/advisor.js';
 import { renderStockChart } from './chart.js';
 import { villageArt, heroArt } from './art.js';
 import { wallOf } from '../src/advisor.js';
 import { pickAutoUpgrade } from '../src/autopilot.js';
+import { unitIcon } from '../src/units.js';
+import { timelineEvents, laneOf, moveLabel } from '../src/timeline.js';
+import { minimapSvg } from './minimap.js';
 
 const $ = (id) => document.getElementById(id);
 const ALL = 'all';
@@ -20,8 +23,6 @@ const TIP_LIMIT = 8;
 const KEY_BUILDINGS = [15, 10, 11, 23, 16, 17, 19, 20, 25, 26];
 const WALLS = [31, 32, 33, 42, 43];
 const ICONS = { attack: '⚔', shield: '🛡', crop: '🌾', storage: '📦', build: '🏗', balance: '⚖', bonus: '⭐', clock: '🕒', alert: '🔔', hero: '🧭', farm: '🐎' };
-const MOVE_KEYS = { att1: 'move.att1', att2: 'move.att2', att3: 'move.att3', def1: 'move.def1', def2: 'move.def2', def3: 'move.def3', adventure: 'move.adventure', hero_on_adventure: 'move.adventure' };
-const moveLabel = (kind) => t(MOVE_KEYS[kind] || (/settler/i.test(kind) ? 'move.settlers' : 'move.other'));
 
 let filter = (() => { try { return localStorage.getItem('tvh.ovFilter') || ALL; } catch (e) { return ALL; } })();
 let showAllTips = false;
@@ -352,10 +353,10 @@ function renderTroops(scope, now) {
   }
   const { info } = infos[0];
   const home = !info.seen ? `<p class="muted small">${esc(t('ov.troopsNotSeen'))}</p>`
-    : info.home.length ? `<ul class="unit-list">${info.home.map((x) => `<li><span>${esc(x.name || x.unit)}</span><b class="mono">${fmtNum(x.count)}</b></li>`).join('')}</ul>`
+    : info.home.length ? `<ul class="unit-list">${info.home.map((x) => `<li><span>${unitIcon(x.unit)} ${esc(x.name || x.unit)}</span><b class="mono">${fmtNum(x.count)}</b></li>`).join('')}</ul>`
       : `<p class="muted small">${esc(t('ov.noTroops'))}</p>`;
   const queue = info.training.length
-    ? `<ul class="feed">${info.training.map((x) => `<li><span>${x.count} × ${esc(x.name || x.unit)} <small class="muted">· ${esc(buildingName(x.gid))}</small></span>
+    ? `<ul class="feed">${info.training.map((x) => `<li><span>${unitIcon(x.unit)} ${x.count} × ${esc(x.name || x.unit)} <small class="muted">· ${esc(buildingName(x.gid))}</small></span>
         <span class="feed-time"><b class="mono">${x.finishAt ? fmtDuration(x.finishAt - now) : '—'}</b><small class="muted">${x.finishAt ? esc(t('ov.doneAt', { clock: fmtClock(x.finishAt) })) : ''}</small></span></li>`).join('')}</ul>`
     : `<p class="muted small">${esc(t(info.trainingSeen ? 'ov.noTraining' : 'ov.trainingNotSeen'))}</p>`;
   $('ovTroops').innerHTML = `<h3>${esc(t('ov.troopsHome'))}</h3>${home}<h3>${esc(t('ov.troopsTraining'))}</h3>${queue}`;
@@ -382,6 +383,47 @@ function renderActivity(scope, data, now) {
         <span class="feed-time"><small class="muted">${esc(fmtAgo(e.t, now))}</small></span>
       </li>`).join('')
     : `<li class="muted">${esc(t('log.empty'))}</li>`;
+}
+
+// -------------------------------------------------------------- timeline ---
+const TL_HOURS = 6;
+const hourLabel = (ts) => new Date(ts).toLocaleTimeString(dateLocale(), { hour: 'numeric' });
+
+// The next six hours on one line, then the first few events as a list.
+function renderTimeline(scope, data, now) {
+  const span = TL_HOURS * 3600000;
+  const events = timelineEvents(scope, data, now, TL_HOURS);
+  const multi = scope.length > 1;
+  $('ovTimelineMeta').textContent = events.length ? t('tl.count', { n: events.length }) : '';
+  // Markers move slowly: redraw them every 20 s or when the events change.
+  const sig = JSON.stringify([events.map((e) => [e.at, e.kind, e.text, e.v]), Math.floor(now / 20000), langNow, multi]);
+  if (artCache.timeline !== sig) {
+    artCache.timeline = sig;
+    const placed = laneOf(events, now, span);
+    const lanes = Math.max(1, ...placed.map((e) => e.lane + 1));
+    // "Now", then every whole hour.
+    const hours = [];
+    for (let at = Math.ceil(now / 3600000) * 3600000; at <= now + span; at += 3600000) hours.push(at);
+    const tick = (x, label, cls = '') => `<span class="tl-tick${cls}" style="inset-inline-start:${(x * 100).toFixed(2)}%"><small>${esc(label)}</small></span>`;
+    const ticks = tick(0, t('tl.now'), ' now') + hours.map((at) => tick((at - now) / span, (at - now) / span < 0.06 ? '' : hourLabel(at))).join('');
+    const marks = placed.map((e) => `<span class="tl-mark k-${e.kind}" style="inset-inline-start:${(e.x * 100).toFixed(2)}%;top:${e.lane * 26}px" title="${esc(`${fmtClock(e.at)} · ${e.text}${multi ? ` · ${e.vName}` : ''}`)}">${e.icon}</span>`).join('');
+    $('ovTimeline').innerHTML = `<div class="tl-track" style="height:${lanes * 26 + 4}px">${marks}</div><div class="tl-axis">${ticks}</div>`;
+  }
+  const list = events.slice(0, 6);
+  $('ovTimelineList').innerHTML = list.length
+    ? list.map((e) => `<li class="k-${e.kind}"><span>${e.icon} ${esc(e.text)}${multi && e.vName ? ` <small class="muted">· ${esc(e.vName)}</small>` : ''}</span>
+        <span class="feed-time"><b class="mono">${fmtDuration(e.at - now)}</b><small class="muted">${fmtClock(e.at)}</small></span></li>`).join('')
+    : `<li class="muted">${esc(t('tl.empty', { n: TL_HOURS }))}</li>`;
+}
+
+// --------------------------------------------------------------- mini map ---
+function renderMinimap(scope, data) {
+  const ids = new Set(scope.map((v) => v.id));
+  const sig = JSON.stringify([Object.values(data.villages).map((v) => [v.id, v.name, v.x, v.y, v.underAttack]), [...ids], data.farms, data.raids.map((r) => r.targets), data.escapes,
+    Object.keys(data.oases || {}).length, langNow]);
+  if (artCache.map === sig) return;
+  artCache.map = sig;
+  $('ovMap').innerHTML = minimapSvg(data, ids) || `<p class="muted small">${esc(t('mm.empty'))}</p>`;
 }
 
 // ----------------------------------------------------------- illustrations ---
@@ -482,6 +524,8 @@ export function renderOverview(data, now) {
   renderBanner(scope, now);
   renderPostcards(scope, now);
   renderHero(data);
+  renderTimeline(scope, data, now);
+  renderMinimap(scope, data);
   renderTroops(scope, now);
   renderTips(scope, data, now);
   renderResources(scope, data, now);
@@ -516,3 +560,10 @@ document.addEventListener('click', (e) => {
   }
 });
 window.addEventListener('resize', () => { chartKey = ''; });
+// Map markers are focusable: Enter / Space picks the village too.
+document.addEventListener('keydown', (e) => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('#ovMap [data-filter]')) {
+    e.preventDefault();
+    e.target.closest('[data-filter]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  }
+});

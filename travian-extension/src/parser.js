@@ -374,6 +374,7 @@
         const maxLink = qs(qs(box, '.cta'), 'a');
         return {
           field: input.getAttribute('name'),
+          unit: unitOf(img),
           name: img ? img.getAttribute('alt') || '' : '',
           max: maxLink ? num(text(maxLink)) || 0 : 0,
         };

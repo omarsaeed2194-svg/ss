@@ -4,6 +4,7 @@ import { renderAutopilot } from './autopilot.js';
 import { renderFarms } from './farms.js';
 import { renderEscapes } from './escape.js';
 import { leaseIsFresh } from '../src/sync.js';
+import { unitIcon } from '../src/units.js';
 import {
   sortedVillages, taskLabel, buildingName, fmtDuration, fmtAgo, TRAINING_BUILDINGS, buildStatus,
 } from '../src/shared.js';
@@ -160,10 +161,10 @@ function renderTroopTable(now) {
   const rows = villages.map((v) => {
     const info = troopInfo(v, now);
     const home = !info.seen ? `<span class="muted">${esc(t('ov.troopsNotSeen'))}</span>`
-      : info.home.length ? info.home.map((x) => `<span class="unit-chip">${esc(x.name || x.unit)} <b class="mono">${x.count}</b></span>`).join('')
+      : info.home.length ? info.home.map((x) => `<span class="unit-chip">${unitIcon(x.unit)} ${esc(x.name || x.unit)} <b class="mono">${x.count}</b></span>`).join('')
         : `<span class="muted">${esc(t('ov.noTroops'))}</span>`;
     const training = info.training.length
-      ? info.training.map((x) => `<span class="unit-chip">${x.count} × ${esc(x.name || x.unit)} <small class="mono muted">${x.finishAt ? fmtDuration(x.finishAt - now) : ''}</small></span>`).join('')
+      ? info.training.map((x) => `<span class="unit-chip">${unitIcon(x.unit)} ${x.count} × ${esc(x.name || x.unit)} <small class="mono muted">${x.finishAt ? fmtDuration(x.finishAt - now) : ''}</small></span>`).join('')
       : `<span class="muted">${esc(t(info.trainingSeen ? 'ov.noTraining' : 'ov.trainingNotSeen'))}</span>`;
     return `<tr><td>${esc(v.name)}<br><small class="muted">${coords(v.x, v.y)}</small></td><td>${home}</td><td>${training}</td><td class="muted small">${esc(fmtAgo(v.troopsAt, now))}</td></tr>`;
   });

@@ -212,7 +212,7 @@ async function processPage(state, tabId) {
         const bp = state.buildPage;
         const slotBuilding = (v.buildings || []).find((b) => b.slot === bp.slot);
         const gid = Number(new URL(state.url).searchParams.get('gid')) || (slotBuilding && slotBuilding.gid);
-        if (gid && bp.trainable && bp.trainable.length) v.units = { ...(v.units || {}), [gid]: bp.trainable.map(({ field, name }) => ({ field, name })) };
+        if (gid && bp.trainable && bp.trainable.length) v.units = { ...(v.units || {}), [gid]: bp.trainable.map(({ field, unit, name }) => ({ field, unit, name })) };
         if (gid && bp.trainingQueue) {
           const items = bp.trainingQueue.map((q) => ({ unit: q.unit, name: q.name, count: q.count, finishAt: q.secondsLeft != null ? now + q.secondsLeft * 1000 : null }));
           v.trainingQueue = { ...(v.trainingQueue || {}), [gid]: { at: now, items } };

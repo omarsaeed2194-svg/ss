@@ -151,3 +151,13 @@ button, input, select { font: inherit; color: inherit; }
 .build-why.good { color: var(--good); }
 .build-why.warn { color: var(--warn); }
 .build-why.bad { color: var(--bad); }
+
+/* Unit icons (src/units.js) */
+.uicon { flex: none; vertical-align: -3px; }
+.uicon.k-inf { color: var(--info-mark); }
+.uicon.k-cav { color: var(--series-2); }
+.uicon.k-scout { color: var(--series-3); }
+.uicon.k-ram, .uicon.k-cat { color: var(--iron); }
+.uicon.k-chief, .uicon.k-hero { color: var(--crop); }
+.uicon.k-settler { color: var(--wood); }
+.uicon.k-animal { color: var(--good-mark); }

@@ -4,6 +4,7 @@ import { command, esc, fillSelect, escapeStatus } from '../src/ui.js';
 import { sortedVillages } from '../src/shared.js';
 import { unitField } from '../src/autopilot.js';
 import { t, coords } from '../src/i18n.js';
+import { fieldKind, kindIcon, tribeBase } from '../src/units.js';
 
 const $ = (id) => document.getElementById(id);
 const FIELDS = Array.from({ length: 10 }, (_, i) => `t${i + 1}`);
@@ -76,7 +77,7 @@ function renderForm() {
   if ($('escUnits').dataset.sig !== sig) {
     const want = new Set(($('escUnits').dataset.want || Array.from(document.querySelectorAll('#escUnits input:checked')).map((el) => el.value).join(',')).split(',').filter(Boolean));
     $('escUnits').dataset.sig = sig;
-    $('escUnits').innerHTML = FIELDS.map((f) => `<label class="switch"><input type="checkbox" value="${f}" ${want.has(f) ? 'checked' : ''}> <span>${esc(unitLabel(names, f))}</span></label>`).join('');
+    $('escUnits').innerHTML = FIELDS.map((f) => `<label class="switch"><input type="checkbox" value="${f}" ${want.has(f) ? 'checked' : ''}> <span>${kindIcon(fieldKind(f, tribeBase(data.villages)))} ${esc(unitLabel(names, f))}</span></label>`).join('');
   }
 
   // Escapes need the village checks running.
