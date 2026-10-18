@@ -4,7 +4,7 @@ import {
   fmtDuration, fmtAgo, fmtNum, fmtClock, buildStatus,
 } from './shared.js';
 import { t, setLanguage, coords, ltr } from './i18n.js';
-import { escapeStatus } from './escape.js';
+import { escapeStatus, donateStatus } from './escape.js';
 
 export { escapeStatus };
 
@@ -168,7 +168,9 @@ export function villageCard(v, data, now = Date.now()) {
   }
   const plan = (data.escapes || []).find((p) => p.villageId === v.id);
   const esc_ = escapeStatus(v, plan, data.villages, now);
-  if (esc_ && (v.underAttack || esc_.tone !== 'muted')) attack += `<p class="small escape-line ${esc_.tone}">🏃 ${esc(esc_.text)}</p>`;
+  if (esc_ && (v.underAttack || esc_.tone !== 'muted')) attack += `<p class="small escape-line ${esc_.tone}">${plan.troops === false ? '💰' : '🏃'} ${esc(esc_.text)}</p>`;
+  const dn = plan && plan.troops !== false ? donateStatus(v, plan, now) : null;
+  if (dn && (v.underAttack || dn.tone !== 'muted')) attack += `<p class="small escape-line ${dn.tone}">💰 ${esc(dn.text)}</p>`;
 
   const troops = troopInfo(v, now);
   const troopLine = troops.seen

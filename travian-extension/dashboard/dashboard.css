@@ -437,7 +437,7 @@ svg.chart .hit { fill: transparent; }
   background: var(--panel); border: 1.5px solid var(--line); font-size: 13px; line-height: 1; cursor: default; }
 [dir="rtl"] .tl-mark { transform: translateX(50%); }
 .tl-mark.k-attack, .tl-mark.k-starve { border-color: var(--bad-mark); background: var(--bad-bg); }
-.tl-mark.k-full, .tl-mark.k-escape { border-color: var(--warn-mark); background: var(--warn-bg); }
+.tl-mark.k-full, .tl-mark.k-escape, .tl-mark.k-donate { border-color: var(--warn-mark); background: var(--warn-bg); }
 .tl-mark.k-build, .tl-mark.k-train { border-color: var(--good-mark); background: var(--good-bg); }
 .tl-mark.k-farm, .tl-mark.k-raid, .tl-mark.k-move { border-color: var(--info-mark); background: var(--info-bg); }
 .tl-axis { position: relative; height: 22px; }

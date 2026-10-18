@@ -281,6 +281,53 @@
       return done ? { ok: true } : { ok: false, code: 'noTransferConfirm' };
     },
 
+    // Alliance bonus donation. The page hasn't been checked against a saved
+    // copy, so it looks for the usual names: four resource inputs (lumber /
+    // clay / iron / crop, or r1..r4), opened by a bonus card's button if
+    // needed, and the form's own send button — never a gold one.
+    async donate({ amounts, bonus = -1 }) {
+      const NAMES = {
+        wood: ['lumber', 'wood', 'r1', 'resource1', 'res1'], clay: ['clay', 'r2', 'resource2', 'res2'],
+        iron: ['iron', 'r3', 'resource3', 'res3'], crop: ['crop', 'r4', 'resource4', 'res4'],
+      };
+      const shown = (el) => !!el && el.getClientRects().length > 0;
+      const findInputs = () => {
+        const out = {};
+        for (const [k, names] of Object.entries(NAMES)) {
+          out[k] = names.map((n) => Array.from(document.querySelectorAll(`input[name="${n}"], input#${n}`)).find(shown)).find(Boolean);
+          if (!out[k]) return null;
+        }
+        return out;
+      };
+      await waitFor(() => document.getElementById('content'), 5000);
+      await sleep(rand(600, 1200));
+      let inputs = findInputs();
+      if (!inputs) {
+        const openers = Array.from(document.querySelectorAll('[class*="bonus" i] button, [class*="contribut" i] button, [class*="donat" i] button'))
+          .filter((b) => usable(b) && shown(b) && !/gold|cancel|close/i.test(b.className));
+        const btn = openers[bonus >= 0 && openers[bonus] ? bonus : 0];
+        if (btn) { btn.click(); inputs = await waitFor(findInputs, 4000); }
+      }
+      if (!inputs) {
+        const a = Array.from(document.querySelectorAll('a[href*="bonus" i]')).find((x) => !(x.getAttribute('href') || '#').startsWith('#'));
+        return { ok: false, code: 'noDonateForm', link: a ? a.getAttribute('href') : null };
+      }
+      // A disabled input is a resource the game won't take now (e.g. none left).
+      for (const [k, input] of Object.entries(inputs)) if (!input.disabled) { setValue(input, (amounts && amounts[k]) || 0); await sleep(rand(150, 400)); }
+      const root = inputs.wood.closest('form, .dialog, [class*="dialog" i], [class*="contribut" i], [class*="donat" i]') || document;
+      const label = (b) => `${b.className} ${b.name || ''} ${b.id || ''} ${b.value || ''}`;
+      const buttons = await waitFor(() => {
+        const list = Array.from(root.querySelectorAll('button, input[type="submit"]'))
+          .filter((b) => usable(b) && shown(b) && !/gold|cancel|close|fillup/i.test(label(b)));
+        return list.length ? list : null;
+      }, 3000);
+      if (!buttons) return { ok: false, code: 'noDonateButton' };
+      const send = buttons.find((b) => /contribut|donat|send|submit|\bok\b/i.test(label(b))) || buttons[buttons.length - 1];
+      send.click();
+      await waitFor(() => document.querySelector('.toast.toastSuccess, .toastSuccess'), 5000);
+      return { ok: true };
+    },
+
     async adventure() {
       const btn = await waitFor(() => document.querySelector('#heroAdventure tbody tr button:not([disabled])'));
       if (!btn) return { ok: false, code: 'noAdventure' };

@@ -9,7 +9,7 @@ import { pickAutoUpgrade, troopsHome, raidTargets, oasisKey, farmTargets, covers
 import { tribeBase } from './units.js';
 import { recordMapVillages } from './inactive.js';
 import { applyReports } from './reports.js';
-import { firstAttack, escapeTiming, escapeDone, escapeDue, escapeTarget, escapeTroops, TOO_LATE_MS } from './escape.js';
+import { firstAttack, escapeTiming, escapeDone, escapeDue, escapeTarget, escapeTroops, TOO_LATE_MS, donateTiming, donateDone, donateDue, donationAmounts, amountsText, sameAttack } from './escape.js';
 import { parseCommand, statusText, summaryText, helpText } from './telegram.js';
 import { t, setLanguage, coords, ltr } from './i18n.js';
 import {
@@ -241,7 +241,15 @@ async function processPage(state, tabId) {
         }
       }
       if (state.movements) {
-        v.movements = state.movements.map((m) => ({ ...m, arriveAt: m.secondsLeft != null ? now + m.secondsLeft * 1000 : null }));
+        // Timers are whole seconds read at load time, so each read lands a
+        // second or so off: keep the earlier time for the same movement.
+        const prev = v.movements || [];
+        v.movements = state.movements.map((m) => {
+          let arriveAt = m.secondsLeft != null ? now + m.secondsLeft * 1000 : null;
+          const same = arriveAt && prev.find((p) => p.kind === m.kind && p.arriveAt && Math.abs(p.arriveAt - arriveAt) <= 2500);
+          if (same) arriveAt = same.arriveAt;
+          return { ...m, arriveAt };
+        });
         v.movementsAt = now;
         const incoming = v.movements.filter((m) => m.kind === 'att1');
         const count = incoming.reduce((n, m) => n + (m.count || 1), 0);
@@ -333,13 +341,21 @@ const kicked = new Set(); // escapes already started from a page report
 
 // Keep one alarm per protected village at the moment its troops must start
 // leaving, and tell the player when an attack their troops dodged is over.
-async function armEscapes() {
+// One at a time: a call that read the villages before an attack showed up
+// must not clear the timer a newer call just set.
+let arming = Promise.resolve();
+function armEscapes() {
+  arming = arming.then(armEscapesNow, armEscapesNow);
+  return arming;
+}
+
+async function armEscapesNow() {
   const { villages = {}, escapes = [] } = await read(['villages', 'escapes']);
   const now = Date.now();
   const wanted = new Map();
   for (const plan of escapes) {
     const v = villages[plan.villageId];
-    if (!v || plan.enabled === false) continue;
+    if (!v || plan.enabled === false || plan.troops === false) continue;
     const tm = escapeTiming(v, plan, now);
     if (!tm || tm.first - now < TOO_LATE_MS || escapeDone(v, tm.first)) continue;
     if (tm.startAt > now + 1000) wanted.set(`escape:${v.id}`, tm.startAt);
@@ -349,8 +365,21 @@ async function armEscapes() {
       tick(false, true);
     }
   }
+  // Donations have their own timer, usually later than the troops'.
+  for (const plan of escapes) {
+    const v = villages[plan.villageId];
+    if (!v || plan.enabled === false || !plan.donate) continue;
+    const tm = donateTiming(v, plan, now);
+    if (!tm || tm.first - now < TOO_LATE_MS || donateDone(v, tm.first)) continue;
+    if (tm.startAt > now + 1000) wanted.set(`donate:${v.id}`, tm.startAt);
+    else if (!kicked.has(`d:${v.id}:${tm.first}`)) {
+      kicked.add(`d:${v.id}:${tm.first}`);
+      urgent = true;
+      tick(false, true);
+    }
+  }
   const alarms = await chrome.alarms.getAll();
-  for (const a of alarms) if (a.name.startsWith('escape:') && !wanted.has(a.name)) await chrome.alarms.clear(a.name);
+  for (const a of alarms) if ((a.name.startsWith('escape:') || a.name.startsWith('donate:')) && !wanted.has(a.name)) await chrome.alarms.clear(a.name);
   for (const [name, when] of wanted) {
     const have = alarms.find((a) => a.name === name);
     if (!have || Math.abs(have.scheduledTime - when) > 1000) await chrome.alarms.create(name, { when });
@@ -377,8 +406,16 @@ function escapeRefreshIds(data, now) {
 function planEscapes(data, now) {
   const { villages = {}, escapes = [], schedule = {} } = data;
   const forced = new Set(schedule.escapeNow || []);
-  return escapes.filter((p) => villages[p.villageId] && escapeDue(villages[p.villageId], p, now, forced.has(p.villageId)))
+  const jobs = escapes.filter((p) => villages[p.villageId] && escapeDue(villages[p.villageId], p, now, forced.has(p.villageId)))
     .map((p) => ({ type: 'escape', planId: p.id, force: forced.has(p.villageId), label: t('job.escape', { v: villages[p.villageId].name }) }));
+  for (const p of escapes) {
+    const v = villages[p.villageId];
+    if (v && donateDue(v, p, now)) jobs.push({ type: 'donate', planId: p.id, label: t('job.donate', { v: v.name }) });
+  }
+  // "Test donation" from the Troops tab: a small amount, right now.
+  const test = schedule.donateTest && villages[schedule.donateTest.villageId];
+  if (test) jobs.push({ type: 'donate', villageId: test.id, test: true, label: t('job.donateTest', { v: test.name }) });
+  return jobs;
 }
 
 // Runs before anything else and ignores "pause while playing", active hours
@@ -428,8 +465,8 @@ function resolvePage(tabId, state) {
   w.resolve(state);
 }
 
-async function navigate(tabId, url) {
-  const page = waitForPage(tabId);
+async function navigate(tabId, url, timeout = PAGE_TIMEOUT_MS) {
+  const page = waitForPage(tabId, timeout);
   await chrome.tabs.update(tabId, { url });
   const state = await page;
   if (state.type === 'login') throw Object.assign(new Error(t('err.loggedOut')), { loggedOut: true });
@@ -569,7 +606,7 @@ const JOBS = {
     if (!tm) return; // attack recalled, or already handled
     const setState = (patch) => update(['villages'], (d) => {
       const x = d.villages && d.villages[vid];
-      if (x) x.escape = { ...(x.escape && x.escape.forAttack === tm.first ? x.escape : {}), forAttack: tm.first, at: Date.now(), ...patch };
+      if (x) x.escape = { ...(x.escape && sameAttack(x.escape.forAttack, tm.first) ? x.escape : {}), forAttack: tm.first, at: Date.now(), ...patch };
     });
     const lands = fmtClock(tm.first);
     const dest = escapeTarget(v, plan, villages);
@@ -598,10 +635,75 @@ const JOBS = {
       });
       return;
     }
-    const tries = ((v.escape && v.escape.forAttack === tm.first && v.escape.tries) || 0) + 1;
+    const tries = ((v.escape && sameAttack(v.escape.forAttack, tm.first) && v.escape.tries) || 0) + 1;
     await setState({ status: 'failed', tries, reason: r.reason, to: dest.village.id });
     await log('error', t('log.escapeFailed', { reason: r.reason }), vid);
     await sendAlert({ kind: 'attacks', sticky: true, villageId: vid, title: t('alert.escapeFailed.title', { v: v.name }), body: t('alert.escapeFailed.body', { reason: r.reason, clock: lands }) });
+  },
+
+  // Alliance donation before an attack (or a small test one). Verified by
+  // the village's stock actually dropping afterwards.
+  async donate(tabId, job, s) {
+    const { escapes = [] } = await read(['escapes']);
+    const plan = job.test ? null : escapes.find((p) => p.id === job.planId);
+    const vid = job.test ? job.villageId : plan && plan.villageId;
+    if (!vid) return;
+    if (job.test) await patchSchedule({ donateTest: null });
+    await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(vid)}`); // fresh stock and arrival time
+    let { villages = {} } = await read(['villages']);
+    const v = villages[vid];
+    if (!v) return;
+    const tm = job.test ? null : donateDue(v, plan, Date.now());
+    if (!job.test && !tm) return; // attack recalled, or already done
+    const setState = (patch) => update(['villages'], (d) => {
+      const x = d.villages && d.villages[vid];
+      if (x && !job.test) x.donation = { ...(x.donation && sameAttack(x.donation.forAttack, tm.first) ? x.donation : {}), forAttack: tm.first, at: Date.now(), ...patch };
+    });
+    const amounts = job.test ? { wood: 10, clay: 10, iron: 10, crop: 10 } : donationAmounts(v, plan, Date.now(), tribeBase(villages));
+    if (!amounts) {
+      await setState({ status: 'nothing' });
+      await log('info', t('log.donateNothing'), vid);
+      return;
+    }
+    const before = Object.values(v.resources.stock || {}).reduce((n, x) => n + (x || 0), 0);
+    const fail = async (reason) => {
+      if (job.test) { await log('error', t('log.donateTestFailed', { reason }), vid); return; }
+      const tries = ((v.donation && sameAttack(v.donation.forAttack, tm.first) && v.donation.tries) || 0) + 1;
+      await setState({ status: 'failed', tries, reason });
+      await log('error', t('log.donateFailed', { reason }), vid);
+      if (tries >= 2) await sendAlert({ kind: 'attacks', sticky: true, villageId: vid, title: t('alert.donateFailed.title', { v: v.name }), body: t('alert.donateFailed.body', { reason }) });
+    };
+    // The alliance bonus page; if it isn't where expected, try the alliance
+    // page and follow the game's own link to the bonuses.
+    const bonus = plan && plan.donate ? plan.donate.bonus : -1;
+    const tried = new Set();
+    let next = `${s.server}/alliance/bonuses`;
+    let res = { ok: false, code: 'noDonateForm' };
+    while (next && !res.ok && tried.size < 3) {
+      tried.add(next);
+      try {
+        await navigate(tabId, next, 15000); // an attack is close: don't wait long on a wrong address
+        ({ res } = await act(tabId, { kind: 'donate', amounts, bonus }, false));
+      } catch (e) {
+        if (e.loggedOut) throw e;
+        res = { ok: false, code: 'noDonateForm' };
+      }
+      const link = !res.ok && res.link ? new URL(res.link, s.server).href : null;
+      next = link && !tried.has(link) ? link : !res.ok && res.code === 'noDonateForm' && !tried.has(`${s.server}/alliance`) ? `${s.server}/alliance` : null;
+    }
+    if (!res.ok) { await fail(reasonText(res)); return; }
+    // Did the resources really leave the village?
+    await sleep(rand(800, 1500));
+    await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(vid)}`);
+    ({ villages = {} } = await read(['villages']));
+    const after = Object.values((villages[vid].resources || {}).stock || {}).reduce((n, x) => n + (x || 0), 0);
+    const given = Object.values(amounts).reduce((n, x) => n + x, 0);
+    if (before - after < given * 0.5) { await fail(t('reason.donateNotConfirmed')); return; }
+    if (job.test) { await log('success', t('log.donateTestOk', { what: amountsText(amounts) }), vid); return; }
+    await setState({ status: 'sent', amounts });
+    await log('success', t('log.donated', { what: amountsText(amounts), lands: fmtClock(tm.first) }), vid);
+    await bump('donations');
+    await sendAlert({ kind: 'attacks', villageId: vid, title: t('alert.donated.title', { v: v.name }), body: t('alert.donated.body', { what: amountsText(amounts), lands: fmtClock(tm.first) }) });
   },
 
   async refresh(tabId, job, s) {
@@ -1206,7 +1308,7 @@ function planActions(s, data, now) {
 async function spendBeforeAttack(tabId, s, plan, vid, attackAt) {
   const { villages = {} } = await read(['villages']);
   const v = villages[vid];
-  if (!v || (v.escape && v.escape.spentFor === attackAt)) return;
+  if (!v || (v.escape && sameAttack(v.escape.spentFor, attackAt))) return;
   const est = estimateStock(v, Date.now());
   const cap = v.resources ? RESOURCES.reduce((n, k) => n + (capacityFor(v.resources, k) || 0), 0) : 0;
   if (!est || !cap || RESOURCES.reduce((n, k) => n + est[k], 0) < cap * 0.2) return;
@@ -1468,6 +1570,12 @@ const COMMANDS = {
       villageId,
       targetVillageId: plan.targetVillageId && plan.targetVillageId !== villageId ? String(plan.targetVillageId) : '',
       units: Array.isArray(plan.units) ? plan.units.filter((f) => /^t([1-9]|10)$/.test(f)) : 'all',
+      troops: plan.troops !== false,
+      donate: plan.donate ? {
+        seconds: Math.min(600, Math.max(20, Math.round(Number(plan.donate.seconds) || 60))),
+        keepCranny: plan.donate.keepCranny !== false,
+        bonus: [0, 1, 2, 3].includes(Number(plan.donate.bonus)) ? Number(plan.donate.bonus) : -1,
+      } : null,
       hero: !!plan.hero,
       leadSeconds: Math.min(3600, Math.max(30, Math.round(Number(plan.leadSeconds) || 120))),
       enabled: plan.enabled !== false,
@@ -1475,7 +1583,8 @@ const COMMANDS = {
       spend: plan.spend && TROOP_BUILDINGS.includes(Number(plan.spend.gid)) && /^t([1-9]|10)$/.test(plan.spend.field)
         ? { gid: Number(plan.spend.gid), field: plan.spend.field } : null,
     };
-    if (Array.isArray(clean.units) && !clean.units.length) throw new Error(t('escape.needUnits'));
+    if (!clean.troops && !clean.donate) throw new Error(t('escape.needSomething'));
+    if (clean.troops && Array.isArray(clean.units) && !clean.units.length) throw new Error(t('escape.needUnits'));
     await update(['escapes'], (d) => {
       d.escapes = d.escapes || [];
       const i = d.escapes.findIndex((p) => p.villageId === villageId);
@@ -1490,6 +1599,11 @@ const COMMANDS = {
       if (p) Object.assign(p, patch);
     });
     await armEscapes();
+  },
+  async testDonate({ villageId }) {
+    await patchSchedule({ donateTest: { villageId, at: Date.now() } });
+    urgent = true;
+    tick(false, true);
   },
   async removeEscape({ id }) {
     await update(['escapes'], (d) => { d.escapes = (d.escapes || []).filter((x) => x.id !== id); });
@@ -1767,7 +1881,7 @@ chrome.runtime.onInstalled.addListener(setup);
 chrome.runtime.onStartup.addListener(setup);
 chrome.alarms.onAlarm.addListener((a) => {
   if (a.name === 'tick') { pollTelegram(); tick(); }
-  else if (a.name.startsWith('escape:')) { urgent = true; tick(false, true); }
+  else if (a.name.startsWith('escape:') || a.name.startsWith('donate:')) { urgent = true; tick(false, true); }
 });
 chrome.notifications.onClicked.addListener(async () => {
   const s = await getSettings();

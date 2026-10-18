@@ -2,7 +2,7 @@
 // training finishing, troops arriving, storage filling up, crop running
 // out, escapes, farm rounds and oasis raids. Pure; the dashboard draws it.
 import { RESOURCES, resLabel, hoursUntilLimit } from './shared.js';
-import { escapeTiming, escapeDone } from './escape.js';
+import { escapeTiming, escapeDone, donateTiming, donateDone } from './escape.js';
 import { t } from './i18n.js';
 
 const MOVE_KEYS = { att1: 'move.att1', att2: 'move.att2', att3: 'move.att3', def1: 'move.def1', def2: 'move.def2', def3: 'move.def3', adventure: 'move.adventure', hero_on_adventure: 'move.adventure' };
@@ -44,7 +44,9 @@ export function timelineEvents(scope, data, now = Date.now(), hours = 6) {
     }
     const plan = (data.escapes || []).find((x) => x.villageId === v.id && x.enabled !== false);
     const tm = plan && escapeTiming(v, plan, now);
-    if (tm && !escapeDone(v, tm.first)) add(Math.max(now + 1, tm.leaveAt), 'escape', '🏃', t('tl.escape'), v);
+    if (tm && plan.troops !== false && !escapeDone(v, tm.first)) add(Math.max(now + 1, tm.leaveAt), 'escape', '🏃', t('tl.escape'), v);
+    const dt = plan && donateTiming(v, plan, now);
+    if (dt && !donateDone(v, dt.first)) add(Math.max(now + 1, dt.at), 'donate', '💰', t('tl.donate'), v);
   }
   if (on) {
     for (const l of data.farms || []) {

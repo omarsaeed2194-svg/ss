@@ -183,16 +183,28 @@
         <h3 class="gap" id="escFormTitle"></h3>
         <div class="row wrap">
           <label><span data-i18n="escape.village"></span> <select id="escVillage"></select></label>
+          <label class="switch"><input type="checkbox" id="escTroops" checked> <span data-i18n="escape.moveTroops"></span></label>
+        </div>
+        <div class="row wrap" id="escTroopRow">
           <label><span data-i18n="escape.to"></span> <select id="escTarget"></select></label>
           <label><span data-i18n="escape.lead"></span> <input type="number" id="escLead" min="30" max="3600" value="120" class="num"> <span data-i18n="escape.seconds"></span></label>
           <label class="switch"><input type="checkbox" id="escHero"> <span data-i18n="escape.hero"></span></label>
           <label><span data-i18n="escape.spend"></span> <select id="escSpend"></select></label>
           <p class="muted small" data-i18n="escape.spendHelp"></p>
         </div>
-        <div class="row wrap">
+        <div class="row wrap" id="escUnitRow">
           <label class="switch"><input type="checkbox" id="escAll" checked> <span data-i18n="escape.allUnits"></span></label>
           <div id="escUnits" class="row wrap" hidden></div>
         </div>
+        <h3 class="gap" data-i18n="donate.title"></h3>
+        <div class="row wrap">
+          <label class="switch"><input type="checkbox" id="escDonate"> <span data-i18n="donate.enable"></span></label>
+          <label><input type="number" id="escDonateSec" min="20" max="600" value="60" class="num"> <span data-i18n="donate.before"></span></label>
+          <label class="switch"><input type="checkbox" id="escKeepCranny" checked> <span data-i18n="donate.keepCranny"></span></label>
+          <label><span data-i18n="donate.bonus"></span> <select id="escBonus"></select></label>
+          <button class="btn small" id="escDonateTest" data-i18n="donate.test"></button>
+        </div>
+        <p class="muted small" data-i18n="donate.help"></p>
         <div class="row wrap">
           <button class="btn primary" id="escSave" data-i18n="escape.save"></button>
           <span id="escMsg" class="small muted"></span>

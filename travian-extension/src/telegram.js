@@ -3,7 +3,7 @@
 // polls Telegram and acts on the command.
 import { RESOURCES, resLabel, capacityFor, estimateStock, hoursUntilLimit, fmtDuration, fmtClock, fmtNum, sortedVillages } from './shared.js';
 import { t } from './i18n.js';
-import { firstAttack, escapeStatus } from './escape.js';
+import { firstAttack, escapeStatus, donateStatus } from './escape.js';
 
 // Commands answer to English or Arabic words, with or without "/".
 const WORDS = {
@@ -43,7 +43,9 @@ export function statusText(data, now = Date.now()) {
     if (v.underAttack) lines.push(`⚔️ ${first ? t('tg.attackIn', { t: fmtDuration(first - now), clock: fmtClock(first) }) : t('tg.attackUnknown')}`);
     const plan = (data.escapes || []).find((p) => p.villageId === v.id);
     const esc = escapeStatus(v, plan, data.villages, now);
-    if (esc && esc.tone !== 'muted') lines.push(`🏃 ${esc.text}`);
+    if (esc && esc.tone !== 'muted') lines.push(`${plan.troops === false ? '💰' : '🏃'} ${esc.text}`);
+    const dn = plan && plan.troops !== false ? donateStatus(v, plan, now) : null;
+    if (dn && dn.tone !== 'muted') lines.push(`💰 ${dn.text}`);
     const res = RESOURCES.map((k) => { const p = pct(v, k, now); return p == null ? null : `${resLabel(k)} ${p}%`; }).filter(Boolean);
     if (res.length) lines.push(`📦 ${res.join(' · ')}`);
     const crop = v.resources && v.resources.production ? v.resources.production.crop : null;
@@ -66,6 +68,7 @@ export function summaryText(data, stats, now = Date.now()) {
   row('🌿', 'tg.sumRaids', stats.raids);
   row('⚔️', 'tg.sumAttacks', stats.attacks);
   row('🏃', 'tg.sumEscapes', stats.escapes);
+  row('💰', 'tg.sumDonations', stats.donations);
   row('🎁', 'tg.sumQuests', stats.quests);
   row('🎒', 'tg.sumHeroBag', stats.heroBag);
   row('⚠️', 'tg.sumErrors', stats.errors);

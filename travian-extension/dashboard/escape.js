@@ -1,6 +1,7 @@
 // Troops tab: escape plans — which village's troops leave when an attack
 // comes, where to, and how long before it lands.
 import { command, esc, fillSelect, escapeStatus } from '../src/ui.js';
+import { donateStatus } from '../src/escape.js';
 import { sortedVillages, buildingName } from '../src/shared.js';
 import { unitField } from '../src/autopilot.js';
 import { t, coords } from '../src/i18n.js';
@@ -28,14 +29,16 @@ function renderTable(now) {
     if (!v) return '';
     const names = unitNames(v);
     const st = escapeStatus(v, p, data.villages, now) || { tone: 'muted', text: t('escape.st.off') };
+    const dn = p.troops !== false && p.enabled !== false ? donateStatus(v, p, now) : null;
+    const toneClass = (x) => (x.tone === 'bad' ? 'bad' : x.tone === 'good' ? 'good-text' : x.tone === 'warn' ? 'warn' : 'muted');
     const to = p.targetVillageId && data.villages[p.targetVillageId] ? data.villages[p.targetVillageId].name : t('escape.nearest');
-    const units = Array.isArray(p.units) ? p.units.map((f) => unitLabel(names, f)).join(t('list.sep')) : t('escape.allUnits');
+    const units = p.troops === false ? t('escape.troopsStay') : Array.isArray(p.units) ? p.units.map((f) => unitLabel(names, f)).join(t('list.sep')) : t('escape.allUnits');
     return `<tr class="${p.enabled === false ? 'off' : ''}">
       <td>${v.underAttack ? '⚔ ' : ''}${esc(v.name)}</td>
-      <td>${esc(to)}</td>
-      <td>${esc(units)}${p.hero ? ` <span class="tag">${esc(t('escape.heroTag'))}</span>` : ''}${p.spend ? ` <span class="tag">${esc(t('escape.spendTag'))}</span>` : ''}</td>
+      <td>${esc(p.troops === false ? '—' : to)}</td>
+      <td>${esc(units)}${p.hero ? ` <span class="tag">${esc(t('escape.heroTag'))}</span>` : ''}${p.spend ? ` <span class="tag">${esc(t('escape.spendTag'))}</span>` : ''}${p.donate ? ` <span class="tag">${esc(t('donate.tag', { n: p.donate.seconds }))}</span>` : ''}</td>
       <td class="mono">${esc(t('escape.leadValue', { n: p.leadSeconds }))}</td>
-      <td class="${st.tone === 'bad' ? 'bad' : st.tone === 'good' ? 'good-text' : st.tone === 'warn' ? 'warn' : 'muted'}">${esc(st.text)}</td>
+      <td><span class="${toneClass(st)}">${p.troops === false ? '💰 ' : ''}${esc(st.text)}</span>${dn ? `<br><span class="${toneClass(dn)}">💰 ${esc(dn.text)}</span>` : ''}</td>
       <td><label class="switch"><input type="checkbox" data-esc-toggle="${esc(p.id)}" ${p.enabled === false ? '' : 'checked'}></label></td>
       <td class="actions">
         ${st.tone === 'warn' && v.escape && v.escape.status === 'sent' && !v.underAttack && data.settings.server
@@ -60,6 +63,11 @@ function loadForm(vid) {
   $('escTarget').dataset.want = p ? p.targetVillageId : '';
   $('escUnits').dataset.want = p && Array.isArray(p.units) ? p.units.join(',') : '';
   $('escSpend').dataset.want = p && p.spend ? `${p.spend.gid}:${p.spend.field}` : '';
+  $('escTroops').checked = !p || p.troops !== false;
+  $('escDonate').checked = !!(p && p.donate);
+  $('escDonateSec').value = p && p.donate ? p.donate.seconds : 60;
+  $('escKeepCranny').checked = !p || !p.donate || p.donate.keepCranny !== false;
+  $('escBonus').dataset.want = p && p.donate ? String(p.donate.bonus) : '-1';
   $('escUnits').dataset.sig = '';
 }
 
@@ -80,6 +88,13 @@ function renderForm() {
   fillSelect($('escSpend'), spend, $('escSpend').dataset.want);
   $('escSpend').dataset.want = $('escSpend').value;
   $('escFormTitle').textContent = planOf(vid) ? t('escape.editTitle', { v: v ? v.name : '' }) : t('escape.add');
+
+  fillSelect($('escBonus'), [['-1', t('donate.bonusAny')], ['0', t('donate.bonus0')], ['1', t('donate.bonus1')], ['2', t('donate.bonus2')], ['3', t('donate.bonus3')]], $('escBonus').dataset.want);
+  $('escBonus').dataset.want = $('escBonus').value;
+  const troops = $('escTroops').checked;
+  $('escTroopRow').hidden = !troops;
+  $('escUnitRow').hidden = !troops;
+  for (const id of ['escDonateSec', 'escKeepCranny', 'escBonus']) $(id).disabled = !$('escDonate').checked;
 
   // Unit choice, only when "all units" is off.
   $('escUnits').hidden = $('escAll').checked;
@@ -112,6 +127,17 @@ $('escVillage').addEventListener('change', () => { loadForm($('escVillage').valu
 $('escTarget').addEventListener('change', () => { $('escTarget').dataset.want = $('escTarget').value; });
 $('escAll').addEventListener('change', () => { $('escUnits').hidden = $('escAll').checked; });
 $('escSpend').addEventListener('change', () => { $('escSpend').dataset.want = $('escSpend').value; });
+$('escBonus').addEventListener('change', () => { $('escBonus').dataset.want = $('escBonus').value; });
+$('escTroops').addEventListener('change', rerender);
+$('escDonate').addEventListener('change', rerender);
+$('escDonateTest').addEventListener('click', async () => {
+  try {
+    await command('testDonate', { villageId: $('escVillage').value });
+    msg(t('donate.testStarted'), 'good');
+  } catch (err) {
+    msg(err.message, 'bad');
+  }
+});
 
 $('escSave').addEventListener('click', async () => {
   const plan = {
@@ -121,6 +147,8 @@ $('escSave').addEventListener('click', async () => {
     hero: $('escHero').checked,
     units: $('escAll').checked ? 'all' : Array.from(document.querySelectorAll('#escUnits input:checked')).map((el) => el.value),
     spend: $('escSpend').value ? { gid: Number($('escSpend').value.split(':')[0]), field: $('escSpend').value.split(':')[1] } : null,
+    troops: $('escTroops').checked,
+    donate: $('escDonate').checked ? { seconds: Number($('escDonateSec').value), keepCranny: $('escKeepCranny').checked, bonus: Number($('escBonus').value) } : null,
     enabled: true,
   };
   try {
