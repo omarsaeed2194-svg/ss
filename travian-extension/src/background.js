@@ -669,10 +669,13 @@ const JOBS = {
     if (!task) return;
     // Player tasks leave the queue when done; autopilot picks were never in it.
     const finish = async () => { if (!task.auto) await removeTask(vid, task.id); };
+    // A new building that can't go up is skipped by kind, not only by
+    // site, so the next pick doesn't try it on the next free site.
     const skipSlot = async (ms) => {
       const now = Date.now();
-      const cur = v.autoSkip && v.autoSkip.until > now ? v.autoSkip.slots : [];
-      await patchVillage(vid, { autoSkip: { slots: [...cur, task.slot], until: now + ms } });
+      const live = v.autoSkip && v.autoSkip.until > now ? v.autoSkip : {};
+      const gids = [...(live.gids || []), ...(task.gid ? [Number(task.gid)] : [])];
+      await patchVillage(vid, { autoSkip: { slots: task.gid ? live.slots || [] : [...(live.slots || []), task.slot], gids, until: now + ms } });
     };
 
     let slot = task.slot;

@@ -56,7 +56,7 @@ const ESSENTIAL = [
 // A building the village is missing, on a free site, once the game would
 // allow it; null when there is nothing to construct. Storage comes early
 // when it is filling up.
-export function pickConstruct(v, tribeBase = null, skip = [], now = Date.now()) {
+export function pickConstruct(v, tribeBase = null, skip = [], now = Date.now(), skipGids = []) {
   if (!v.buildings || !v.buildings.length) return null;
   const has = (gid) => v.buildings.some((b) => b.gid === gid && (b.level > 0 || b.underConstruction));
   const level = (gid) => Math.max(0, ...v.buildings.filter((b) => b.gid === gid).map((b) => b.level || 0));
@@ -69,7 +69,7 @@ export function pickConstruct(v, tribeBase = null, skip = [], now = Date.now()) 
   const filling = (list) => !!est && list.some((k) => est[k] / (capacityFor(v.resources, k) || Infinity) >= 0.8);
   for (const e of ESSENTIAL) {
     const gid = e.gid === 'wall' ? wallGid(tribeBase) : e.gid;
-    if (!gid || has(gid) || (avg < (e.minAvg || 0) && !(e.fills && filling(e.fills)))) continue;
+    if (!gid || has(gid) || skipGids.includes(gid) || (avg < (e.minAvg || 0) && !(e.fills && filling(e.fills)))) continue;
     if (Object.entries(e.need).some(([g, n]) => level(Number(g)) < n)) continue;
     const slot = e.slot ? (empty(e.slot) ? e.slot : null) : sites[0];
     if (slot) return { slot, gid, level: 0, why: 'construct', construct: true };
@@ -102,7 +102,7 @@ export function pickAutoUpgrade(v, s, now = Date.now(), tribeBase = null) {
 
   // 1b. A building the village still lacks (warehouse, rally point…).
   if (ap.construct) {
-    const c = pickConstruct(v, tribeBase, skip, now);
+    const c = pickConstruct(v, tribeBase, skip, now, v.autoSkip && v.autoSkip.until > now ? v.autoSkip.gids || [] : []);
     if (c) return c;
   }
 
