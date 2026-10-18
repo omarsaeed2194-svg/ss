@@ -24,6 +24,17 @@ you're away:
   first; a target that fails three times in a row (beginner's protection,
   village gone…) is switched off. "Send now" works any time, and the lists
   sync to your other browsers with the rest of your commands.
+- **Inactive finder** — scans the map around a village and remembers each
+  player village's population; it looks again every ~12 hours (while
+  automation runs) and lists players whose villages didn't grow over 20+
+  hours, nearest first, with one click to add them to a farm list. Natars are
+  left out.
+- **Raid reports** *(experimental, off by default)* — about 15 minutes after
+  a farm round it opens the report list, matches raids to your farms by
+  village name, shows each farm's last result, bounty (full/half/empty) and a
+  score, and pauses a farm when the raid was lost or troops died twice
+  running. The report page hasn't been checked against a saved copy yet; if
+  it isn't recognised the Activity log says so.
 - **Game farm lists** — can also press "Start all" (or the lists you pick) on
   the game's own farm lists every N minutes.
 - **Hero adventures** — sends the hero out whenever they're home and an
@@ -38,15 +49,32 @@ you're away:
   fails, and when the attack is over (send them back from the rally point; they
   eat the other village's crop meanwhile). Attacks are noticed at each check,
   so keep "Check every" shorter than your attackers' travel time.
+  Optionally, right after the troops leave, it **spends the stock** on a unit
+  you choose (as many as the storage pays for) so the attacker finds less.
+  After the attack a **Bring back** button opens the rally point to call the
+  troops home (that step stays manual).
 - **Troops** — the troops in each village and what the barracks, stable and
   workshop are training (with finish times), in the Overview, the Troops tab
   and the popup.
 - **Autopilot** — one switch for when you're away. When a village's build
   queue is empty it picks the next upgrade itself (warehouse/granary when
   90% full → crop when the village is short of crop → Main Building up to the
-  fields' level → the lowest resource field, up to a level you choose). It also
-  sends the hero on adventures and starts farm lists if you tick them. The
-  Autopilot tab shows what it will do next in every village.
+  fields' level → the lowest resource field, up to a level you choose). It
+  also **puts up missing buildings** on free sites (warehouse and granary once
+  storage fills or fields reach 2, rally point, cranny, marketplace, barracks,
+  your tribe's wall) as soon as the game allows them, **collects task
+  rewards** into the village with the most free storage, and — if you tick it
+  — tops up an upgrade that waits for resources with **just the missing amount
+  from the hero's bag**. It sends the hero on adventures and starts farm lists
+  if you tick them. The Autopilot tab shows what it will do next in every
+  village. You can also queue a **new building on a free site** yourself in
+  the Build queue tab.
+- **Telegram control** — besides alerts, the bot answers commands sent to it
+  in Arabic or English: `status`/`الحالة`, `pause`/`وقف`, `resume`/`شغل`,
+  `check`/`افحص`, `farms`/`مزارع`, `escape`/`اهرب`, `summary`/`ملخص`. Commands
+  older than 5 minutes are ignored. A **daily summary** arrives at the hour you
+  pick (what was built, trained, farmed, attacks, escapes, errors, and what
+  needs you now).
 - **Oasis raids** — raids empty oases near a village with the unit and number
   you choose, every N minutes. It finds oases on the game map (or uses
   coordinates you add), opens each oasis right before sending and only raids
@@ -63,8 +91,21 @@ you're away:
   as things happen (finished upgrades, attacks starting and ending). Each
   village is drawn from its real state (keep height, wall, fields, scaffolding
   while building, red flag under attack), with a hero card beside it.
+  The Overview also has a **next-6-hours timeline** (builds and training
+  finishing, troops arriving, storage full, crop running out, escapes, farm
+  rounds, raids), a **mini map** (your villages, farms, oases, raid targets,
+  escape routes, attacks — click a village to filter), **unit icons**, and
+  **resource balance** suggestions between villages with a button to open the
+  marketplace (sending stays manual).
 - **Popup** — live resources, time until storage is full, build queue
-  countdowns and attack warnings at a glance.
+  countdowns and attack warnings at a glance, plus **quick actions** (check
+  now, send all farm lists, pause/resume everything, escape now) and one line
+  per village when you have many (tap to open its card).
+- **Health tab** — whether the bot is running and where, what's switched off
+  and why, each job's last success and failure, the last day's errors, and
+  how fresh each village's data is.
+- **Light/dark** — follows your computer, or pick one (popup, dashboard or
+  Settings). The dashboard works on a phone-sized window too.
 
 Works on Travian: Legends servers (`*.travian.com`, e.g.
 `ts3.x1.arabics.travian.com`). It does **not** support Travian: Kingdoms.
@@ -142,7 +183,10 @@ themselves. Save them first:
 
 - **Telegram:** message `@BotFather`, send `/newbot`, copy the token. Send any
   message to your new bot, open
-  `https://api.telegram.org/bot<token>/getUpdates`, and copy `chat.id`.
+  `https://api.telegram.org/bot<token>/getUpdates`, and copy `chat.id`. With
+  **Control from Telegram** on, send `help` (or `الأوامر`) to the bot for the
+  command list. Only that chat is obeyed, and only the browser that drives the
+  game answers.
 - **Discord:** Server Settings → Integrations → Webhooks → New Webhook → Copy
   Webhook URL.
 
@@ -175,8 +219,12 @@ themselves. Save them first:
   server-side setup instead.
 - It can't log in for you. If your session expires you get an alert and the
   bot pauses until you log in again.
-- It upgrades existing buildings and fields; it doesn't place new buildings
-  on empty building sites.
+- **Checked against saved game pages:** building sites, task rewards, the
+  hero's bag, rally point send form, training, farm lists, map tiles. **Not
+  yet checked:** the report list (raid reports are experimental), the
+  marketplace send page and calling troops back (both stay manual for now),
+  hero attribute points, academy research and smithy upgrades (not
+  automated).
 - If Travian changes its page layout, parts of it may stop working until the
   selectors in `src/parser.js` and `src/content.js` are updated. Watch the
   **Activity log** for errors.
@@ -194,11 +242,19 @@ src/sync.js            Saves commands to Chrome sync; one-browser-at-a-time leas
 src/advisor.js         Game tips worked out from each village's state
 src/autopilot.js       Autopilot choices: next upgrade, which oases to raid, farm targets
 src/escape.js          Troop escape: when to leave, where to, which troops
+src/telegram.js        Telegram commands, status and daily summary texts
+src/timeline.js        Events of the next hours for the Overview timeline
+src/units.js           Unit kinds and their icons
+src/health.js          The Health tab's report
+src/inactive.js        Inactive finder: population snapshots and verdicts
+src/reports.js         Raid reports matched to farms; pausing rules
+src/merchants.js       Resource balance suggestions between villages
 src/ui.js / ui.css     Village cards and styles shared by popup and dashboard
 popup/                 Toolbar popup
 dashboard/             Full dashboard (also the extension's options page); overview.js renders the
                        Overview tab, autopilot.js the Autopilot tab, farms.js the farm lists,
-                       escape.js the escape plans,
+                       escape.js the escape plans, finder.js the inactive finder, health.js the
+                       Health tab, minimap.js the map,
                        chart.js the 24-hour stock chart, art.js the village/hero drawings
 icons/                 Extension icons
 ```
