@@ -7,6 +7,7 @@ import {
 } from './shared.js';
 import { pickAutoUpgrade, troopsHome, raidTargets, oasisKey, farmTargets, coversTroops, cleanTroops } from './autopilot.js';
 import { firstAttack, escapeTiming, escapeDone, escapeDue, escapeTarget, escapeTroops, TOO_LATE_MS } from './escape.js';
+import { parseCommand, statusText, summaryText, helpText } from './telegram.js';
 import { t, setLanguage, coords, ltr } from './i18n.js';
 import {
   COMMAND_KEYS, commandsOf, schedulePush, pushCommands, pullCommands, mayRun, renewLease, getDevice,
@@ -55,11 +56,18 @@ async function getSettings() {
 const reasonText = (res) => (res.code ? t(`reason.${res.code}`) : res.reason || '');
 
 async function log(level, msg, villageId) {
-  await update(['log'], (d) => {
+  await update(['log', 'stats'], (d) => {
     d.log = d.log || [];
     d.log.unshift({ t: Date.now(), level, msg, villageId: villageId || null });
     if (d.log.length > LOG_LIMIT) d.log.length = LOG_LIMIT;
+    if (level === 'error') d.stats = { since: Date.now(), ...(d.stats || {}), errors: ((d.stats || {}).errors || 0) + 1 };
   });
+}
+
+// Counters for the daily summary, reset each time it is sent.
+async function bump(key, n = 1) {
+  if (!n) return;
+  await update(['stats'], (d) => { d.stats = { since: Date.now(), ...(d.stats || {}) }; d.stats[key] = (d.stats[key] || 0) + n; });
 }
 
 async function setStatus(patch) {
@@ -283,6 +291,8 @@ async function processPage(state, tabId) {
   for (const n of notes) await log('info', n);
   for (const [level, msg, vid] of events) await log(level, msg, vid);
   for (const a of alerts) await sendAlert(a);
+  await bump('completed', events.filter((e) => e[0] === 'success').length);
+  await bump('attacks', alerts.filter((a) => a.kind === 'attacks').length);
   await refreshBadge();
   await armEscapes();
   return fromWorker ? { worker: true, badge: t('badge.worker') } : { worker: false };
@@ -337,9 +347,10 @@ function escapeRefreshIds(data, now) {
 }
 
 function planEscapes(data, now) {
-  const { villages = {}, escapes = [] } = data;
-  return escapes.filter((p) => villages[p.villageId] && escapeDue(villages[p.villageId], p, now))
-    .map((p) => ({ type: 'escape', planId: p.id, label: t('job.escape', { v: villages[p.villageId].name }) }));
+  const { villages = {}, escapes = [], schedule = {} } = data;
+  const forced = new Set(schedule.escapeNow || []);
+  return escapes.filter((p) => villages[p.villageId] && escapeDue(villages[p.villageId], p, now, forced.has(p.villageId)))
+    .map((p) => ({ type: 'escape', planId: p.id, force: forced.has(p.villageId), label: t('job.escape', { v: villages[p.villageId].name }) }));
 }
 
 // Runs before anything else and ignores "pause while playing", active hours
@@ -525,7 +536,8 @@ const JOBS = {
     const { villages = {} } = await read(['villages']);
     const v = villages[vid];
     if (!v) return;
-    const tm = escapeDue(v, plan, Date.now());
+    await update(['schedule'], (d) => { if (d.schedule && d.schedule.escapeNow) d.schedule.escapeNow = d.schedule.escapeNow.filter((x) => x !== vid); });
+    const tm = escapeDue(v, plan, Date.now(), job.force);
     if (!tm) return; // attack recalled, or already handled
     const setState = (patch) => update(['villages'], (d) => {
       const x = d.villages && d.villages[vid];
@@ -548,6 +560,7 @@ const JOBS = {
       const what = troopsText(v, r.sent);
       await setState({ status: 'sent', to: dest.village.id, sent: r.sent, fallback: dest.fallback, overNotified: false });
       await log('success', t('log.escaped', { what, to: dest.village.name, lands }), vid);
+      await bump('escapes');
       await sendAlert({
         kind: 'attacks', villageId: vid, title: t('alert.escaped.title', { v: v.name }),
         body: t(dest.fallback ? 'alert.escaped.bodyFallback' : 'alert.escaped.body', { what, to: dest.village.name, lands }),
@@ -719,6 +732,7 @@ const JOBS = {
     const name = (bp.title || '').replace(/\s*\S*\s*\d+\s*$/, '') || title;
     if (task.auto) await log('success', t('log.autoUpgrading', { name, n: bp.nextLevel ?? '?', why: t(`auto.why.${why}`) }), vid);
     else await log('success', t('log.upgrading', { name, n: bp.nextLevel ?? '?' }), vid);
+    await bump('upgrades');
     await patchVillage(vid, { buildWait: null });
     if (task.auto) return;
     await update(['tasks'], (d) => {
@@ -748,7 +762,7 @@ const JOBS = {
         await log('info', t('log.trainNoRes', { b: bname, v: vname, u: unit.name || rule.troop, t: fmtDuration(next) }), rule.villageId);
       } else {
         const { res } = await act(tabId, { kind: 'train', field: rule.troop, amount }, true);
-        if (res.ok) await log('success', t('log.training', { n: amount, u: unit.name || rule.troop, v: vname }), rule.villageId);
+        if (res.ok) { await log('success', t('log.training', { n: amount, u: unit.name || rule.troop, v: vname }), rule.villageId); await bump('trained', amount); }
         else await log('error', t('log.trainFailed', { v: vname, reason: reasonText(res) }), rule.villageId);
       }
     }
@@ -840,6 +854,7 @@ const JOBS = {
           d.oases[o.key] = { ...(d.oases[o.key] || { x: o.x, y: o.y }), raidedAt: Date.now() };
         });
         await log('success', t('log.raidSent', { n: rule.amount, u: unit, xy, d: o.distance.toFixed(1) }), vid);
+        await bump('raids');
       }
       if (sent) {
         // Pick up the troops that left and their movements.
@@ -921,6 +936,7 @@ const JOBS = {
         if (r.fatal) break;
       }
       await log(sent ? 'success' : 'info', t('log.farmRound', { list: list.name, sent, total: due.length, short, failed }), vid);
+      await bump('farm', sent);
       if (sent) {
         await sleep(rand(1500, 3000));
         await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(vid)}`);
@@ -1290,6 +1306,12 @@ const COMMANDS = {
     });
     tick(true);
   },
+  async sendSummary() {
+    const s = await getSettings();
+    if (!s.telegram.token || !s.telegram.chatId) throw new Error(t('tg.notSetUp'));
+    await sendTelegram(s, await runTelegramCommand('summary'));
+    return true;
+  },
   async testAlert() {
     const s = await getSettings();
     if (s.alerts.desktop) {
@@ -1377,6 +1399,112 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   return undefined;
 });
 
+// --------------------------------------------------------------- telegram --
+const sendTelegram = (s, text) => fetch(`https://api.telegram.org/bot${encodeURIComponent(s.telegram.token)}/sendMessage`, {
+  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: s.telegram.chatId, text }),
+}).catch(() => null);
+
+const COMMAND_MAX_AGE_MS = 5 * 60 * 1000; // older commands (computer was off…) are not run
+
+async function runTelegramCommand(cmd) {
+  const data = await read([...DATA_KEYS, 'escapes', 'stats']);
+  const s = mergeSettings(data.settings);
+  setLanguage(s.language);
+  data.settings = s; data.tasks = data.tasks || {}; data.villages = data.villages || {};
+  const now = Date.now();
+  if (cmd === 'status') return statusText(data, now);
+  if (cmd === 'help') return helpText();
+  if (cmd === 'summary') return summaryText(data, data.stats || {}, now);
+  if (cmd === 'pause') {
+    await update(['settings', 'status'], (d) => {
+      const st = mergeSettings(d.settings);
+      d.status = { ...(d.status || {}), tgPaused: { botEnabled: st.botEnabled, autopilot: st.autopilot.enabled } };
+      d.settings = mergeSettings({ ...st, botEnabled: false, autopilot: { ...st.autopilot, enabled: false } });
+    });
+    await refreshBadge();
+    await log('info', t('log.tgPaused'));
+    return t('tg.paused');
+  }
+  if (cmd === 'resume') {
+    await update(['settings', 'status'], (d) => {
+      const st = mergeSettings(d.settings);
+      const was = (d.status || {}).tgPaused || { botEnabled: true, autopilot: st.autopilot.enabled };
+      d.settings = mergeSettings({ ...st, botEnabled: was.botEnabled || !was.autopilot, autopilot: { ...st.autopilot, enabled: !!was.autopilot } });
+      if (d.status) delete d.status.tgPaused;
+    });
+    await refreshBadge();
+    await log('info', t('log.tgResumed'));
+    tick(false, true);
+    return t('tg.resumed');
+  }
+  if (cmd === 'check') { await COMMANDS.runNow(); return t('tg.checking'); }
+  if (cmd === 'farms') {
+    const lists = (data.farms || []).filter((l) => l.enabled !== false && (l.targets || []).some((x) => x.enabled !== false));
+    if (!lists.length) return t('tg.noFarms');
+    await update(['schedule'], (d) => { d.schedule = { ...(d.schedule || {}), farmNow: [...new Set([...((d.schedule || {}).farmNow || []), ...lists.map((l) => l.id)])] }; });
+    tick(false, true);
+    return t('tg.farmsQueued', { n: lists.length });
+  }
+  if (cmd === 'escape') {
+    const ids = (data.escapes || []).filter((p) => p.enabled !== false && data.villages[p.villageId] && firstAttack(data.villages[p.villageId], now)).map((p) => p.villageId);
+    if (!ids.length) return t('tg.noEscape');
+    await update(['schedule'], (d) => { d.schedule = { ...(d.schedule || {}), escapeNow: [...new Set([...((d.schedule || {}).escapeNow || []), ...ids])] }; });
+    urgent = true;
+    tick(false, true);
+    return t('tg.escaping', { list: ids.map((id) => data.villages[id].name).join(t('list.sep')) });
+  }
+  return null;
+}
+
+let polling = false;
+async function pollTelegram() {
+  if (polling) return;
+  polling = true;
+  try {
+    const s = await getSettings();
+    if (!s.telegram.token || !s.telegram.chatId) return;
+    const now = Date.now();
+    // Only the browser that drives the game answers, so replies aren't doubled.
+    if (!(await mayRun(now)).ok) return;
+    const { tgState = {} } = await read(['tgState']);
+
+    // Daily summary at the chosen hour (or within 3 hours of it, if the
+    // computer was off or asleep right then).
+    const day = new Date(now).toDateString();
+    const late = new Date(now).getHours() - Number(s.telegram.summaryHour);
+    if (s.telegram.summaryHour >= 0 && late >= 0 && late < 3 && tgState.summaryDay !== day) {
+      tgState.summaryDay = day;
+      await chrome.storage.local.set({ tgState });
+      const reply = await runTelegramCommand('summary');
+      await sendTelegram(s, reply);
+      await update(['stats'], (d) => { d.stats = { since: Date.now() }; });
+    }
+
+    if (s.telegram.control === false) return;
+    const res = await fetch(`https://api.telegram.org/bot${encodeURIComponent(s.telegram.token)}/getUpdates?timeout=0&offset=${tgState.offset || 0}`).catch(() => null);
+    if (!res || !res.ok) return;
+    const json = await res.json().catch(() => null);
+    if (!json || !json.ok) return;
+    const fresh = tgState.offset != null; // first poll: skip whatever was waiting
+    let offset = tgState.offset || 0;
+    for (const u of json.result || []) {
+      offset = Math.max(offset, u.update_id + 1);
+      const m = u.message;
+      if (!fresh || !m || !m.text || String(m.chat && m.chat.id) !== String(s.telegram.chatId)) continue;
+      const cmd = parseCommand(m.text);
+      if (!cmd) { await sendTelegram(s, helpText()); continue; }
+      if (now - m.date * 1000 > COMMAND_MAX_AGE_MS) { await sendTelegram(s, t('tg.tooOld')); continue; }
+      const reply = await runTelegramCommand(cmd);
+      if (reply) await sendTelegram(s, reply);
+    }
+    await chrome.storage.local.set({ tgState: { ...tgState, offset } });
+  } catch (e) {
+    /* network hiccup: next minute */
+  } finally {
+    polling = false;
+  }
+}
+
 // ------------------------------------------------------------- lifecycle --
 async function setup() {
   await chrome.alarms.create('tick', { periodInMinutes: 1 });
@@ -1407,7 +1535,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 chrome.runtime.onInstalled.addListener(setup);
 chrome.runtime.onStartup.addListener(setup);
 chrome.alarms.onAlarm.addListener((a) => {
-  if (a.name === 'tick') tick();
+  if (a.name === 'tick') { pollTelegram(); tick(); }
   else if (a.name.startsWith('escape:')) { urgent = true; tick(false, true); }
 });
 chrome.notifications.onClicked.addListener(async () => {

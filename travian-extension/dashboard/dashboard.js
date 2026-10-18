@@ -43,6 +43,7 @@ async function saveSetting(el) {
     value = Number(value);
     if (!Number.isFinite(value)) return;
   }
+  if (el.dataset.setting === 'telegram.summaryHour') value = Number(value);
   const top = path[0];
   const patch = path.length === 1 ? { [top]: value } : { [top]: { ...data.settings[top], [path[1]]: value } };
   data.settings = { ...data.settings, ...patch };
@@ -257,6 +258,18 @@ $('testAlert').addEventListener('click', async () => {
   }
 });
 
+$('tgSummaryNow').addEventListener('click', async (e) => {
+  e.target.disabled = true;
+  try {
+    await command('sendSummary');
+    $('tgSummaryMsg').textContent = t('tg.summarySent');
+  } catch (err) {
+    $('tgSummaryMsg').textContent = err.message;
+  } finally {
+    setTimeout(() => { e.target.disabled = false; }, 3000);
+  }
+});
+
 // ------------------------------------------------------------ settings ---
 $('resetData').addEventListener('click', () => {
   if (confirm(t('settings.resetConfirm'))) command('resetData');
@@ -348,6 +361,7 @@ function render() {
     applyI18n();
     document.title = t('app.name');
     fillSelect($('language'), LANGUAGES);
+    fillSelect($('tgSummaryHour'), [[-1, t('tg.summaryOff')], ...Array.from({ length: 24 }, (_, h) => [h, `${String(h).padStart(2, '0')}:00`])]);
   }
   $('server').textContent = data.settings.server ? new URL(data.settings.server).host : t('server.none');
   $('version').textContent = t('app.version', { v: chrome.runtime.getManifest().version });

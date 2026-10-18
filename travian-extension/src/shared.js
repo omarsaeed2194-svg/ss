@@ -59,7 +59,9 @@ export const DEFAULT_SETTINGS = {
   // queued, and sends the hero / farm lists. Oasis raids have their own rules.
   autopilot: { enabled: false, build: true, fieldsMax: 10, adventures: true, farmLists: false },
   alerts: { desktop: true, attacks: true, storage: true, storageHours: 1, starvation: true, loggedOut: true, botErrors: true },
-  telegram: { token: '', chatId: '' },
+  // control: answer commands sent from the chat; summaryHour: daily summary
+  // at this hour (-1 = off).
+  telegram: { token: '', chatId: '', control: true, summaryHour: 8 },
   discord: { webhookUrl: '' },
 };
 

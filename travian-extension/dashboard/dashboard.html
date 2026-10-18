@@ -337,6 +337,13 @@
           </ol>
           <label class="field"><span data-i18n="alerts.tgToken"></span> <input type="password" data-setting="telegram.token" autocomplete="off" dir="ltr"></label>
           <label class="field"><span data-i18n="alerts.tgChat"></span> <input type="text" data-setting="telegram.chatId" autocomplete="off" dir="ltr"></label>
+          <label class="switch"><input type="checkbox" data-setting="telegram.control"> <span data-i18n="tg.controlToggle"></span></label>
+          <p class="muted small" data-i18n="tg.controlHelp"></p>
+          <div class="row wrap">
+            <label><span data-i18n="tg.summaryAt"></span> <select data-setting="telegram.summaryHour" id="tgSummaryHour"></select></label>
+            <button class="btn small" id="tgSummaryNow" data-i18n="tg.summaryNow"></button>
+            <span id="tgSummaryMsg" class="small muted"></span>
+          </div>
           <h3 class="gap">Discord</h3>
           <p class="small muted" data-i18n="alerts.discordHelp"></p>
           <label class="field"><span data-i18n="alerts.webhook"></span> <input type="password" data-setting="discord.webhookUrl" autocomplete="off" dir="ltr" placeholder="https://discord.com/api/webhooks/…"></label>

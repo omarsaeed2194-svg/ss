@@ -34,11 +34,12 @@ export function escapeDone(v, first) {
   return st.status === 'sent' || st.status === 'nothing' || (st.status === 'failed' && (st.tries || 0) >= MAX_TRIES);
 }
 
-// Timing when an escape should run now, else null.
-export function escapeDue(v, plan, now = Date.now()) {
+// Timing when an escape should run now, else null. `force`: the player
+// asked to go now (e.g. from Telegram), whatever the lead time says.
+export function escapeDue(v, plan, now = Date.now(), force = false) {
   if (!plan || plan.enabled === false) return null;
   const tm = escapeTiming(v, plan, now);
-  if (!tm || now < tm.startAt || tm.first - now < TOO_LATE_MS || escapeDone(v, tm.first)) return null;
+  if (!tm || (!force && now < tm.startAt) || tm.first - now < TOO_LATE_MS || escapeDone(v, tm.first)) return null;
   return tm;
 }
 
