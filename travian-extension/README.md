@@ -53,6 +53,14 @@ you're away:
   you choose (as many as the storage pays for) so the attacker finds less.
   After the attack a **Bring back** button opens the rally point to call the
   troops home (that step stays manual).
+- **Donate to the alliance before an attack** *(experimental)* — on the same
+  plan, the village's resources go to an alliance bonus a set number of
+  seconds before the first attack lands (60 by default), so the attacker
+  finds nothing to steal; it can keep what the crannies hide, and works with
+  or without moving the troops. It has its own precise timer, runs with
+  automation off, and checks afterwards that the stock really dropped. The
+  alliance page hasn't been checked against a saved copy yet: press **Test
+  now** (donates 10 of each) once while you watch.
 - **Troops** — the troops in each village and what the barracks, stable and
   workshop are training (with finish times), in the Overview, the Troops tab
   and the popup.
@@ -221,7 +229,8 @@ themselves. Save them first:
   bot pauses until you log in again.
 - **Checked against saved game pages:** building sites, task rewards, the
   hero's bag, rally point send form, training, farm lists, map tiles. **Not
-  yet checked:** the report list (raid reports are experimental), the
+  yet checked:** the alliance bonus page (donations are experimental — use
+  the Test button), the report list (raid reports are experimental), the
   marketplace send page and calling troops back (both stay manual for now),
   hero attribute points, academy research and smithy upgrades (not
   automated).
