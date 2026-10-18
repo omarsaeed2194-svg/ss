@@ -1,7 +1,7 @@
 // Troops tab: escape plans — which village's troops leave when an attack
 // comes, where to, and how long before it lands.
 import { command, esc, fillSelect, escapeStatus } from '../src/ui.js';
-import { sortedVillages } from '../src/shared.js';
+import { sortedVillages, buildingName } from '../src/shared.js';
 import { unitField } from '../src/autopilot.js';
 import { t, coords } from '../src/i18n.js';
 import { fieldKind, kindIcon, tribeBase } from '../src/units.js';
@@ -33,11 +33,13 @@ function renderTable(now) {
     return `<tr class="${p.enabled === false ? 'off' : ''}">
       <td>${v.underAttack ? '⚔ ' : ''}${esc(v.name)}</td>
       <td>${esc(to)}</td>
-      <td>${esc(units)}${p.hero ? ` <span class="tag">${esc(t('escape.heroTag'))}</span>` : ''}</td>
+      <td>${esc(units)}${p.hero ? ` <span class="tag">${esc(t('escape.heroTag'))}</span>` : ''}${p.spend ? ` <span class="tag">${esc(t('escape.spendTag'))}</span>` : ''}</td>
       <td class="mono">${esc(t('escape.leadValue', { n: p.leadSeconds }))}</td>
       <td class="${st.tone === 'bad' ? 'bad' : st.tone === 'good' ? 'good-text' : st.tone === 'warn' ? 'warn' : 'muted'}">${esc(st.text)}</td>
       <td><label class="switch"><input type="checkbox" data-esc-toggle="${esc(p.id)}" ${p.enabled === false ? '' : 'checked'}></label></td>
       <td class="actions">
+        ${st.tone === 'warn' && v.escape && v.escape.status === 'sent' && !v.underAttack && data.settings.server
+          ? `<button class="btn small" data-open="${esc(`${data.settings.server}/build.php?newdid=${encodeURIComponent(p.villageId)}&id=39&tt=1`)}" title="${esc(t('escape.bringBackHelp'))}">${esc(t('escape.bringBack'))}</button>` : ''}
         <button class="btn small" data-esc-edit="${esc(p.villageId)}" title="${esc(t('farm.edit'))}">✎</button>
         <button class="btn small danger" data-esc-remove="${esc(p.id)}" title="${esc(t('build.remove'))}">✕</button>
       </td>
@@ -57,6 +59,7 @@ function loadForm(vid) {
   $('escAll').checked = !p || !Array.isArray(p.units);
   $('escTarget').dataset.want = p ? p.targetVillageId : '';
   $('escUnits').dataset.want = p && Array.isArray(p.units) ? p.units.join(',') : '';
+  $('escSpend').dataset.want = p && p.spend ? `${p.spend.gid}:${p.spend.field}` : '';
   $('escUnits').dataset.sig = '';
 }
 
@@ -68,6 +71,14 @@ function renderForm() {
   const v = data.villages[vid];
   fillSelect($('escTarget'), [['', t('escape.nearest')], ...villages.filter((o) => o.id !== vid).map((o) => [o.id, `${o.name} ${coords(o.x, o.y)}`])], $('escTarget').dataset.want);
   $('escTarget').dataset.want = $('escTarget').value;
+  // Units this village can train (seen on its barracks/stable/workshop pages).
+  const spend = [['', t('escape.spendNone')]];
+  for (const [gid, list] of Object.entries((v && v.units) || {})) {
+    if (![19, 20, 21, 29, 30].includes(Number(gid))) continue;
+    for (const u of list) spend.push([`${gid}:${u.field}`, `${u.name || unitLabel(names, u.field)} · ${buildingName(Number(gid))}`]);
+  }
+  fillSelect($('escSpend'), spend, $('escSpend').dataset.want);
+  $('escSpend').dataset.want = $('escSpend').value;
   $('escFormTitle').textContent = planOf(vid) ? t('escape.editTitle', { v: v ? v.name : '' }) : t('escape.add');
 
   // Unit choice, only when "all units" is off.
@@ -100,6 +111,7 @@ const msg = (text, tone) => { $('escMsg').textContent = text; $('escMsg').classN
 $('escVillage').addEventListener('change', () => { loadForm($('escVillage').value); msg(''); rerender(); });
 $('escTarget').addEventListener('change', () => { $('escTarget').dataset.want = $('escTarget').value; });
 $('escAll').addEventListener('change', () => { $('escUnits').hidden = $('escAll').checked; });
+$('escSpend').addEventListener('change', () => { $('escSpend').dataset.want = $('escSpend').value; });
 
 $('escSave').addEventListener('click', async () => {
   const plan = {
@@ -108,6 +120,7 @@ $('escSave').addEventListener('click', async () => {
     leadSeconds: Number($('escLead').value),
     hero: $('escHero').checked,
     units: $('escAll').checked ? 'all' : Array.from(document.querySelectorAll('#escUnits input:checked')).map((el) => el.value),
+    spend: $('escSpend').value ? { gid: Number($('escSpend').value.split(':')[0]), field: $('escSpend').value.split(':')[1] } : null,
     enabled: true,
   };
   try {
@@ -121,6 +134,7 @@ $('escSave').addEventListener('click', async () => {
 $('escapeTable').addEventListener('click', (e) => {
   const b = e.target.closest('button');
   if (!b) return;
+  if (b.dataset.open) { chrome.tabs.create({ url: b.dataset.open }); return; }
   if (b.dataset.escEdit) { loadForm(b.dataset.escEdit); $('escVillage').value = b.dataset.escEdit; rerender(); }
   else if (b.dataset.escRemove) command('removeEscape', { id: b.dataset.escRemove });
 });

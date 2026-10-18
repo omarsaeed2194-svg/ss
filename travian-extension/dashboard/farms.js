@@ -5,6 +5,7 @@ import { sortedVillages, fmtDuration, fmtAgo } from '../src/shared.js';
 import { unitField, distance, parseCoordList, cleanTroops } from '../src/autopilot.js';
 import { t, coords } from '../src/i18n.js';
 import { fieldKind, kindIcon, tribeBase } from '../src/units.js';
+import { farmScore } from '../src/reports.js';
 
 const $ = (id) => document.getElementById(id);
 const FIELDS = Array.from({ length: 10 }, (_, i) => `t${i + 1}`);
@@ -38,6 +39,20 @@ function unitNames(v) {
 function troopsHtml(troops, names) {
   const parts = Object.entries(cleanTroops(troops)).map(([f, n]) => `<span class="unit-chip">${kindIcon(fieldKind(f, tribeBase(data.villages)))} <b class="mono">${n}</b> ${esc(names[f] || t('troops.unitN', { n: f.slice(1) }))}</span>`);
   return parts.join('') || '—';
+}
+
+// What the raid reports said about a farm: the last raid and a score.
+const REPORT_ICON = { won: '✓', losses: '⚠', lost: '✕' };
+const CARRY_ICON = { full: '●', half: '◐', empty: '○' };
+function reportCell(tg, now) {
+  const st = tg.stats;
+  if (!st || !st.last) return '<span class="muted">—</span>';
+  const tone = st.last.result === 'won' ? 'good-text' : 'bad';
+  const title = t('farm.reportTitle', { raids: st.raids, full: st.full, empty: st.empty, losses: st.losses });
+  return `<span class="${tone}" title="${esc(title)}">${REPORT_ICON[st.last.result] || ''} ${esc(t(`report.${st.last.result}`))}</span>
+    ${st.last.carry ? ` <span title="${esc(t(`report.carry.${st.last.carry}`))}">${CARRY_ICON[st.last.carry]}</span>` : ''}
+    <small class="muted">· ${esc(t('farm.score', { n: farmScore(tg) }))} · ${esc(fmtAgo(st.last.at, now))}</small>
+    ${tg.pausedBy === 'report' && tg.enabled === false ? `<br><span class="tag busy">${esc(t('farm.pausedReport'))}</span>` : ''}`;
 }
 
 // ------------------------------------------------------------------ lists ---
@@ -91,7 +106,8 @@ function renderTargets(now) {
     else el.value = val ?? '';
   }
 
-  const head = ['#', t('farm.target'), t('raid.th.distance'), t('farm.type'), t('farm.troops'), t('farm.last'), t('th.on')]
+  const reports = data.settings.reports.enabled;
+  const head = ['#', t('farm.target'), t('raid.th.distance'), t('farm.type'), t('farm.troops'), t('farm.last'), ...(reports ? [t('farm.reportCol')] : []), t('th.on')]
     .map((h) => `<th>${esc(h)}</th>`).join('');
   const rows = (l.targets || []).map((tg, i) => `<tr class="${tg.enabled === false ? 'off' : ''}${tg.id === editing ? ' selected' : ''}">
       <td class="muted">${i + 1}</td>
@@ -100,6 +116,7 @@ function renderTargets(now) {
       <td>${esc(t(tg.type === 'oasis' ? 'farm.typeOasis' : 'farm.typeVillage'))}</td>
       <td>${troopsHtml(tg.troops, names)}</td>
       <td>${lastResult(tg, now)}${tg.sent ? ` <small class="muted">· ${esc(t('farm.sentCount', { n: tg.sent }))}</small>` : ''}</td>
+      ${reports ? `<td>${reportCell(tg, now)}</td>` : ''}
       <td><label class="switch"><input type="checkbox" data-ft-toggle="${esc(tg.id)}" ${tg.enabled === false ? '' : 'checked'}></label></td>
       <td class="actions">
         <button class="btn small" data-ft-edit="${esc(tg.id)}" title="${esc(t('farm.edit'))}">✎</button>
@@ -124,6 +141,10 @@ function renderTargets(now) {
   $('ftSave').textContent = editing ? t('farm.save') : t('farm.add');
   $('ftCancel').hidden = !editing;
 }
+
+// For the inactive finder: the open list and the troops in the editor.
+export const currentFarmList = () => (data ? current() : null);
+export const readFarmTroops = () => readTroops();
 
 function readTroops() {
   const out = {};

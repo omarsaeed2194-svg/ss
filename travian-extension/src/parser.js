@@ -42,6 +42,7 @@
     if (p.endsWith('/position_details.php')) return 'tile';
     if (p.startsWith('/hero/adventures')) return 'adventures';
     if (p.startsWith('/hero/inventory')) return 'inventory';
+    if ((p.startsWith('/report') || p.endsWith('/berichte.php')) && !url.searchParams.get('id')) return 'reports';
     if (p === '/tasks' || p.startsWith('/tasks/')) return 'tasks';
     return 'other';
   }
@@ -365,6 +366,31 @@
     }).filter((b) => b.gid);
   }
 
+  // Report list: one row per report with the result icon (iReport1 won
+  // without losses, 2 won with losses, 3 lost) and, for raids, how full
+  // the troops came back (carry full / half / empty).
+  function parseReports(doc) {
+    const out = [];
+    const seen = new Set();
+    for (const a of qsa(doc, 'a[href*="report?"], a[href*="report/"], a[href*="berichte.php?"]')) {
+      const href = a.getAttribute('href') || '';
+      const m = href.match(/[?&]id=([^&#]+)/);
+      const row = a.closest('tr');
+      if (!m || !row || seen.has(m[1])) continue;
+      seen.add(m[1]);
+      let result = null;
+      let carry = null;
+      for (const el of qsa(row, 'img, i, span, div')) {
+        const r = (el.getAttribute('class') || '').match(/\biReport(\d+)\b/);
+        if (r && result == null) result = Number(r[1]);
+        const c = el.classList;
+        if (c && c.contains('carry')) carry = c.contains('full') ? 'full' : c.contains('half') ? 'half' : c.contains('empty') ? 'empty' : carry;
+      }
+      out.push({ id: decodeURIComponent(m[1]), subject: text(a), result, carry, unread: row.classList.contains('newMessage') || !!qs(row, '.newMessage') });
+    }
+    return out;
+  }
+
   // Task page (/tasks): rewards waiting to be collected.
   function parseQuests(doc) {
     const box = qs(doc, '.taskOverview');
@@ -385,6 +411,32 @@
       if (m) items[m[1]] = (items[m[1]] || 0) + (num(text(qs(slot, '.count'))) || 1);
     }
     return { loaded: !!box && !qs(doc, '.inventoryPageWrapper.loading'), items };
+  }
+
+  // Player villages from the same map answer: the tooltip text carries
+  // "{k.spieler} name", "{k.einwohner} population", "{k.allianz} tag".
+  function villagesFromTiles(tiles) {
+    const out = [];
+    const strip = (s) => String(s || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    for (const tile of tiles || []) {
+      const pos = tile.position || tile;
+      if (pos.x == null || pos.y == null || !(tile.uid > 0) || !(tile.did > 0)) continue;
+      const body = String(tile.text || '');
+      const field = (key) => {
+        const m = body.match(new RegExp('\\{k\\.' + key + '\\}([^<{]*)'));
+        return m ? strip(m[1]) : null;
+      };
+      const pop = num(field('einwohner'));
+      if (pop == null) continue;
+      out.push({
+        x: Number(pos.x), y: Number(pos.y), did: tile.did, uid: tile.uid, aid: tile.aid || 0,
+        name: strip(String(tile.title || '').replace(/\{k\.\w+\}/g, '')),
+        player: field('spieler') || '',
+        alliance: field('allianz') || '',
+        pop,
+      });
+    }
+    return out;
   }
 
   // build.php for an existing building / field / empty site.
@@ -470,13 +522,14 @@
     if (type === 'send') out.sendPage = parseSendPage(doc);
     if (type === 'tasks') out.quests = parseQuests(doc);
     if (type === 'inventory') out.inventory = parseInventory(doc);
+    if (type === 'reports') out.reports = parseReports(doc);
     return out;
   }
 
   const api = {
     num, parsePage, parseResources, parseVillages, parseBuildQueue, parseFields, parseBuildings, parseMovements,
     parseBuildPage, parseFarmLists, parseHero, pageType, parseTroops, parseTrainingQueue, parseTile, parseSendPage,
-    oasesFromTiles, unitOf, parseNewBuildings, parseQuests, parseInventory,
+    oasesFromTiles, villagesFromTiles, unitOf, parseNewBuildings, parseQuests, parseInventory, parseReports,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TravianParser = api;

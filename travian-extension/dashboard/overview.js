@@ -16,6 +16,7 @@ import { pickAutoUpgrade } from '../src/autopilot.js';
 import { unitIcon, tribeBase } from '../src/units.js';
 import { timelineEvents, laneOf, moveLabel } from '../src/timeline.js';
 import { minimapSvg } from './minimap.js';
+import { balancePlan } from '../src/merchants.js';
 
 const $ = (id) => document.getElementById(id);
 const ALL = 'all';
@@ -417,6 +418,26 @@ function renderTimeline(scope, data, now) {
     : `<li class="muted">${esc(t('tl.empty', { n: TL_HOURS }))}</li>`;
 }
 
+// ---------------------------------------------------------------- balance ---
+// Villages with a resource piling up that another village lacks.
+function renderBalance(scope, data, now) {
+  const all = Object.keys(data.villages).length;
+  $('ovBalancePanel').hidden = all < 2;
+  if (all < 2) return;
+  const ids = new Set(scope.map((v) => v.id));
+  const plan = balancePlan(data.villages, now).filter((p) => ids.has(p.from) || ids.has(p.to));
+  $('ovBalanceMeta').textContent = plan.length ? '' : t('bal.ok');
+  const name = (id) => (data.villages[id] || {}).name || '—';
+  const server = data.settings.server;
+  const html = plan.length ? plan.map((p) => `<li><span><b>${esc(name(p.from))}</b> → <b>${esc(name(p.to))}</b>
+      <br>${RESOURCES.filter((k) => p.amounts[k]).map((k) => `<span class="unit-chip">${esc(resLabel(k))} <b class="mono">${fmtNum(p.amounts[k])}</b></span>`).join('')}</span>
+      <span class="feed-time">${p.market && server
+        ? `<button type="button" class="btn small" data-open="${esc(`${server}/build.php?newdid=${encodeURIComponent(p.from)}&gid=17&t=5`)}">${esc(t('bal.open'))}</button>`
+        : `<small class="muted">${esc(t('bal.noMarket'))}</small>`}</span></li>`).join('')
+    : `<li class="muted">${esc(t('bal.none'))}</li>`;
+  if ($('ovBalance').dataset.html !== html) { $('ovBalance').dataset.html = html; $('ovBalance').innerHTML = html; }
+}
+
 // --------------------------------------------------------------- mini map ---
 function renderMinimap(scope, data) {
   const ids = new Set(scope.map((v) => v.id));
@@ -530,6 +551,7 @@ export function renderOverview(data, now) {
   renderTroops(scope, now);
   renderTips(scope, data, now);
   renderResources(scope, data, now);
+  renderBalance(scope, data, now);
   renderChart(scope, data);
   renderFields(scope);
   renderNext(scope, data, now);
@@ -546,6 +568,8 @@ document.addEventListener('click', (e) => {
     window.dispatchEvent(new CustomEvent('tvh:rerender'));
     return;
   }
+  const open = e.target.closest('[data-open]');
+  if (open && open.closest('#tab-overview')) { chrome.tabs.create({ url: open.dataset.open }); return; }
   const b = e.target.closest('[data-tip]');
   if (b) {
     const tip = lastTips[Number(b.dataset.tip)];

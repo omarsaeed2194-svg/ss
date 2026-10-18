@@ -66,6 +66,8 @@ export const DEFAULT_SETTINGS = {
   // at this hour (-1 = off).
   telegram: { token: '', chatId: '', control: true, summaryHour: 8 },
   discord: { webhookUrl: '' },
+  // Read raid reports after farm rounds (experimental).
+  reports: { enabled: false },
 };
 
 export function mergeSettings(saved) {

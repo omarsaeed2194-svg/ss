@@ -35,7 +35,7 @@ export function commandsOf(data) {
     raids: (data.raids || []).map(({ nextAt, scannedAt, ...rest }) => rest),
     farms: (data.farms || []).map(({ nextAt, targets, ...rest }) => ({
       ...rest,
-      targets: (targets || []).map(({ lastSentAt, lastTriedAt, lastResult, fails, sent, ...tg }) => tg),
+      targets: (targets || []).map(({ lastSentAt, lastTriedAt, lastResult, fails, sent, stats, ...tg }) => tg),
     })),
     escapes: data.escapes || [],
   };
@@ -126,8 +126,8 @@ export function mergeCommands(local, remote) {
       ...l,
       nextAt: mine.nextAt || 0,
       targets: (l.targets || []).map((tg) => {
-        const { lastSentAt, lastTriedAt, lastResult, fails, sent } = mineTargets[tg.id] || {};
-        return { ...tg, lastSentAt, lastTriedAt, lastResult, fails, sent };
+        const { lastSentAt, lastTriedAt, lastResult, fails, sent, stats } = mineTargets[tg.id] || {};
+        return { ...tg, lastSentAt, lastTriedAt, lastResult, fails, sent, stats };
       }),
     };
   });

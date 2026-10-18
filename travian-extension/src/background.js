@@ -7,6 +7,8 @@ import {
 } from './shared.js';
 import { pickAutoUpgrade, troopsHome, raidTargets, oasisKey, farmTargets, coversTroops, cleanTroops, buildCategory, bagShortfall } from './autopilot.js';
 import { tribeBase } from './units.js';
+import { recordMapVillages } from './inactive.js';
+import { applyReports } from './reports.js';
 import { firstAttack, escapeTiming, escapeDone, escapeDue, escapeTarget, escapeTroops, TOO_LATE_MS } from './escape.js';
 import { parseCommand, statusText, summaryText, helpText } from './telegram.js';
 import { t, setLanguage, coords, ltr } from './i18n.js';
@@ -577,6 +579,9 @@ const JOBS = {
       return;
     }
     const r = await sendTroops(tabId, s, vid, { x: dest.village.x, y: dest.village.y, troops: (available) => escapeTroops(plan, available), mission: 'reinforce' });
+    // Troops first; then what's in storage goes into training so there is
+    // less to steal.
+    if (plan.spend) await spendBeforeAttack(tabId, s, plan, vid, tm.first).catch((e) => log('error', t('log.spendFailed', { reason: e.message }), vid));
     if (r.empty) {
       await setState({ status: 'nothing', to: dest.village.id });
       await log('info', t('log.escapeNothing', { lands }), vid);
@@ -826,7 +831,12 @@ const JOBS = {
     const vid = job.villageId;
     const { villages = {} } = await read(['villages']);
     const v = villages[vid];
-    await update(['schedule'], (d) => { if (d.schedule && d.schedule.scanVillage === vid) d.schedule.scanVillage = null; });
+    await update(['schedule'], (d) => {
+      if (!d.schedule) return;
+      if (d.schedule.scanVillage === vid) d.schedule.scanVillage = null;
+      // Even when this look fails, the next finder scan waits its turn.
+      if (d.schedule.finderVillage === vid) d.schedule.finderScanAt = Date.now() + jittered(12 * 3600000, 15);
+    });
     if (!v || v.x == null) return;
     await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(vid)}`);
     const { res } = await act(tabId, { kind: 'scanMap', x: v.x, y: v.y }, false);
@@ -849,6 +859,13 @@ const JOBS = {
       }
     });
     await log('info', t('log.scanned', { n: res.oases.length }), vid);
+    // Player villages and their population, for the inactive finder.
+    if (res.villages && res.villages.length) {
+      await update(['mapVillages', 'villages'], (d) => {
+        d.mapVillages = recordMapVillages(d.mapVillages, res.villages, now, Object.values(d.villages || {}));
+      });
+      await log('info', t('log.scannedVillages', { n: res.villages.length }), vid);
+    }
   },
 
   // Raid empty oases near a village. Every target is checked right before
@@ -986,6 +1003,10 @@ const JOBS = {
       }
       await log(sent ? 'success' : 'info', t('log.farmRound', { list: list.name, sent, total: due.length, short, failed }), vid);
       await bump('farm', sent);
+      // Reports exist once the raids land: read them a little later.
+      if (sent && s.reports.enabled) {
+        await update(['schedule'], (d) => { const sc = d.schedule = d.schedule || {}; if (!sc.reportsDue) sc.reportsDue = Date.now() + 15 * 60000; });
+      }
       if (sent) {
         await sleep(rand(1500, 3000));
         await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(vid)}`);
@@ -1005,6 +1026,32 @@ const JOBS = {
     if (res.ok) await log('success', t('log.farmSent', { what: res.started === 'all' ? t('log.farmAll') : t('log.farmCount', { n: res.started }) }));
     else await log('info', t('log.farmInfo', { reason: reasonText(res) }));
     await patchSchedule({ farmAt: Date.now() + jittered(s.farm.intervalMinutes * 60000, s.jitterPercent) });
+  },
+
+  // Raid reports (experimental): how each farm went; farms where the raid
+  // was lost, or troops died twice running, are paused.
+  async reports(tabId, job, s) {
+    await patchSchedule({ reportsDue: null });
+    let page = await navigate(tabId, `${s.server}/report/offensive`);
+    if (!page || page.type !== 'reports' || !(page.reports || []).length) page = await navigate(tabId, `${s.server}/report?t=1`);
+    const list = (page && page.reports) || [];
+    if (!list.length || !list.some((r) => r.result)) {
+      const { alertMemo = {} } = await read(['alertMemo']);
+      if (Date.now() - (alertMemo.reportsUnknown || 0) > 24 * 3600000) {
+        await update(['alertMemo'], (d) => { d.alertMemo = { ...(d.alertMemo || {}), reportsUnknown: Date.now() }; });
+        await log('error', t('log.reportsUnknown'));
+      }
+      return;
+    }
+    let changes = [];
+    await update(['farms', 'villages', 'reportsSeen'], (d) => {
+      const r = applyReports(d.farms, d.villages || {}, list, d.reportsSeen || []);
+      d.farms = r.farms; d.reportsSeen = r.seen; changes = r.changes;
+    });
+    for (const c of changes.filter((x) => x.paused)) {
+      await log('alert', t('log.farmPausedReport', { name: c.target, xy: coords(c.x, c.y), list: c.list, why: t(`report.${c.result}`) }));
+    }
+    if (changes.length) await log('info', t('log.reportsRead', { n: changes.length, full: changes.filter((c) => c.carry === 'full').length }));
   },
 
   // Task rewards: collected in the village with the most free storage (the
@@ -1106,6 +1153,9 @@ function planActions(s, data, now) {
   if (!automationOn(s) || !withinActiveHours(s.activeHours, new Date(now))) return jobs;
   const ap = s.autopilot;
   const auto = ap.enabled;
+  if (schedule.finderVillage && villages[schedule.finderVillage] && schedule.scanVillage !== schedule.finderVillage && now >= (schedule.finderScanAt || 0)) {
+    jobs.push({ type: 'scan', villageId: schedule.finderVillage, label: t('job.scan', { v: villages[schedule.finderVillage].name }) });
+  }
 
   for (const v of sortedVillages(villages)) {
     if (buildBlock(v, s, now)) continue;
@@ -1128,6 +1178,7 @@ function planActions(s, data, now) {
     jobs.push({ type: 'farmList', listId: list.id, label: t('job.farmList', { list: list.name }) });
   }
   if ((s.farm.enabled || (auto && ap.farmLists)) && now >= (schedule.farmAt || 0)) jobs.push({ type: 'farm', label: t('job.farm') });
+  if (s.reports.enabled && schedule.reportsDue && now >= schedule.reportsDue) jobs.push({ type: 'reports', label: t('job.reports') });
   if (auto && ap.quests && account.questClaimable && now >= (schedule.questAt || 0)) jobs.push({ type: 'quest', label: t('job.quest') });
   // A build waiting for resources the hero carries in the bag.
   if (auto && ap.heroBag) {
@@ -1145,6 +1196,25 @@ function planActions(s, data, now) {
     jobs.push({ type: 'adventure', label: t('job.adventure') });
   }
   return jobs;
+}
+
+// Resource protection: train as many of the plan's unit as storage pays
+// for, once per attack, when the stock is worth protecting.
+async function spendBeforeAttack(tabId, s, plan, vid, attackAt) {
+  const { villages = {} } = await read(['villages']);
+  const v = villages[vid];
+  if (!v || (v.escape && v.escape.spentFor === attackAt)) return;
+  const est = estimateStock(v, Date.now());
+  const cap = v.resources ? RESOURCES.reduce((n, k) => n + (capacityFor(v.resources, k) || 0), 0) : 0;
+  if (!est || !cap || RESOURCES.reduce((n, k) => n + est[k], 0) < cap * 0.2) return;
+  const page = await navigate(tabId, `${s.server}/build.php?newdid=${encodeURIComponent(vid)}&gid=${plan.spend.gid}`);
+  const unit = page.buildPage && page.buildPage.trainable.find((u) => u.field === plan.spend.field);
+  await update(['villages'], (d) => { const x = d.villages && d.villages[vid]; if (x) x.escape = { ...(x.escape || {}), spentFor: attackAt }; });
+  if (!unit || !(unit.max > 0)) { await log('info', t('log.spendNothing'), vid); return; }
+  const { res, page: after } = await act(tabId, { kind: 'train', field: unit.field, amount: unit.max }, true);
+  if (!res.ok || !after) throw new Error(res.ok ? t('reason.stillOnBuild') : reasonText(res));
+  await log('success', t('log.spent', { n: unit.max, unit: unit.name || unit.field }), vid);
+  await bump('trained', unit.max);
 }
 
 // Runs jobs in order; returns false when the run should stop (logged out,
@@ -1398,6 +1468,9 @@ const COMMANDS = {
       hero: !!plan.hero,
       leadSeconds: Math.min(3600, Math.max(30, Math.round(Number(plan.leadSeconds) || 120))),
       enabled: plan.enabled !== false,
+      // Train this unit with what's in storage once the troops are out.
+      spend: plan.spend && TROOP_BUILDINGS.includes(Number(plan.spend.gid)) && /^t([1-9]|10)$/.test(plan.spend.field)
+        ? { gid: Number(plan.spend.gid), field: plan.spend.field } : null,
     };
     if (Array.isArray(clean.units) && !clean.units.length) throw new Error(t('escape.needUnits'));
     await update(['escapes'], (d) => {
@@ -1422,6 +1495,18 @@ const COMMANDS = {
   async scanOases({ villageId }) {
     await patchSchedule({ scanVillage: villageId });
     tick(false, true);
+  },
+  // Inactive finder: scan around a village now, and again every ~12 h
+  // while automation runs, so population changes show.
+  async finderScan({ villageId }) {
+    await patchSchedule({ scanVillage: villageId, finderVillage: villageId, finderScanAt: Date.now() + 12 * 3600000 });
+    tick(false, true);
+  },
+  async finderStop() {
+    await patchSchedule({ finderVillage: null, finderScanAt: null });
+  },
+  async finderClear() {
+    await update(['mapVillages'], (d) => { d.mapVillages = {}; });
   },
   // Quick actions (popup, Telegram): stop or restart everything that acts
   // in the game. Watching, alerts and escape plans keep running.
@@ -1540,8 +1625,8 @@ const COMMANDS = {
     return { pulled, pushed };
   },
   async resetData() {
-    await update(['villages', 'account', 'schedule', 'alertMemo', 'status', 'history', 'oases'], (d) => {
-      d.villages = {}; d.account = {}; d.schedule = {}; d.alertMemo = {}; d.status = {}; d.history = {}; d.oases = {};
+    await update(['villages', 'account', 'schedule', 'alertMemo', 'status', 'history', 'oases', 'mapVillages'], (d) => {
+      d.villages = {}; d.account = {}; d.schedule = {}; d.alertMemo = {}; d.status = {}; d.history = {}; d.oases = {}; d.mapVillages = {};
     });
     await refreshBadge();
   },

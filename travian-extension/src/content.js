@@ -208,7 +208,7 @@
       if (!res.ok) return { ok: false, code: 'mapApi', status: res.status };
       const json = await res.json().catch(() => null);
       const tiles = (json && (json.tiles || (json.response && json.response.tiles))) || [];
-      return { ok: true, tiles: tiles.length, oases: P.oasesFromTiles(tiles) };
+      return { ok: true, tiles: tiles.length, oases: P.oasesFromTiles(tiles), villages: P.villagesFromTiles(tiles) };
     },
 
     // Empty building site: the chosen building's "Construct" button.
