@@ -4,6 +4,7 @@ import { renderOverview } from './overview.js';
 import { renderAutopilot } from './autopilot.js';
 import { renderFarms } from './farms.js';
 import { renderFinder } from './finder.js';
+import { renderCulture } from './culture.js';
 import { renderEscapes } from './escape.js';
 import { leaseIsFresh } from '../src/sync.js';
 import { unitIcon, tribeBase } from '../src/units.js';
@@ -386,6 +387,7 @@ function renderTicking(now) {
   renderSync(now);
   renderTroopTable(now);
   renderHealth(data, now);
+  renderCulture(data, now);
 }
 
 function render() {

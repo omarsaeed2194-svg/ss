@@ -9,6 +9,7 @@ import { pickAutoUpgrade, troopsHome, raidTargets, oasisKey, farmTargets, covers
 import { tribeBase } from './units.js';
 import { recordMapVillages } from './inactive.js';
 import { applyReports } from './reports.js';
+import { savingFor, canAfford, CELEBRATIONS } from './culture.js';
 import { firstAttack, escapeTiming, escapeDone, escapeDue, escapeTarget, escapeTroops, TOO_LATE_MS, donateTiming, donateDone, donateDue, donationAmounts, amountsText, sameAttack } from './escape.js';
 import { parseCommand, statusText, summaryText, helpText } from './telegram.js';
 import { t, setLanguage, coords, ltr } from './i18n.js';
@@ -239,6 +240,11 @@ async function processPage(state, tabId) {
           const items = bp.trainingQueue.map((q) => ({ unit: q.unit, name: q.name, count: q.count, finishAt: q.secondsLeft != null ? now + q.secondsLeft * 1000 : null }));
           v.trainingQueue = { ...(v.trainingQueue || {}), [gid]: { at: now, items } };
         }
+        // Town Hall: is a celebration running, and until when.
+        if (bp.celebration) {
+          v.celebrationUntil = bp.celebration.running ? now + (bp.celebration.secondsLeft || 0) * 1000 : 0;
+          v.celebrationSeenAt = now;
+        }
       }
       if (state.movements) {
         // Timers are whole seconds read at load time, so each read lands a
@@ -315,6 +321,18 @@ async function processPage(state, tabId) {
       d.account.hero = state.account.hero;
     }
     if (state.account) d.account.questClaimable = !!state.account.questClaimable;
+    // Villages / slots and the bar towards the next slot (culture points).
+    const ex = state.account && state.account.expansion;
+    if (ex && ex.total != null) {
+      const prev = d.account.expansion;
+      if (prev && prev.total != null && ex.total > prev.total) {
+        alerts.push({ title: t('alert.newSlot.title'), body: t('alert.newSlot.body', { used: ex.used, n: ex.total }) });
+      }
+      d.account.expansion = { ...ex, at: now };
+      const hist = d.account.cpHistory || [];
+      const last = hist[hist.length - 1];
+      if (!last || now - last.at > 20 * 60000 || last.total !== ex.total) d.account.cpHistory = [...hist, { at: now, pct: ex.pct, total: ex.total }].slice(-120);
+    }
     if (state.quests && state.quests.loaded) d.account.questClaimable = state.quests.claimable > 0;
     if (state.inventory && state.inventory.loaded) {
       const it = state.inventory.items || {};
@@ -765,6 +783,13 @@ const JOBS = {
         await log('info', t('log.autoNothing', { n: s.autopilot.fieldsMax }), vid);
         return;
       }
+      if (pick.saving) {
+        // Resources wait for a celebration; look again in a while.
+        const quiet = (v.savingLoggedAt || 0) > Date.now() - 3 * 3600000;
+        await patchVillage(vid, { autoIdleUntil: Date.now() + 20 * 60000, ...(quiet ? {} : { savingLoggedAt: Date.now() }) });
+        if (!quiet) await log('info', t('log.savingCelebration', { kind: t(`culture.kind.${pick.kind}`) }), vid);
+        return;
+      }
       why = pick.why;
       task = { kind: 'upgrade', slot: pick.slot, targetLevel: pick.level + 1, auto: true, gid: pick.construct ? pick.gid : undefined };
     }
@@ -1133,6 +1158,42 @@ const JOBS = {
     await patchSchedule({ farmAt: Date.now() + jittered(s.farm.intervalMinutes * 60000, s.jitterPercent) });
   },
 
+  // Celebration in the Town Hall (experimental: the page hasn't been
+  // checked against a saved copy). Verified by the stock dropping or the
+  // page showing a running celebration.
+  async celebrate(tabId, job, s) {
+    const vid = job.villageId;
+    const th = `${s.server}/build.php?newdid=${encodeURIComponent(vid)}&gid=24`;
+    let page = await navigate(tabId, th);
+    let { villages = {} } = await read(['villages']);
+    let v = villages[vid];
+    if (!v) return;
+    await patchVillage(vid, { celebrationCheckAt: Date.now() + 10 * 60000 });
+    const cel = page.buildPage && page.buildPage.celebration;
+    if (cel && cel.running) return; // stored by processPage
+    const c = CELEBRATIONS[job.kind];
+    if (!canAfford(v, c.cost, Date.now())) return;
+    const before = Object.values((v.resources || {}).stock || {}).reduce((n, x) => n + (x || 0), 0);
+    const { res } = await act(tabId, { kind: 'celebrate', great: job.kind === 'great' }, false);
+    const fail = async (reason) => {
+      await patchVillage(vid, { celebrationFailAt: Date.now() });
+      await log('error', t('log.celebrateFailed', { reason }), vid);
+    };
+    if (!res.ok) { await fail(reasonText(res)); return; }
+    await sleep(rand(1500, 2500));
+    page = await navigate(tabId, th);
+    ({ villages = {} } = await read(['villages']));
+    v = villages[vid];
+    const after = Object.values((v.resources || {}).stock || {}).reduce((n, x) => n + (x || 0), 0);
+    const cost = Object.values(c.cost).reduce((n, x) => n + x, 0);
+    const running = page.buildPage && page.buildPage.celebration && page.buildPage.celebration.running;
+    if (!running && before - after < cost * 0.7) { await fail(t('reason.celebrateNotConfirmed')); return; }
+    if (!running) await patchVillage(vid, { celebrationUntil: Date.now() + 12 * 3600000 }); // length unknown: look again later
+    await patchVillage(vid, { autoIdleUntil: 0 }); // the savings are spent: building can go on
+    await log('success', t('log.celebrating', { kind: t(`culture.kind.${job.kind}`), cp: c.cp }), vid);
+    await bump('celebrations');
+  },
+
   // Raid reports (experimental): how each farm went; farms where the raid
   // was lost, or troops died twice running, are paused.
   async reports(tabId, job, s) {
@@ -1284,6 +1345,12 @@ function planActions(s, data, now) {
   }
   if ((s.farm.enabled || (auto && ap.farmLists)) && now >= (schedule.farmAt || 0)) jobs.push({ type: 'farm', label: t('job.farm') });
   if (s.reports.enabled && schedule.reportsDue && now >= schedule.reportsDue) jobs.push({ type: 'reports', label: t('job.reports') });
+  // Celebrations in every village with a Town Hall, once affordable.
+  for (const v of sortedVillages(villages)) {
+    if ((v.celebrationFailAt || 0) > now - 12 * 3600000 || (v.celebrationCheckAt || 0) > now) continue;
+    const c = savingFor(v, s.culture.celebrate, now);
+    if (c && !c.tooSmall && canAfford(v, c.cost, now)) jobs.push({ type: 'celebrate', villageId: v.id, kind: c.kind, label: t('job.celebrate', { v: v.name }) });
+  }
   if (auto && ap.quests && account.questClaimable && now >= (schedule.questAt || 0)) jobs.push({ type: 'quest', label: t('job.quest') });
   // A build waiting for resources the hero carries in the bag.
   if (auto && ap.heroBag) {
@@ -1674,7 +1741,7 @@ const COMMANDS = {
     await patchSchedule({ refreshAt: 0 });
     // "Check now" should retry builds immediately, not after a scheduled wait.
     await update(['villages'], (d) => {
-      for (const v of Object.values(d.villages || {})) { delete v.buildWait; delete v.buildRetryAt; }
+      for (const v of Object.values(d.villages || {})) { delete v.buildWait; delete v.buildRetryAt; delete v.autoIdleUntil; }
     });
     tick(true);
   },

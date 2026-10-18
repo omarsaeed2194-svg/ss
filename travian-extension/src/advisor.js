@@ -173,6 +173,8 @@ export function adviseAccount(data, now = Date.now()) {
   if (hero.adventures > 0 && hero.home && !s.adventure.enabled && !(ap.enabled && ap.adventures)) {
     add('info', 'hero', t('tip.adventures', { n: hero.adventures }), { type: 'setting', label: t('tip.actEnable'), patch: { adventure: { ...s.adventure, enabled: true } } });
   }
+  const ex = data.account.expansion;
+  if (ex && ex.total != null && ex.used < ex.total) add('info', 'bonus', t('tip.freeSlot', { used: ex.used, n: ex.total }), { type: 'tab', tab: 'culture', label: t('tip.actCulture') });
   if (hero.levelUp && s.server) add('info', 'hero', t('tip.heroLevelUp'), { type: 'open', url: `${s.server}/hero`, label: t('tip.actOpenGame') });
   if (data.account.questClaimable && s.server && !(ap.enabled && ap.quests)) {
     add('info', 'bonus', t('tip.quests'), { type: 'open', url: `${s.server}/tasks`, label: t('tip.actOpenGame') });

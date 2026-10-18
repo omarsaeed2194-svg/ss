@@ -77,6 +77,18 @@ you're away:
   if you tick them. The Autopilot tab shows what it will do next in every
   village. You can also queue a **new building on a free site** yourself in
   the Build queue tab.
+- **Culture points** — a tab that shows your village slots and the progress
+  to the next one (read from the game's own sidebar on every page), the pace
+  and an estimated date, and how many culture points each village makes a day.
+  With **Autopilot builds for culture points** on, every village picks the
+  upgrade or new building with the most culture points per resource (Main
+  Building, Embassy, Marketplace, Academy, Town Hall…), using the game's
+  building costs — checked against the real pages — after keeping storage
+  and crop safe. **Celebrations** *(experimental)*: a small (or great, at
+  Town Hall 10+) celebration in every village with a Town Hall as soon as
+  the last one ends; the village saves for it, and the extension checks that
+  the resources really went. You get an alert (and Telegram) when a new
+  village slot opens.
 - **Telegram control** — besides alerts, the bot answers commands sent to it
   in Arabic or English: `status`/`الحالة`, `pause`/`وقف`, `resume`/`شغل`,
   `check`/`افحص`, `farms`/`مزارع`, `escape`/`اهرب`, `summary`/`ملخص`. Commands
@@ -229,7 +241,7 @@ themselves. Save them first:
   bot pauses until you log in again.
 - **Checked against saved game pages:** building sites, task rewards, the
   hero's bag, rally point send form, training, farm lists, map tiles. **Not
-  yet checked:** the alliance bonus page (donations are experimental — use
+  yet checked:** the Town Hall page (celebrations are experimental), the alliance bonus page (donations are experimental — use
   the Test button), the report list (raid reports are experimental), the
   marketplace send page and calling troops back (both stay manual for now),
   hero attribute points, academy research and smithy upgrades (not
@@ -258,6 +270,7 @@ src/health.js          The Health tab's report
 src/inactive.js        Inactive finder: population snapshots and verdicts
 src/reports.js         Raid reports matched to farms; pausing rules
 src/merchants.js       Resource balance suggestions between villages
+src/culture.js         Culture points: per-building values and costs, best picks, celebrations, pace
 src/ui.js / ui.css     Village cards and styles shared by popup and dashboard
 popup/                 Toolbar popup
 dashboard/             Full dashboard (also the extension's options page); overview.js renders the

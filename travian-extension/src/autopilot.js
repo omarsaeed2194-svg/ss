@@ -2,6 +2,7 @@
 // which upgrade to start next when the player queued nothing, and which
 // oases a raid rule may hit.
 import { RESOURCES, FIELD_RESOURCE, capacityFor, estimateStock } from './shared.js';
+import { savingFor, bestCpUpgrade } from './culture.js';
 
 const MAP_SIZE = 401; // standard Travian map, -200..200
 
@@ -79,8 +80,10 @@ export function pickConstruct(v, tribeBase = null, skip = [], now = Date.now(), 
 
 // The next upgrade for a village with nothing queued, or null. In order:
 // a storage that is nearly full, crop when the village is close to
-// starving, the Main Building when it lags behind the fields, then the
-// lowest resource field (favouring the resource produced least).
+// starving, (culture focus) saving for a celebration, missing basic
+// buildings, (culture focus) the most culture points per resource, the
+// Main Building when it lags behind the fields, then the lowest resource
+// field (favouring the resource produced least).
 export function pickAutoUpgrade(v, s, now = Date.now(), tribeBase = null) {
   const ap = s.autopilot;
   const skip = v.autoSkip && v.autoSkip.until > now ? v.autoSkip.slots || [] : [];
@@ -100,12 +103,6 @@ export function pickAutoUpgrade(v, s, now = Date.now(), tribeBase = null) {
     }
   }
 
-  // 1b. A building the village still lacks (warehouse, rally point…).
-  if (ap.construct) {
-    const c = pickConstruct(v, tribeBase, skip, now, v.autoSkip && v.autoSkip.until > now ? v.autoSkip.gids || [] : []);
-    if (c) return c;
-  }
-
   const below = (f) => f.level < ap.fieldsMax;
   // 2. Crop margin too thin to keep troops fed.
   const total = (prod.wood || 0) + (prod.clay || 0) + (prod.iron || 0) + Math.max(0, prod.crop || 0);
@@ -114,13 +111,41 @@ export function pickAutoUpgrade(v, s, now = Date.now(), tribeBase = null) {
     if (crop) return { slot: crop.slot, gid: crop.gid, level: crop.level, why: 'crop' };
   }
 
-  // 3. Main Building keeps pace with the fields (it speeds up all building).
+  // 3. Culture points focus, part 1: a celebration is due — save for it
+  // (or first make the storage big enough to hold its cost).
+  const cu = s.culture || {};
+  const skipGids = v.autoSkip && v.autoSkip.until > now ? v.autoSkip.gids || [] : [];
+  if (cu.focus) {
+    const failedLately = (v.celebrationFailAt || 0) > now - 12 * 3600000;
+    const save = failedLately ? null : savingFor(v, cu.celebrate, now);
+    if (save && save.tooSmall) {
+      const short = RESOURCES.find((k) => (capacityFor(v.resources, k) || 0) < save.cost[k]);
+      const store = lowest(buildings.filter((b) => b.gid === (short === 'crop' ? 11 : 10) && b.level < 20));
+      if (store) return { slot: store.slot, gid: store.gid, level: store.level, why: 'celebration' };
+    } else if (save) {
+      return { saving: true, why: 'saving', kind: save.kind };
+    }
+  }
+
+  // 4. A building the village still lacks (warehouse, rally point…).
+  if (ap.construct) {
+    const c = pickConstruct(v, tribeBase, skip, now, skipGids);
+    if (c) return c;
+  }
+
+  // 5. Culture points focus, part 2: the most culture points per resource.
+  if (cu.focus) {
+    const cp = bestCpUpgrade(v, { skip, skipGids });
+    if (cp) return cp;
+  }
+
+  // 6. Main Building keeps pace with the fields (it speeds up all building).
   const all = v.fields || [];
   const avg = all.length ? all.reduce((n, f) => n + f.level, 0) / all.length : 0;
   const main = lowest(buildings.filter((b) => b.gid === 15));
   if (main && main.level < Math.min(10, Math.floor(avg))) return { slot: main.slot, gid: 15, level: main.level, why: 'main' };
 
-  // 4. Lowest field; among equals, the resource with the lowest production.
+  // 7. Lowest field; among equals, the resource with the lowest production.
   const candidates = fields.filter(below);
   candidates.sort((a, b) => a.level - b.level ||
     (prod[FIELD_RESOURCE[a.gid]] || 0) - (prod[FIELD_RESOURCE[b.gid]] || 0) || a.slot - b.slot);

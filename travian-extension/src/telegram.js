@@ -4,6 +4,7 @@
 import { RESOURCES, resLabel, capacityFor, estimateStock, hoursUntilLimit, fmtDuration, fmtClock, fmtNum, sortedVillages } from './shared.js';
 import { t } from './i18n.js';
 import { firstAttack, escapeStatus, donateStatus } from './escape.js';
+import { expansionEta } from './culture.js';
 
 // Commands answer to English or Arabic words, with or without "/".
 const WORDS = {
@@ -30,6 +31,14 @@ const pct = (v, k, now) => {
   return est && cap ? Math.round((est[k] / cap) * 100) : null;
 };
 
+// "Villages 2/3 · 45 % to the next · about 1d 4h".
+function slotsLine(data, now) {
+  const ex = data.account && data.account.expansion;
+  if (!ex || ex.total == null) return null;
+  const eta = expansionEta(data.account.cpHistory, now);
+  return `🏛 ${t('tg.slots', { used: ex.used, total: ex.total, pct: Math.round(ex.pct || 0) })}${eta ? ` · ${fmtDuration(eta.at - now)}` : ''}`;
+}
+
 // One block per village: attacks, storage, building, escape plan.
 export function statusText(data, now = Date.now()) {
   const s = data.settings;
@@ -37,6 +46,8 @@ export function statusText(data, now = Date.now()) {
   const auto = s.autopilot.enabled ? t('tg.autopilotOn') : s.botEnabled ? t('tg.botOn') : t('tg.botOff');
   lines.push(`${t('tg.automation')}: ${auto}`);
   if (data.status && data.status.loggedOut) lines.push(`⚠️ ${t('status.loggedOut')}`);
+  const slots = slotsLine(data, now);
+  if (slots) lines.push(slots);
   for (const v of sortedVillages(data.villages)) {
     lines.push('', `🏰 ${v.name}`);
     const first = firstAttack(v, now);
@@ -69,10 +80,13 @@ export function summaryText(data, stats, now = Date.now()) {
   row('⚔️', 'tg.sumAttacks', stats.attacks);
   row('🏃', 'tg.sumEscapes', stats.escapes);
   row('💰', 'tg.sumDonations', stats.donations);
+  row('🎉', 'tg.sumCelebrations', stats.celebrations);
   row('🎁', 'tg.sumQuests', stats.quests);
   row('🎒', 'tg.sumHeroBag', stats.heroBag);
   row('⚠️', 'tg.sumErrors', stats.errors);
   if (lines.length === 2) lines.push(t('tg.sumQuiet'));
+  const slots = slotsLine(data, now);
+  if (slots) lines.push('', slots);
   // Right now: anything that needs the player.
   const now_ = [];
   for (const v of sortedVillages(data.villages)) {

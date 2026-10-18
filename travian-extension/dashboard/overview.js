@@ -300,7 +300,7 @@ function renderNext(scope, data, now) {
     const pick = !list.length && ap.enabled && ap.build ? pickAutoUpgrade(v, s, now, tribeBase(data.villages)) : null;
     if (!list.length && !pick) continue;
     const why = buildStatus(v, data, now);
-    const what = list.length ? taskLabel(list[0], v) : pick.construct ? t('ov.autoConstruct', { name: buildingName(pick.gid) }) : t('ov.autoPick', { name: buildingName(pick.gid), n: pick.level + 1 });
+    const what = list.length ? taskLabel(list[0], v) : pick.saving ? t('ap.planSaving', { kind: t(`culture.kind.${pick.kind}`) }) : pick.construct ? t('ov.autoConstruct', { name: buildingName(pick.gid) }) : t('ov.autoPick', { name: buildingName(pick.gid), n: pick.level + 1 });
     rows.push([scope.length > 1 ? t('ov.nextBuild', { v: v.name }) : t('ov.nextBuildOne'), `${what}${why ? ` — ${why.text}` : ''}`]);
   }
   const raids = data.raids.filter((r) => r.enabled !== false && ids.has(r.villageId));

@@ -513,3 +513,11 @@ svg.chart .hit { fill: transparent; }
 .hl-detail { grid-column: 2 / -1; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 .hl-section[data-section="errors"] .hl-row { grid-template-columns: 20px auto minmax(0, 1fr); }
 .hl-section[data-section="errors"] .hl-value { text-align: start; color: var(--text); }
+
+/* Culture tab */
+.cu-slots { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; }
+.cu-slots > div:not(.cu-bar) { display: flex; flex-direction: column; }
+.cu-slots b { font-size: 20px; }
+.cu-bar { height: 12px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); overflow: hidden; }
+.cu-bar i { display: block; height: 100%; background: var(--series-1); border-radius: 999px; }
+.cu-slots.free .cu-bar i { background: var(--good-mark); }

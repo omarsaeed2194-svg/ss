@@ -453,6 +453,11 @@
     return {
       slot,
       newBuildings: qs(doc, '[id^="contract_building"]') ? parseNewBuildings(doc) : null,
+      // Town Hall: a celebration in progress shows a countdown.
+      celebration: qs(doc, '#build.gid24') ? (() => {
+        const timer = qs(doc, '#content table.under_progress .timer, #content .under_progress .timer, #build table .dur .timer');
+        return { running: !!timer, secondsLeft: timer ? num(timer.getAttribute('value')) : null };
+      })() : null,
       title: text(title),
       level: lvl ? num(text(lvl)) : null,
       canUpgrade: !!(upgrade && !upgrade.disabled && !upgrade.classList.contains('disabled')),
@@ -489,8 +494,20 @@
     }));
   }
 
+  // Sidebar "Villages 1/2" box: villages used / slots, and the bar towards
+  // the next slot (culture points).
+  function parseExpansion(doc) {
+    const box = qs(doc, '.expansionSlotInfo');
+    if (!box) return null;
+    const m = text(qs(box, '.slots')).replace(/[^\d/]/g, '').match(/(\d+)\/(\d+)/);
+    const bar = qs(box, '.bar');
+    const w = bar && (bar.getAttribute('style') || '').match(/width:\s*([\d.]+)%/);
+    return { used: m ? Number(m[1]) : null, total: m ? Number(m[2]) : null, pct: w ? Number(w[1]) : null };
+  }
+
   function parseAccount(doc) {
     return {
+      expansion: parseExpansion(doc),
       // The quest master's speech bubble: a task reward is waiting.
       questClaimable: !!qs(doc, '#questmasterButton.claimable, #questmasterButton .newQuestSpeechBubble'),
       gold: num(text(qs(doc, '.ajaxReplaceableGoldAmount'))),
@@ -529,7 +546,7 @@
   const api = {
     num, parsePage, parseResources, parseVillages, parseBuildQueue, parseFields, parseBuildings, parseMovements,
     parseBuildPage, parseFarmLists, parseHero, pageType, parseTroops, parseTrainingQueue, parseTile, parseSendPage,
-    oasesFromTiles, villagesFromTiles, unitOf, parseNewBuildings, parseQuests, parseInventory, parseReports,
+    oasesFromTiles, villagesFromTiles, unitOf, parseNewBuildings, parseQuests, parseInventory, parseReports, parseExpansion,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TravianParser = api;

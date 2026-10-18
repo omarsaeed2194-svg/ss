@@ -48,7 +48,8 @@ function renderPlan(now) {
     if (queued) what = t('ap.planQueued', { task: taskLabel(queued, v) });
     else if (ap.build) {
       const pick = pickAutoUpgrade(v, s, now, tribeBase(data.villages));
-      what = pick && pick.construct ? t('ap.planConstruct', { name: buildingName(pick.gid), slot: pick.slot })
+      what = pick && pick.saving ? t('ap.planSaving', { kind: t(`culture.kind.${pick.kind}`) })
+        : pick && pick.construct ? t('ap.planConstruct', { name: buildingName(pick.gid), slot: pick.slot })
         : pick ? t('ap.planPick', { name: buildingName(pick.gid), n: pick.level + 1, why: t(`auto.why.${pick.why}`) })
         : v.fields ? t('ap.planNothing', { n: ap.fieldsMax }) : t('build.notScannedFields');
     } else what = t('ap.planBuildOff');

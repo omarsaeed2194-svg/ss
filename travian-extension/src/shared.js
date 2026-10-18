@@ -68,6 +68,9 @@ export const DEFAULT_SETTINGS = {
   discord: { webhookUrl: '' },
   // Read raid reports after farm rounds (experimental).
   reports: { enabled: false },
+  // Culture points: focus = the autopilot builds for culture points;
+  // celebrate = off | small | great, held in every village with a Town Hall.
+  culture: { focus: false, celebrate: 'off' },
 };
 
 export function mergeSettings(saved) {

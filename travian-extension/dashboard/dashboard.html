@@ -22,6 +22,7 @@
       <a href="#troops" data-tab="troops" data-i18n="nav.troops"></a>
       <a href="#autopilot" data-tab="autopilot" data-i18n="nav.autopilot"></a>
       <a href="#raids" data-tab="raids" data-i18n="nav.raids"></a>
+      <a href="#culture" data-tab="culture" data-i18n="nav.culture"></a>
       <a href="#alerts" data-tab="alerts" data-i18n="nav.alerts"></a>
       <a href="#settings" data-tab="settings" data-i18n="nav.settings"></a>
       <a href="#health" data-tab="health" data-i18n="nav.health"></a>
@@ -468,6 +469,33 @@
           <p class="muted small" data-i18n="settings.serverHelp"></p>
           <button class="btn danger" id="resetData" data-i18n="settings.reset"></button>
         </div>
+      </div>
+    </section>
+
+    <!-- Culture points -->
+    <section class="tab" id="tab-culture">
+      <div class="cols">
+        <div class="panel">
+          <h2 data-i18n="culture.nextTitle"></h2>
+          <div id="cuHead"></div>
+        </div>
+        <div class="panel">
+          <h2 data-i18n="culture.settings"></h2>
+          <label class="switch strong"><input type="checkbox" data-setting="culture.focus"> <span data-i18n="culture.focus"></span></label>
+          <p class="muted small indent" data-i18n="culture.focusHelp"></p>
+          <label><span data-i18n="culture.celebrate"></span> <select data-setting="culture.celebrate">
+            <option value="off" data-i18n="culture.celebrateOffOpt"></option>
+            <option value="small" data-i18n="culture.celebrateSmall"></option>
+            <option value="great" data-i18n="culture.celebrateGreat"></option>
+          </select></label>
+          <p class="muted small" id="cuCelebrateInfo"></p>
+          <p class="muted small" data-i18n="culture.celebrateHelp"></p>
+        </div>
+      </div>
+      <div class="panel">
+        <h2 data-i18n="culture.villagesTitle"></h2>
+        <div class="table-wrap"><table class="list" id="cuTable"></table></div>
+        <p class="muted small" data-i18n="culture.tableHelp"></p>
       </div>
     </section>
 

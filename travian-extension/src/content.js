@@ -328,6 +328,21 @@
       return { ok: true };
     },
 
+    // Town Hall: the celebration's "hold" button — small first, great
+    // second. Never the building's own upgrade button or a gold/NPC one.
+    async celebrate({ great }) {
+      const root = document.getElementById('build') || document;
+      await sleep(rand(500, 1000));
+      const shown = (el) => !!el && el.getClientRects().length > 0;
+      const buttons = Array.from(root.querySelectorAll('.research button, .research input[type="submit"], .cta button, .celebration button'))
+        .filter((b) => usable(b) && shown(b) && !b.closest('.upgradeButtonsContainer') && !/gold|exchange|npc|\bbuild\b/i.test(b.className));
+      const btn = great ? buttons[1] : buttons[0];
+      if (!btn) return { ok: false, code: 'noCelebrateButton' };
+      setTimeout(() => btn.click(), 50);
+      await sleep(2500);
+      return { ok: true };
+    },
+
     async adventure() {
       const btn = await waitFor(() => document.querySelector('#heroAdventure tbody tr button:not([disabled])'));
       if (!btn) return { ok: false, code: 'noAdventure' };

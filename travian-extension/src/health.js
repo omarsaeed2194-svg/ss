@@ -6,7 +6,7 @@ import { leaseIsFresh } from './sync.js';
 import { t } from './i18n.js';
 
 const HOUR = 3600000;
-const JOB_TYPES = ['refresh', 'build', 'train', 'farmList', 'farm', 'raid', 'escape', 'adventure', 'scan', 'quest', 'heroBag', 'reports', 'donate'];
+const JOB_TYPES = ['refresh', 'build', 'train', 'farmList', 'farm', 'raid', 'escape', 'adventure', 'scan', 'quest', 'heroBag', 'reports', 'donate', 'celebrate'];
 
 const row = (tone, label, value, detail = '') => ({ tone, label, value, detail });
 
