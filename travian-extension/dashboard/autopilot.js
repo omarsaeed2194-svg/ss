@@ -3,6 +3,7 @@
 import { command, esc, fillSelect } from '../src/ui.js';
 import { sortedVillages, buildingName, taskLabel, fmtDuration, fmtAgo, buildStatus } from '../src/shared.js';
 import { pickAutoUpgrade, unitField, distance, oasisKey } from '../src/autopilot.js';
+import { tribeBase } from '../src/units.js';
 import { t, coords } from '../src/i18n.js';
 
 const $ = (id) => document.getElementById(id);
@@ -46,8 +47,9 @@ function renderPlan(now) {
     let what;
     if (queued) what = t('ap.planQueued', { task: taskLabel(queued, v) });
     else if (ap.build) {
-      const pick = pickAutoUpgrade(v, s, now);
-      what = pick ? t('ap.planPick', { name: buildingName(pick.gid), n: pick.level + 1, why: t(`auto.why.${pick.why}`) })
+      const pick = pickAutoUpgrade(v, s, now, tribeBase(data.villages));
+      what = pick && pick.construct ? t('ap.planConstruct', { name: buildingName(pick.gid), slot: pick.slot })
+        : pick ? t('ap.planPick', { name: buildingName(pick.gid), n: pick.level + 1, why: t(`auto.why.${pick.why}`) })
         : v.fields ? t('ap.planNothing', { n: ap.fieldsMax }) : t('build.notScannedFields');
     } else what = t('ap.planBuildOff');
     rows.push(`<li><span><b>${esc(v.name)}</b><br>🏗 ${esc(what)}${why && ap.enabled ? `<br><small class="muted">${esc(why.text)}</small>` : ''}</span></li>`);

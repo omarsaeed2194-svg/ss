@@ -32,11 +32,55 @@ export const oasisKey = (x, y) => `${x}|${y}`;
 
 const lowest = (list) => list.slice().sort((a, b) => a.level - b.level)[0] || null;
 
+// Building categories on an empty site's page (build.php?id=N&category=C).
+const MILITARY = new Set([12, 13, 14, 19, 20, 21, 22, 29, 30, 36, 37, 41, 46]);
+const RESOURCE_BUILDINGS = new Set([5, 6, 7, 8, 9]);
+export const buildCategory = (gid) => (RESOURCE_BUILDINGS.has(gid) ? 3 : MILITARY.has(gid) ? 2 : 1);
+
+// Each tribe's wall (slot 40).
+const WALLS = { 0: 31, 10: 32, 20: 33, 50: 42, 60: 43 };
+export const wallGid = (tribeBase) => WALLS[tribeBase] || null;
+
+// What every village needs, in order, with the levels the game asks for
+// first and the average field level before it is worth the resources.
+const ESSENTIAL = [
+  { gid: 10, need: { 15: 1 }, minAvg: 2, fills: ['wood', 'clay', 'iron'] }, // warehouse
+  { gid: 11, need: { 15: 1 }, minAvg: 2, fills: ['crop'] },                  // granary
+  { gid: 16, need: {}, slot: 39, minAvg: 1 },           // rally point
+  { gid: 23, need: {}, minAvg: 2 },                     // cranny
+  { gid: 17, need: { 15: 3, 10: 1, 11: 1 }, minAvg: 3 }, // marketplace
+  { gid: 19, need: { 15: 3, 16: 1 }, minAvg: 3 },       // barracks
+  { gid: 'wall', need: {}, slot: 40, minAvg: 3 },
+];
+
+// A building the village is missing, on a free site, once the game would
+// allow it; null when there is nothing to construct. Storage comes early
+// when it is filling up.
+export function pickConstruct(v, tribeBase = null, skip = [], now = Date.now()) {
+  if (!v.buildings || !v.buildings.length) return null;
+  const has = (gid) => v.buildings.some((b) => b.gid === gid && (b.level > 0 || b.underConstruction));
+  const level = (gid) => Math.max(0, ...v.buildings.filter((b) => b.gid === gid).map((b) => b.level || 0));
+  const empty = (slot) => { const b = v.buildings.find((x) => x.slot === slot); return !skip.includes(slot) && (!b || !b.gid); };
+  const fields = v.fields || [];
+  const avg = fields.length ? fields.reduce((n, f) => n + f.level, 0) / fields.length : 0;
+  const sites = v.buildings.filter((b) => !b.gid && b.slot >= 19 && b.slot <= 38 && !skip.includes(b.slot)).map((b) => b.slot).sort((a, b) => a - b);
+  const est = estimateStock(v, now);
+  const filling = (list) => !!est && list.some((k) => est[k] / (capacityFor(v.resources, k) || Infinity) >= 0.8);
+  for (const e of ESSENTIAL) {
+    const gid = e.gid === 'wall' ? wallGid(tribeBase) : e.gid;
+    if (!gid || has(gid) || (avg < (e.minAvg || 0) && !(e.fills && filling(e.fills)))) continue;
+    if (Object.entries(e.need).some(([g, n]) => level(Number(g)) < n)) continue;
+    const slot = e.slot ? (empty(e.slot) ? e.slot : null) : sites[0];
+    if (slot) return { slot, gid, level: 0, why: 'construct', construct: true };
+  }
+  return null;
+}
+
 // The next upgrade for a village with nothing queued, or null. In order:
 // a storage that is nearly full, crop when the village is close to
 // starving, the Main Building when it lags behind the fields, then the
 // lowest resource field (favouring the resource produced least).
-export function pickAutoUpgrade(v, s, now = Date.now()) {
+export function pickAutoUpgrade(v, s, now = Date.now(), tribeBase = null) {
   const ap = s.autopilot;
   const skip = v.autoSkip && v.autoSkip.until > now ? v.autoSkip.slots || [] : [];
   const free = (b) => b && !b.underConstruction && !b.maxLevel && !skip.includes(b.slot);
@@ -53,6 +97,12 @@ export function pickAutoUpgrade(v, s, now = Date.now()) {
       const store = lowest(buildings.filter((b) => b.gid === (k === 'crop' ? 11 : 10) && b.level < 20));
       if (store) return { slot: store.slot, gid: store.gid, level: store.level, why: 'storage', res: k };
     }
+  }
+
+  // 1b. A building the village still lacks (warehouse, rally point…).
+  if (ap.construct) {
+    const c = pickConstruct(v, tribeBase, skip, now);
+    if (c) return c;
   }
 
   const below = (f) => f.level < ap.fieldsMax;
@@ -75,6 +125,20 @@ export function pickAutoUpgrade(v, s, now = Date.now()) {
     (prod[FIELD_RESOURCE[a.gid]] || 0) - (prod[FIELD_RESOURCE[b.gid]] || 0) || a.slot - b.slot);
   const f = candidates[0];
   return f ? { slot: f.slot, gid: f.gid, level: f.level, why: 'fields' } : null;
+}
+
+// What a waiting upgrade still lacks, per resource, rounded up to whole
+// hundreds (the hero's bag moves resources in any amount, but the stock
+// estimate is never exact); null when the village already has enough.
+export function bagShortfall(v, cost, now = Date.now()) {
+  const est = estimateStock(v, now);
+  if (!est || !cost) return null;
+  const out = {};
+  for (const k of RESOURCES) {
+    const lack = (cost[k] || 0) - est[k];
+    out[k] = lack > 0 ? Math.ceil(lack / 100) * 100 : 0;
+  }
+  return RESOURCES.some((k) => out[k] > 0) ? out : null;
 }
 
 // Oases a raid rule may hit now, nearest first: inside its radius, not owned,

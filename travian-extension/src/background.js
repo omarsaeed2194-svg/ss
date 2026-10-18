@@ -3,9 +3,10 @@
 import {
   RESOURCES, resLabel, FIELD_RESOURCE, mergeSettings, capacityFor,
   estimateStock, fmtDuration, fmtClock, withinActiveHours, sortedVillages, taskLabel, buildingName,
-  buildBlock,
+  buildBlock, fmtNum,
 } from './shared.js';
-import { pickAutoUpgrade, troopsHome, raidTargets, oasisKey, farmTargets, coversTroops, cleanTroops } from './autopilot.js';
+import { pickAutoUpgrade, troopsHome, raidTargets, oasisKey, farmTargets, coversTroops, cleanTroops, buildCategory, bagShortfall } from './autopilot.js';
+import { tribeBase } from './units.js';
 import { firstAttack, escapeTiming, escapeDone, escapeDue, escapeTarget, escapeTroops, TOO_LATE_MS } from './escape.js';
 import { parseCommand, statusText, summaryText, helpText } from './telegram.js';
 import { t, setLanguage, coords, ltr } from './i18n.js';
@@ -302,6 +303,12 @@ async function processPage(state, tabId) {
       d.account.gold = state.account.gold;
       d.account.silver = state.account.silver;
       d.account.hero = state.account.hero;
+    }
+    if (state.account) d.account.questClaimable = !!state.account.questClaimable;
+    if (state.quests && state.quests.loaded) d.account.questClaimable = state.quests.claimable > 0;
+    if (state.inventory && state.inventory.loaded) {
+      const it = state.inventory.items || {};
+      d.account.heroBag = { wood: it['145'] || 0, clay: it['146'] || 0, iron: it['147'] || 0, crop: it['148'] || 0, at: now };
     }
     if (state.farmLists) d.account.farmLists = state.farmLists;
     d.account.updatedAt = now;
@@ -645,14 +652,14 @@ const JOBS = {
       if (!v.buildings || !v.buildingsAt) await navigate(tabId, `${s.server}/dorf2.php?newdid=${encodeURIComponent(vid)}`);
       ({ villages = {} } = await read(['villages']));
       v = villages[vid];
-      const pick = pickAutoUpgrade(v, s, Date.now());
+      const pick = pickAutoUpgrade(v, s, Date.now(), tribeBase(villages));
       if (!pick) {
         await patchVillage(vid, { autoIdleUntil: Date.now() + AUTO_IDLE_MS });
         await log('info', t('log.autoNothing', { n: s.autopilot.fieldsMax }), vid);
         return;
       }
       why = pick.why;
-      task = { kind: 'upgrade', slot: pick.slot, targetLevel: pick.level + 1, auto: true };
+      task = { kind: 'upgrade', slot: pick.slot, targetLevel: pick.level + 1, auto: true, gid: pick.construct ? pick.gid : undefined };
     }
     if (!task) return;
     // Player tasks leave the queue when done; autopilot picks were never in it.
@@ -679,11 +686,33 @@ const JOBS = {
       slot = field.slot;
     }
 
-    const page = await navigate(tabId, `${s.server}/build.php?newdid=${encodeURIComponent(vid)}&id=${slot}`);
+    // A new building on an empty site: open the site on the right tab.
+    const site = (v.buildings || []).find((b) => b.slot === slot);
+    const empty = task.gid && (!site || !site.gid);
+    const page = await navigate(tabId, `${s.server}/build.php?newdid=${encodeURIComponent(vid)}&id=${slot}${empty ? `&category=${buildCategory(task.gid)}` : ''}`);
     const bp = page.buildPage;
     if (!bp) throw new Error(t('err.noBuildPage'));
-    const title = bp.title || t('task.slot', { n: slot });
+    let title = bp.title || t('task.slot', { n: slot });
     const now = Date.now();
+    let contract = null;
+    if (bp.newBuildings) {
+      // Still empty: construct. Waiting and blocked cases go through the
+      // same paths as an upgrade below.
+      title = buildingName(task.gid) || title;
+      contract = task.gid ? bp.newBuildings.find((b) => b.gid === Number(task.gid)) : null;
+      if (!contract) {
+        if (task.auto) await skipSlot(AUTO_SKIP_MS);
+        await finish();
+        await log('error', t('log.cannotConstructHere', { name: task.gid ? buildingName(task.gid) : title, slot }), vid);
+        return;
+      }
+      bp.canUpgrade = contract.canBuild;
+      bp.secondsUntilResources = contract.secondsUntilResources;
+      bp.cost = contract.cost;
+      bp.maxLevel = false;
+      bp.nextLevel = 1;
+      if (contract.missing.length) bp.blockedReason = t('reason.needs', { list: contract.missing.join(t('list.sep')) });
+    }
 
     // Autopilot picks just want one more level, whatever the page says now.
     if (!task.auto && task.kind === 'upgrade' && ((bp.level != null && bp.level >= task.targetLevel) || (bp.nextLevel != null && bp.nextLevel > task.targetLevel))) {
@@ -741,7 +770,7 @@ const JOBS = {
       return;
     }
 
-    const { res, page: after } = await act(tabId, { kind: 'upgrade' }, true);
+    const { res, page: after } = await act(tabId, contract ? { kind: 'construct', gid: contract.gid } : { kind: 'upgrade' }, true);
     if (!res.ok || !after || after.type === 'build') {
       await patchVillage(vid, { buildWait: { reason: 'blocked', at: Date.now(), until: Date.now() + 5 * 60000, text: t('reason.stillOnBuild') } });
       await log('error', t('log.clickFailed', { name: title, reason: res.ok ? t('reason.stillOnBuild') : reasonText(res) }), vid);
@@ -749,7 +778,8 @@ const JOBS = {
     }
     // Title reads "<name> Level N" in the server's language; drop the level part.
     const name = (bp.title || '').replace(/\s*\S*\s*\d+\s*$/, '') || title;
-    if (task.auto) await log('success', t('log.autoUpgrading', { name, n: bp.nextLevel ?? '?', why: t(`auto.why.${why}`) }), vid);
+    if (contract) await log('success', t(task.auto ? 'log.autoConstructing' : 'log.constructing', { name: buildingName(contract.gid), slot }), vid);
+    else if (task.auto) await log('success', t('log.autoUpgrading', { name, n: bp.nextLevel ?? '?', why: t(`auto.why.${why}`) }), vid);
     else await log('success', t('log.upgrading', { name, n: bp.nextLevel ?? '?' }), vid);
     await bump('upgrades');
     await patchVillage(vid, { buildWait: null });
@@ -977,6 +1007,68 @@ const JOBS = {
     await patchSchedule({ farmAt: Date.now() + jittered(s.farm.intervalMinutes * 60000, s.jitterPercent) });
   },
 
+  // Task rewards: collected in the village with the most free storage (the
+  // resources land in the active village).
+  async quest(tabId, job, s) {
+    const { villages = {} } = await read(['villages']);
+    const now = Date.now();
+    const fill = (v) => {
+      const est = estimateStock(v, now);
+      return est ? Math.max(...RESOURCES.map((k) => est[k] / (capacityFor(v.resources, k) || 1))) : 1;
+    };
+    const target = sortedVillages(villages).sort((a, b) => fill(a) - fill(b))[0];
+    if (!target || fill(target) > 0.85) {
+      await patchSchedule({ questAt: now + 3600000 });
+      await log('info', t('log.questsNoRoom'));
+      return;
+    }
+    await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(target.id)}`);
+    const page = await navigate(tabId, `${s.server}/tasks`);
+    if (!page || page.type !== 'tasks') throw new Error(t('err.noTasksPage'));
+    const { res } = await act(tabId, { kind: 'collectQuests' }, false);
+    await patchSchedule({ questAt: Date.now() + 2 * 3600000 });
+    if (!res.ok) throw new Error(reasonText(res));
+    await update(['account'], (d) => { d.account = { ...(d.account || {}), questClaimable: false }; });
+    if (res.collected) {
+      await log('success', t('log.questsCollected', { n: res.collected, v: target.name }), target.id);
+      await bump('quests', res.collected);
+    }
+  },
+
+  // An upgrade waits for resources the hero carries: move just the missing
+  // amount from the hero's bag into that village.
+  async heroBag(tabId, job, s) {
+    const vid = job.villageId;
+    let { villages = {} } = await read(['villages']);
+    const wait = villages[vid] && villages[vid].buildWait;
+    if (!wait || !wait.cost) return;
+    // Opening the village makes it the active one (the bag empties into it)
+    // and refreshes its stock.
+    await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(vid)}`);
+    ({ villages = {} } = await read(['villages']));
+    const v = villages[vid];
+    const need = bagShortfall(v, wait.cost, Date.now());
+    if (!need) { await patchVillage(vid, { buildWait: null }); return; }
+    const page = await navigate(tabId, `${s.server}/hero/inventory`);
+    if (!page || page.type !== 'inventory' || !page.inventory || !page.inventory.loaded) throw new Error(t('err.noInventory'));
+    const items = page.inventory.items || {};
+    const have = { wood: items['145'] || 0, clay: items['146'] || 0, iron: items['147'] || 0, crop: items['148'] || 0 };
+    if (RESOURCES.some((k) => need[k] > have[k])) {
+      await patchVillage(vid, { heroBagAt: Date.now() + 3 * 3600000 });
+      await log('info', t('log.heroBagShort'), vid);
+      return;
+    }
+    const { res } = await act(tabId, { kind: 'heroTransfer', amounts: need }, false);
+    if (!res.ok) {
+      await patchVillage(vid, { heroBagAt: Date.now() + 6 * 3600000 });
+      throw new Error(reasonText(res));
+    }
+    await patchVillage(vid, { buildWait: null, heroBagAt: Date.now() + 30 * 60000 });
+    const list = RESOURCES.filter((k) => need[k]).map((k) => `${fmtNum(need[k])} ${resLabel(k)}`).join(t('list.sep'));
+    await log('success', t('log.heroBagUsed', { list }), vid);
+    await bump('heroBag');
+  },
+
   async adventure(tabId, job, s) {
     await navigate(tabId, `${s.server}/hero/adventures`);
     const { res } = await act(tabId, { kind: 'adventure' }, false);
@@ -1036,6 +1128,18 @@ function planActions(s, data, now) {
     jobs.push({ type: 'farmList', listId: list.id, label: t('job.farmList', { list: list.name }) });
   }
   if ((s.farm.enabled || (auto && ap.farmLists)) && now >= (schedule.farmAt || 0)) jobs.push({ type: 'farm', label: t('job.farm') });
+  if (auto && ap.quests && account.questClaimable && now >= (schedule.questAt || 0)) jobs.push({ type: 'quest', label: t('job.quest') });
+  // A build waiting for resources the hero carries in the bag.
+  if (auto && ap.heroBag) {
+    const bag = account.heroBag;
+    for (const v of Object.values(villages)) {
+      const w = v.buildWait;
+      if (!w || w.reason !== 'resources' || !w.cost || !(w.until > now) || (v.heroBagAt || 0) > now) continue;
+      const need = bagShortfall(v, w.cost, now);
+      if (!need || (bag && now - bag.at < 6 * 3600000 && RESOURCES.some((k) => need[k] > (bag[k] || 0)))) continue;
+      jobs.push({ type: 'heroBag', villageId: v.id, label: t('job.heroBag', { v: v.name }) });
+    }
+  }
   const hero = account.hero || {};
   if ((s.adventure.enabled || (auto && ap.adventures)) && hero.adventures > 0 && hero.home && now >= (schedule.adventureAt || 0)) {
     jobs.push({ type: 'adventure', label: t('job.adventure') });

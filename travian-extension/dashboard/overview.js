@@ -13,7 +13,7 @@ import { renderStockChart } from './chart.js';
 import { villageArt, heroArt } from './art.js';
 import { wallOf } from '../src/advisor.js';
 import { pickAutoUpgrade } from '../src/autopilot.js';
-import { unitIcon } from '../src/units.js';
+import { unitIcon, tribeBase } from '../src/units.js';
 import { timelineEvents, laneOf, moveLabel } from '../src/timeline.js';
 import { minimapSvg } from './minimap.js';
 
@@ -167,6 +167,7 @@ async function runTipAction(tip) {
   if (a.type === 'addTask') await command('addTask', { villageId: a.villageId, task: a.task });
   else if (a.type === 'addFields') await command('addTask', { villageId: a.villageId, task: { kind: 'fields', resource: a.resource, targetLevel: a.targetLevel } });
   else if (a.type === 'setting') await command('saveSettings', { settings: a.patch });
+  else if (a.type === 'open') { chrome.tabs.create({ url: a.url }); return; }
   else if (a.type === 'tab') {
     if (a.villageId) window.dispatchEvent(new CustomEvent('tvh:select-village', { detail: a.villageId }));
     location.hash = `#${a.tab}`;
@@ -295,10 +296,10 @@ function renderNext(scope, data, now) {
   if (s.watchEnabled || on) rows.push([t('ov.nextCheck'), left(sched.refreshAt)]);
   for (const v of scope) {
     const list = data.tasks[v.id] || [];
-    const pick = !list.length && ap.enabled && ap.build ? pickAutoUpgrade(v, s, now) : null;
+    const pick = !list.length && ap.enabled && ap.build ? pickAutoUpgrade(v, s, now, tribeBase(data.villages)) : null;
     if (!list.length && !pick) continue;
     const why = buildStatus(v, data, now);
-    const what = list.length ? taskLabel(list[0], v) : t('ov.autoPick', { name: buildingName(pick.gid), n: pick.level + 1 });
+    const what = list.length ? taskLabel(list[0], v) : pick.construct ? t('ov.autoConstruct', { name: buildingName(pick.gid) }) : t('ov.autoPick', { name: buildingName(pick.gid), n: pick.level + 1 });
     rows.push([scope.length > 1 ? t('ov.nextBuild', { v: v.name }) : t('ov.nextBuildOne'), `${what}${why ? ` — ${why.text}` : ''}`]);
   }
   const raids = data.raids.filter((r) => r.enabled !== false && ids.has(r.villageId));

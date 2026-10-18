@@ -58,7 +58,9 @@ export const DEFAULT_SETTINGS = {
   adventure: { enabled: false },
   // Runs the villages without commands: picks upgrades when nothing is
   // queued, and sends the hero / farm lists. Oasis raids have their own rules.
-  autopilot: { enabled: false, build: true, fieldsMax: 10, adventures: true, farmLists: false },
+  // construct: missing basics on free sites; quests: collect task rewards;
+  // heroBag: top up a waiting upgrade from the hero's resources.
+  autopilot: { enabled: false, build: true, fieldsMax: 10, adventures: true, farmLists: false, construct: true, quests: true, heroBag: false },
   alerts: { desktop: true, attacks: true, storage: true, storageHours: 1, starvation: true, loggedOut: true, botErrors: true },
   // control: answer commands sent from the chat; summaryHour: daily summary
   // at this hour (-1 = off).
@@ -152,7 +154,8 @@ export function taskLabel(task, village) {
     return t('task.toLevel', { what, n: task.targetLevel });
   }
   const b = village && [...(village.fields || []), ...(village.buildings || [])].find((x) => x.slot === task.slot);
-  const name = b ? buildingName(b.gid, b.name) : task.name || t('task.slot', { n: task.slot });
+  const name = task.gid && (!b || !b.gid) ? buildingName(task.gid)
+    : b ? buildingName(b.gid, b.name) : task.name || t('task.slot', { n: task.slot });
   return t('task.slotLabel', { name, slot: task.slot, n: task.targetLevel });
 }
 

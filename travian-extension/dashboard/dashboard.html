@@ -146,6 +146,14 @@
             <label><span data-i18n="build.toLevel"></span> <input type="number" id="fieldsLevel" min="1" max="21" value="10" class="num"></label>
             <button class="btn primary" id="addFieldsTask" data-i18n="btn.add"></button>
           </div>
+          <h3 class="gap" data-i18n="build.newTitle"></h3>
+          <p class="muted small" data-i18n="build.newHelp"></p>
+          <div class="row wrap">
+            <label><span data-i18n="build.newSite"></span> <select id="newSite"></select></label>
+            <label><span data-i18n="build.newWhat"></span> <select id="newGid"></select></label>
+            <label><span data-i18n="build.toLevel"></span> <input type="number" id="newLevel" min="1" max="20" value="1" class="num"></label>
+            <button class="btn primary" id="addNewBuilding" data-i18n="btn.add"></button>
+          </div>
         </div>
         <div class="panel">
           <h2 data-i18n="build.fields"></h2>
@@ -215,8 +223,14 @@
           <label class="switch"><input type="checkbox" data-setting="autopilot.build"> <span data-i18n="ap.build"></span></label>
           <div class="row indent"><label><span data-i18n="ap.fieldsMax"></span> <input type="number" min="1" max="20" data-setting="autopilot.fieldsMax" class="num"></label></div>
           <p class="muted small indent" data-i18n="ap.buildHelp"></p>
+          <label class="switch indent"><input type="checkbox" data-setting="autopilot.construct"> <span data-i18n="ap.construct"></span></label>
+          <p class="muted small indent" data-i18n="ap.constructHelp"></p>
           <label class="switch"><input type="checkbox" data-setting="autopilot.adventures"> <span data-i18n="ap.adventures"></span></label>
           <label class="switch"><input type="checkbox" data-setting="autopilot.farmLists"> <span data-i18n="ap.farmLists"></span></label>
+          <label class="switch"><input type="checkbox" data-setting="autopilot.quests"> <span data-i18n="ap.quests"></span></label>
+          <p class="muted small indent" data-i18n="ap.questsHelp"></p>
+          <label class="switch"><input type="checkbox" data-setting="autopilot.heroBag"> <span data-i18n="ap.heroBag"></span></label>
+          <p class="muted small indent" data-i18n="ap.heroBagHelp"></p>
           <p class="muted small" data-i18n="ap.raidsNote"></p>
           <p class="muted small" data-i18n="ap.pauseNote"></p>
         </div>

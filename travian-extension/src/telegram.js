@@ -66,6 +66,8 @@ export function summaryText(data, stats, now = Date.now()) {
   row('🌿', 'tg.sumRaids', stats.raids);
   row('⚔️', 'tg.sumAttacks', stats.attacks);
   row('🏃', 'tg.sumEscapes', stats.escapes);
+  row('🎁', 'tg.sumQuests', stats.quests);
+  row('🎒', 'tg.sumHeroBag', stats.heroBag);
   row('⚠️', 'tg.sumErrors', stats.errors);
   if (lines.length === 2) lines.push(t('tg.sumQuiet'));
   // Right now: anything that needs the player.

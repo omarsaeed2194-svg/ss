@@ -5,7 +5,7 @@ import { renderAutopilot } from './autopilot.js';
 import { renderFarms } from './farms.js';
 import { renderEscapes } from './escape.js';
 import { leaseIsFresh } from '../src/sync.js';
-import { unitIcon } from '../src/units.js';
+import { unitIcon, tribeBase } from '../src/units.js';
 import {
   sortedVillages, taskLabel, buildingName, fmtDuration, fmtAgo, TRAINING_BUILDINGS, buildStatus,
 } from '../src/shared.js';
@@ -116,10 +116,35 @@ function renderBuild(now, force) {
       </li>`).join('')
     : `<li class="empty muted">${esc(t('build.emptyQueue'))}</li>`;
 
+  renderNewBuilding(v);
   if (force || !$('fieldTable').contains(document.activeElement)) $('fieldTable').innerHTML = upgradeTable(v.fields, 'fields');
   const buildings = (v.buildings || []).filter((b) => b.gid > 0);
   if (force || !$('buildingTable').contains(document.activeElement)) $('buildingTable').innerHTML = upgradeTable(v.buildings ? buildings : null, 'buildings');
 }
+
+// New building on a free site: rally point only on 39, the wall only on 40,
+// anything else on the free sites of the village centre.
+const SITE_ONLY = { 16: 39 };
+const WALL_GIDS = [31, 32, 33, 42, 43];
+const NEW_GIDS = [10, 11, 23, 17, 19, 20, 21, 22, 13, 18, 24, 25, 26, 27, 37, 5, 6, 7, 8, 9, 14, 34, 36, 41];
+function renderNewBuilding(v) {
+  const sites = (v.buildings || []).filter((b) => !b.gid).map((b) => b.slot).sort((a, b) => a - b);
+  const has = new Set((v.buildings || []).filter((b) => b.gid).map((b) => b.gid));
+  fillSelect($('newSite'), sites.map((slot) => [slot, slot === 39 ? t('build.siteRally', { n: slot }) : slot === 40 ? t('build.siteWall', { n: slot }) : t('build.siteN', { n: slot })]));
+  const site = Number($('newSite').value);
+  const base = tribeBase(data.villages);
+  const wall = { 0: 31, 10: 32, 20: 33, 50: 42, 60: 43 }[base];
+  const gids = site === 39 ? [16] : site === 40 ? (wall ? [wall] : WALL_GIDS) : NEW_GIDS.filter((g) => !SITE_ONLY[g] && !(has.has(g) && [10, 11, 23, 36].indexOf(g) < 0));
+  fillSelect($('newGid'), gids.map((g) => [g, buildingName(g)]));
+  $('addNewBuilding').disabled = !sites.length;
+  if (!v.buildings) $('newSite').title = t('build.notScannedBuildings');
+}
+$('newSite').addEventListener('change', () => render());
+$('addNewBuilding').addEventListener('click', () => {
+  const slot = Number($('newSite').value), gid = Number($('newGid').value), targetLevel = Number($('newLevel').value);
+  if (!buildVillageId || !slot || !gid || !(targetLevel >= 1)) return;
+  command('addTask', { villageId: buildVillageId, task: { kind: 'upgrade', slot, gid, targetLevel, name: buildingName(gid) } });
+});
 
 $('buildVillage').addEventListener('change', (e) => { buildVillageId = e.target.value; render(); });
 // Tips can open the Build tab on a specific village.

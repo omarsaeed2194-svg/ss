@@ -41,6 +41,8 @@
     }
     if (p.endsWith('/position_details.php')) return 'tile';
     if (p.startsWith('/hero/adventures')) return 'adventures';
+    if (p.startsWith('/hero/inventory')) return 'inventory';
+    if (p === '/tasks' || p.startsWith('/tasks/')) return 'tasks';
     return 'other';
   }
 
@@ -205,6 +207,8 @@
       adventures: adv ? num(text(qs(adv, '.content'))) || 0 : 0,
       home: !!qs(status, 'i.heroHome'),
       statusText: status ? (qs(status, 'a') ? qs(status, 'a').getAttribute('title') || '' : '') : '',
+      // Unspent attribute points after a level-up.
+      levelUp: !!qs(doc, 'i.levelUp.show'),
     };
   }
 
@@ -342,6 +346,47 @@
     return out;
   }
 
+  // An empty building site lists what can go there, one contract per
+  // building: a green "Construct" button, or a wait for resources, or
+  // prerequisites still missing.
+  function parseNewBuildings(doc) {
+    return qsa(doc, '[id^="contract_building"]').map((c) => {
+      const gid = num(c.id.replace('contract_building', ''));
+      const button = qs(c, 'button.new');
+      const timer = qs(qs(c, '.errorMessage'), '.timer');
+      const cost = qsa(qs(c, '.resourceWrapper'), '.resource .value');
+      return {
+        gid,
+        canBuild: !!(button && !button.disabled && !button.classList.contains('disabled') && button.classList.contains('green')),
+        secondsUntilResources: timer ? num(timer.getAttribute('value')) : null,
+        missing: qsa(c, '.buildingCondition.error').map((x) => text(x)),
+        cost: cost.length >= 4 ? { wood: num(text(cost[0])), clay: num(text(cost[1])), iron: num(text(cost[2])), crop: num(text(cost[3])) } : null,
+      };
+    }).filter((b) => b.gid);
+  }
+
+  // Task page (/tasks): rewards waiting to be collected.
+  function parseQuests(doc) {
+    const box = qs(doc, '.taskOverview');
+    return {
+      loaded: !!box,
+      claimable: qsa(box, 'button.collect').filter((b) => !b.classList.contains('disabled') && !b.disabled).length,
+    };
+  }
+
+  // Hero inventory: how much of each item is in the bag (item145 wood,
+  // 146 clay, 147 iron, 148 crop, 106 ointment …).
+  function parseInventory(doc) {
+    const box = qs(doc, '.heroItems');
+    const items = {};
+    for (const slot of qsa(box, '.heroItem:not(.empty)')) {
+      const item = qs(slot, '.item');
+      const m = item && item.className.match(/\bitem(\d+)\b/);
+      if (m) items[m[1]] = (items[m[1]] || 0) + (num(text(qs(slot, '.count'))) || 1);
+    }
+    return { loaded: !!box && !qs(doc, '.inventoryPageWrapper.loading'), items };
+  }
+
   // build.php for an existing building / field / empty site.
   function parseBuildPage(doc, url) {
     const slot = num(url.searchParams.get('id'));
@@ -355,6 +400,7 @@
     const lvl = qs(title, '.level');
     return {
       slot,
+      newBuildings: qs(doc, '[id^="contract_building"]') ? parseNewBuildings(doc) : null,
       title: text(title),
       level: lvl ? num(text(lvl)) : null,
       canUpgrade: !!(upgrade && !upgrade.disabled && !upgrade.classList.contains('disabled')),
@@ -393,6 +439,8 @@
 
   function parseAccount(doc) {
     return {
+      // The quest master's speech bubble: a task reward is waiting.
+      questClaimable: !!qs(doc, '#questmasterButton.claimable, #questmasterButton .newQuestSpeechBubble'),
       gold: num(text(qs(doc, '.ajaxReplaceableGoldAmount'))),
       silver: num(text(qs(doc, '.ajaxReplaceableSilverAmount'))),
       hero: parseHero(doc),
@@ -420,13 +468,15 @@
     if (type === 'farmlist') out.farmLists = parseFarmLists(doc);
     if (type === 'tile') out.tile = parseTile(doc, url);
     if (type === 'send') out.sendPage = parseSendPage(doc);
+    if (type === 'tasks') out.quests = parseQuests(doc);
+    if (type === 'inventory') out.inventory = parseInventory(doc);
     return out;
   }
 
   const api = {
     num, parsePage, parseResources, parseVillages, parseBuildQueue, parseFields, parseBuildings, parseMovements,
     parseBuildPage, parseFarmLists, parseHero, pageType, parseTroops, parseTrainingQueue, parseTile, parseSendPage,
-    oasesFromTiles, unitOf,
+    oasesFromTiles, unitOf, parseNewBuildings, parseQuests, parseInventory,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TravianParser = api;

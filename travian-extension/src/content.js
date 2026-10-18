@@ -24,6 +24,10 @@
     if (url.searchParams.get('tt') === '99') {
       await waitFor(() => document.querySelector('#rallyPointFarmList .farmListHeader'));
     }
+    if (url.pathname === '/tasks') await waitFor(() => document.querySelector('.taskOverview'));
+    if (url.pathname.startsWith('/hero/inventory')) {
+      await waitFor(() => document.querySelector('.heroItems') && !document.querySelector('.inventoryPageWrapper.loading'));
+    }
     const state = P.parsePage(document, location.href);
     if (state.type === 'unknown') return;
     try {
@@ -205,6 +209,76 @@
       const json = await res.json().catch(() => null);
       const tiles = (json && (json.tiles || (json.response && json.response.tiles))) || [];
       return { ok: true, tiles: tiles.length, oases: P.oasesFromTiles(tiles) };
+    },
+
+    // Empty building site: the chosen building's "Construct" button.
+    async construct({ gid }) {
+      const contract = document.getElementById(`contract_building${Number(gid)}`);
+      if (!contract) return { ok: false, code: 'noContract' };
+      const btn = contract.querySelector('button.new');
+      if (!usable(btn) || !btn.classList.contains('green')) return { ok: false, code: 'cannotConstruct' };
+      setTimeout(() => btn.click(), 50);
+      return { ok: true, navigating: true };
+    },
+
+    // Task page: press every "Collect", on the village tab and then on the
+    // general tab.
+    async collectQuests() {
+      if (!(await waitFor(() => document.querySelector('.taskOverview')))) return { ok: false, code: 'noTasks' };
+      const pressed = new Set();
+      let collected = 0;
+      for (const tab of ['1', '2']) {
+        if (tab === '2') {
+          const a = document.querySelector('a.tabItem[data-tab="2"]');
+          if (!a) break;
+          if (!a.classList.contains('active')) {
+            a.click();
+            await sleep(rand(1500, 2500));
+            await waitFor(() => document.querySelector('.taskOverview'));
+          }
+        }
+        for (let i = 0; i < 15; i++) {
+          const b = Array.from(document.querySelectorAll('.taskOverview button.collect')).find((x) => usable(x) && !pressed.has(x));
+          if (!b) break;
+          pressed.add(b);
+          b.click();
+          collected++;
+          await sleep(rand(1200, 2200));
+        }
+      }
+      return { ok: true, collected };
+    },
+
+    // Hero inventory: move resources from the hero's bag into the active
+    // village (the dialog shows all four; the game caps at free storage).
+    async heroTransfer({ amounts }) {
+      const IDS = { wood: 145, clay: 146, iron: 147, crop: 148 };
+      const NAMES = { wood: 'lumber', clay: 'clay', iron: 'iron', crop: 'crop' };
+      const want = Object.entries(amounts || {}).filter(([k, n]) => IDS[k] && n > 0);
+      if (!want.length) return { ok: false, code: 'nothingToTransfer' };
+      await waitFor(() => document.querySelector('.heroItems .heroItem'));
+      const item = want.map(([k]) => document.querySelector(`.heroItems .heroItem .item.item${IDS[k]}`)).find(Boolean);
+      if (!item) return { ok: false, code: 'noHeroItem' };
+      item.closest('.heroItem').click();
+      const dialog = await waitFor(() => document.querySelector('.resourceTransferDialog'), 5000);
+      if (!dialog) return { ok: false, code: 'noTransferDialog' };
+      await sleep(rand(400, 800));
+      for (const [k, n] of want) {
+        const input = dialog.querySelector(`input[name="${NAMES[k]}"]`);
+        if (input && !input.disabled) { setValue(input, n); await sleep(rand(200, 500)); }
+      }
+      const btn = await waitFor(() => {
+        const buttons = dialog.querySelectorAll('.actionButton button');
+        return buttons.length === 2 && usable(buttons[1]) ? buttons[1] : null;
+      }, 3000);
+      if (!btn) {
+        const cancel = dialog.querySelector('.dialogCancelButton');
+        if (cancel) cancel.click();
+        return { ok: false, code: 'transferBlocked' };
+      }
+      btn.click();
+      const done = await waitFor(() => document.querySelector('.toast.toastSuccess'), 6000);
+      return done ? { ok: true } : { ok: false, code: 'noTransferConfirm' };
     },
 
     async adventure() {
