@@ -14,6 +14,7 @@
       <h1 data-i18n="app.name"></h1>
       <span id="server" class="muted small"></span>
       <span id="version" class="muted small"></span>
+      <button type="button" class="btn small ghost theme-btn" id="themeBtn"></button>
     </div>
     <div class="tabs">
       <a href="#overview" data-tab="overview" data-i18n="nav.overview"></a>
@@ -23,6 +24,7 @@
       <a href="#raids" data-tab="raids" data-i18n="nav.raids"></a>
       <a href="#alerts" data-tab="alerts" data-i18n="nav.alerts"></a>
       <a href="#settings" data-tab="settings" data-i18n="nav.settings"></a>
+      <a href="#health" data-tab="health" data-i18n="nav.health"></a>
       <a href="#log" data-tab="log" data-i18n="nav.log"></a>
     </div>
     <div class="side-toggles">
@@ -391,6 +393,8 @@
         <div class="panel">
           <h2 data-i18n="settings.language"></h2>
           <div class="row"><select data-setting="language" id="language"></select></div>
+          <h2 class="gap" data-i18n="theme.label"></h2>
+          <div class="row"><select data-setting="theme" id="themeSelect"></select></div>
           <h2 class="gap" data-i18n="settings.timing"></h2>
           <div class="row"><label><span data-i18n="settings.checkEvery"></span> <input type="number" min="3" data-setting="refreshMinutes" class="num"> <span data-i18n="settings.minutes"></span></label></div>
           <div class="row"><label><span data-i18n="settings.jitter"></span> <input type="number" min="0" max="60" data-setting="jitterPercent" class="num"> %</label></div>
@@ -416,6 +420,12 @@
           <button class="btn danger" id="resetData" data-i18n="settings.reset"></button>
         </div>
       </div>
+    </section>
+
+    <!-- Health -->
+    <section class="tab" id="tab-health">
+      <div class="panel health-head" id="healthHead"></div>
+      <div class="cols" id="healthSections"></div>
     </section>
 
     <!-- Log -->

@@ -8,7 +8,7 @@ import { escapeStatus } from './escape.js';
 
 export { escapeStatus };
 
-export const STORAGE_KEYS = ['settings', 'villages', 'account', 'tasks', 'training', 'raids', 'farms', 'escapes', 'oases', 'schedule', 'status', 'log', 'device', 'syncState', 'history'];
+export const STORAGE_KEYS = ['settings', 'villages', 'account', 'tasks', 'training', 'raids', 'farms', 'escapes', 'oases', 'schedule', 'status', 'log', 'device', 'syncState', 'history', 'health', 'stats'];
 
 export async function loadAll() {
   const data = await chrome.storage.local.get(STORAGE_KEYS);
@@ -25,6 +25,9 @@ export async function loadAll() {
   data.schedule = data.schedule || {};
   data.status = data.status || {};
   data.log = data.log || [];
+  data.health = data.health || {};
+  data.stats = data.stats || {};
+  applyTheme(data.settings.theme);
   try {
     data.lease = (await chrome.storage.sync.get('lease')).lease || null;
   } catch (e) {
@@ -70,6 +73,21 @@ export function troopInfo(v, now = Date.now()) {
   };
 }
 
+// Light / dark: "system" follows the computer. The last choice is kept in
+// localStorage too, so pages open in the right colours before data loads.
+export const THEMES = ['system', 'light', 'dark'];
+export function applyTheme(theme) {
+  const root = document.documentElement;
+  if (theme === 'light' || theme === 'dark') root.dataset.theme = theme;
+  else delete root.dataset.theme;
+  try { localStorage.setItem('tvh.theme', theme || 'system'); } catch (e) { /* storage blocked */ }
+}
+export function initTheme() {
+  try { applyTheme(localStorage.getItem('tvh.theme') || 'system'); } catch (e) { /* storage blocked */ }
+}
+export const nextTheme = (theme) => THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
+export const themeIcon = (theme) => (theme === 'light' ? '☀' : theme === 'dark' ? '☾' : '◐');
+
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 
@@ -85,6 +103,30 @@ export function statusLine(data, now = Date.now()) {
   const last = status.lastRunAt ? t('status.last', { ago: fmtAgo(status.lastRunAt, now) }) : '';
   const auto = s.autopilot.enabled ? `${t('status.autopilot')} · ` : '';
   return { tone: 'good', text: auto + t('status.next', { t: fmtDuration(next) }) + last };
+}
+
+// One line per village for the popup when there are many: name, four
+// small storage bars and what matters most right now.
+export function villageRow(v, data, now = Date.now(), open = false) {
+  const est = estimateStock(v, now);
+  const bars = est ? RESOURCES.map((k) => {
+    const pct = Math.min(100, Math.round((est[k] / (capacityFor(v.resources, k) || 1)) * 100));
+    const p = v.resources.production ? v.resources.production[k] : 0;
+    const tone = (k === 'crop' && p < 0) || pct >= 95 ? 'bad' : pct >= 80 ? 'warn' : '';
+    return `<span class="vr-bar res-${k}" title="${esc(`${resLabel(k)} ${pct}%`)}"><i class="${tone}" style="height:${Math.max(6, pct)}%"></i></span>`;
+  }).join('') : '';
+  let state;
+  const first = (v.movements || []).filter((m) => m.kind === 'att1' && m.arriveAt > now).map((m) => m.arriveAt).sort((a, b) => a - b)[0];
+  const active = (v.buildQueue || []).filter((b) => b.finishAt && b.finishAt > now).sort((a, b) => a.finishAt - b.finishAt);
+  if (v.underAttack) state = `<span class="bad">⚔ ${first ? `<b class="mono">${fmtDuration(first - now)}</b>` : esc(t('card.attack'))}</span>`;
+  else if (active.length) state = `<span>🏗 <span class="mono">${fmtDuration(active[0].finishAt - now)}</span></span>`;
+  else if (v.buildQueue) state = `<span class="warn-text">${esc(t('card.idle'))}</span>`;
+  else state = `<span class="muted">${esc(fmtAgo(v.updatedAt, now))}</span>`;
+  return `<button type="button" class="vrow${v.underAttack ? ' attacked' : ''}${open ? ' open' : ''}" data-expand="${esc(v.id)}" aria-expanded="${open}">
+    <span class="vr-name">${esc(v.name)} <small class="muted">${coords(v.x, v.y)}</small></span>
+    <span class="vr-bars" aria-hidden="true">${bars}</span>
+    <span class="vr-state small">${state}</span>
+  </button>`;
 }
 
 export function villageCard(v, data, now = Date.now()) {

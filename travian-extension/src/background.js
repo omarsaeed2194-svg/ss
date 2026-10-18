@@ -74,6 +74,24 @@ async function setStatus(patch) {
   await update(['status'], (d) => { d.status = { ...(d.status || {}), ...patch }; });
 }
 
+// Bookkeeping for the Health tab: how each job and each outside service
+// did the last time it ran.
+async function noteJob(type, ok, err) {
+  await update(['health'], (d) => {
+    const h = d.health = d.health || {};
+    const j = (h.jobs = h.jobs || {})[type] = { ...((h.jobs || {})[type] || {}) };
+    const now = Date.now();
+    if (ok) j.okAt = now;
+    else { j.errAt = now; j.err = String(err || '').slice(0, 200); j.fails = [...(j.fails || []).filter((x) => now - x < 86400000), now].slice(-50); }
+  });
+}
+async function noteService(name, ok, err) {
+  await update(['health'], (d) => {
+    const h = d.health = d.health || {};
+    h[name] = { ...(h[name] || {}), at: Date.now(), ok, ...(ok ? { okAt: Date.now() } : { err: String(err || '').slice(0, 200), errAt: Date.now() }) };
+  });
+}
+
 // ----------------------------------------------------------------- alerts --
 async function sendAlert({ title, body, kind, sticky, villageId }) {
   const s = await getSettings();
@@ -105,6 +123,7 @@ async function sendRemote(s, text) {
   const results = await Promise.allSettled(jobs);
   const failed = results.filter((r) => r.status === 'rejected').map((r) => r.reason.message);
   if (failed.length) await log('error', t('log.remoteFailed', { e: failed.join(', ') }));
+  if (jobs.length) await noteService('remote', !failed.length, failed.join(', '));
   return { sent: jobs.length, failed };
 }
 
@@ -1032,8 +1051,10 @@ async function runJobs(tabId, jobs, s, force) {
     await setStatus({ state: 'working', note: job.label });
     try {
       await JOBS[job.type](tabId, job, s);
+      await noteJob(job.type, true);
     } catch (e) {
       if (e.loggedOut) return false; // processPage already alerted
+      await noteJob(job.type, false, e.message);
       await log('error', `${job.label}: ${e.message}`);
       if (s.alerts.botErrors) {
         const { alertMemo = {} } = await read(['alertMemo']);
@@ -1298,6 +1319,51 @@ const COMMANDS = {
     await patchSchedule({ scanVillage: villageId });
     tick(false, true);
   },
+  // Quick actions (popup, Telegram): stop or restart everything that acts
+  // in the game. Watching, alerts and escape plans keep running.
+  async pauseAll({ from } = {}) {
+    await update(['settings', 'status'], (d) => {
+      const st = mergeSettings(d.settings);
+      d.status = { ...(d.status || {}), pausedAll: { botEnabled: st.botEnabled, autopilot: st.autopilot.enabled, at: Date.now() } };
+      delete d.status.tgPaused;
+      d.settings = mergeSettings({ ...st, botEnabled: false, autopilot: { ...st.autopilot, enabled: false } });
+    });
+    await refreshBadge();
+    await log('info', t(from === 'telegram' ? 'log.tgPaused' : 'log.paused'));
+  },
+  async resumeAll({ from } = {}) {
+    await update(['settings', 'status'], (d) => {
+      const st = mergeSettings(d.settings);
+      const status = d.status || {};
+      const was = status.pausedAll || status.tgPaused || { botEnabled: true, autopilot: st.autopilot.enabled };
+      d.settings = mergeSettings({ ...st, botEnabled: was.botEnabled || !was.autopilot, autopilot: { ...st.autopilot, enabled: !!was.autopilot } });
+      delete status.pausedAll; delete status.tgPaused;
+      d.status = status;
+    });
+    await refreshBadge();
+    await log('info', t(from === 'telegram' ? 'log.tgResumed' : 'log.resumed'));
+    tick(false, true);
+  },
+  // Every farm list with targets goes out now, whatever its timer says.
+  async sendAllFarms() {
+    const { farms = [] } = await read(['farms']);
+    const ids = farms.filter((l) => l.enabled !== false && (l.targets || []).some((x) => x.enabled !== false)).map((l) => l.id);
+    if (!ids.length) return 0;
+    await update(['schedule'], (d) => { d.schedule = { ...(d.schedule || {}), farmNow: [...new Set([...((d.schedule || {}).farmNow || []), ...ids])] }; });
+    tick(false, true);
+    return ids.length;
+  },
+  // Escape plans of attacked villages run now instead of at their lead time.
+  async escapeNow() {
+    const { escapes = [], villages = {} } = await read(['escapes', 'villages']);
+    const now = Date.now();
+    const ids = escapes.filter((p) => p.enabled !== false && villages[p.villageId] && firstAttack(villages[p.villageId], now)).map((p) => p.villageId);
+    if (!ids.length) return [];
+    await update(['schedule'], (d) => { d.schedule = { ...(d.schedule || {}), escapeNow: [...new Set([...((d.schedule || {}).escapeNow || []), ...ids])] }; });
+    urgent = true;
+    tick(false, true);
+    return ids.map((id) => villages[id].name);
+  },
   async runNow() {
     await patchSchedule({ refreshAt: 0 });
     // "Check now" should retry builds immediately, not after a scheduled wait.
@@ -1415,43 +1481,16 @@ async function runTelegramCommand(cmd) {
   if (cmd === 'status') return statusText(data, now);
   if (cmd === 'help') return helpText();
   if (cmd === 'summary') return summaryText(data, data.stats || {}, now);
-  if (cmd === 'pause') {
-    await update(['settings', 'status'], (d) => {
-      const st = mergeSettings(d.settings);
-      d.status = { ...(d.status || {}), tgPaused: { botEnabled: st.botEnabled, autopilot: st.autopilot.enabled } };
-      d.settings = mergeSettings({ ...st, botEnabled: false, autopilot: { ...st.autopilot, enabled: false } });
-    });
-    await refreshBadge();
-    await log('info', t('log.tgPaused'));
-    return t('tg.paused');
-  }
-  if (cmd === 'resume') {
-    await update(['settings', 'status'], (d) => {
-      const st = mergeSettings(d.settings);
-      const was = (d.status || {}).tgPaused || { botEnabled: true, autopilot: st.autopilot.enabled };
-      d.settings = mergeSettings({ ...st, botEnabled: was.botEnabled || !was.autopilot, autopilot: { ...st.autopilot, enabled: !!was.autopilot } });
-      if (d.status) delete d.status.tgPaused;
-    });
-    await refreshBadge();
-    await log('info', t('log.tgResumed'));
-    tick(false, true);
-    return t('tg.resumed');
-  }
+  if (cmd === 'pause') { await COMMANDS.pauseAll({ from: 'telegram' }); return t('tg.paused'); }
+  if (cmd === 'resume') { await COMMANDS.resumeAll({ from: 'telegram' }); return t('tg.resumed'); }
   if (cmd === 'check') { await COMMANDS.runNow(); return t('tg.checking'); }
   if (cmd === 'farms') {
-    const lists = (data.farms || []).filter((l) => l.enabled !== false && (l.targets || []).some((x) => x.enabled !== false));
-    if (!lists.length) return t('tg.noFarms');
-    await update(['schedule'], (d) => { d.schedule = { ...(d.schedule || {}), farmNow: [...new Set([...((d.schedule || {}).farmNow || []), ...lists.map((l) => l.id)])] }; });
-    tick(false, true);
-    return t('tg.farmsQueued', { n: lists.length });
+    const n = await COMMANDS.sendAllFarms();
+    return n ? t('tg.farmsQueued', { n }) : t('tg.noFarms');
   }
   if (cmd === 'escape') {
-    const ids = (data.escapes || []).filter((p) => p.enabled !== false && data.villages[p.villageId] && firstAttack(data.villages[p.villageId], now)).map((p) => p.villageId);
-    if (!ids.length) return t('tg.noEscape');
-    await update(['schedule'], (d) => { d.schedule = { ...(d.schedule || {}), escapeNow: [...new Set([...((d.schedule || {}).escapeNow || []), ...ids])] }; });
-    urgent = true;
-    tick(false, true);
-    return t('tg.escaping', { list: ids.map((id) => data.villages[id].name).join(t('list.sep')) });
+    const names = await COMMANDS.escapeNow();
+    return names.length ? t('tg.escaping', { list: names.join(t('list.sep')) }) : t('tg.noEscape');
   }
   return null;
 }
@@ -1482,9 +1521,9 @@ async function pollTelegram() {
 
     if (s.telegram.control === false) return;
     const res = await fetch(`https://api.telegram.org/bot${encodeURIComponent(s.telegram.token)}/getUpdates?timeout=0&offset=${tgState.offset || 0}`).catch(() => null);
-    if (!res || !res.ok) return;
-    const json = await res.json().catch(() => null);
-    if (!json || !json.ok) return;
+    const json = res && res.ok ? await res.json().catch(() => null) : null;
+    if (!json || !json.ok) { await noteService('telegram', false, res ? `HTTP ${res.status}` : 'network'); return; }
+    await noteService('telegram', true);
     const fresh = tgState.offset != null; // first poll: skip whatever was waiting
     let offset = tgState.offset || 0;
     for (const u of json.result || []) {

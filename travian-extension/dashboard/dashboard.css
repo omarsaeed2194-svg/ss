@@ -64,7 +64,7 @@ code { font-size: 11px; background: var(--bg); padding: 1px 4px; border-radius: 
 .btn.ghost:hover { background: var(--info-bg); }
 .link { border: 0; background: none; padding: 0; color: var(--text); font-weight: 600; cursor: pointer; text-align: start; }
 .link:hover { color: var(--info); text-decoration: underline; }
-.good-text { color: var(--good); margin: 0; }
+
 .bad { color: var(--bad); }
 .table-wrap { overflow-x: auto; }
 
@@ -304,10 +304,24 @@ svg.chart .hit { fill: transparent; }
   .meter-when { grid-column: 2 / -1; }
 }
 @media (max-width: 760px) {
-  .layout { grid-template-columns: 1fr; }
-  .side { position: static; height: auto; }
-  main { padding: 16px; }
+  /* Phone: the side bar's parts become rows of the page; the tabs turn
+     into a bar that scrolls sideways and stays at the top. */
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .side { display: contents; }
+  .brand { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 14px 16px 6px; background: var(--panel); }
+  .brand h1 { font-size: 16px; }
+  .brand #version { display: none; }
+  .tabs { position: sticky; top: 0; z-index: 20; flex-direction: row; gap: 4px; overflow-x: auto; scrollbar-width: none;
+    padding: 6px 12px; background: var(--panel); border-block-end: 1px solid var(--border); }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs a { flex: none; white-space: nowrap; padding: 6px 12px; }
+  .side-toggles { margin: 12px 16px 0; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+  .side-toggles .btn { margin-inline-start: auto; }
+  main { padding: 12px 12px 32px; }
+  .panel { padding: 14px; }
   .tip { grid-template-columns: 1fr; }
+  .cols, .grid { grid-template-columns: minmax(0, 1fr); }
+  .table-wrap { overflow-x: auto; }
 }
 
 /* ------------------------------------------------------ illustrations --- */
@@ -321,7 +335,7 @@ svg.chart .hit { fill: transparent; }
   --hero-helmet: #6b7682; --hero-crest: #d03b3b; --hero-shield: #2a78d6; --hero-emblem: #fab219; --hero-eye: #2b2b2b;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --art-sky-top: #0f2236; --art-sky-bottom: #1c3046; --art-sun: #e8e4d4; --art-cloud: #33465a;
     --art-hill: #22381f; --art-ground: #2c4a26; --art-tree: #4f8f47; --art-trunk: #6b4a2e;
     --art-clay: #a95f3f; --art-wheat: #b99a3e; --art-wheat-line: #8a7230; --art-rock: #6c7682;
@@ -329,6 +343,14 @@ svg.chart .hit { fill: transparent; }
     --art-door: #4a3320; --art-wall: #7d7566; --art-pole: #c9bda5; --art-flag: #4caf50; --art-scaffold: #a5835a;
     --hero-bg: #1b2a1b;
   }
+}
+:root[data-theme="dark"] {
+  --art-sky-top: #0f2236; --art-sky-bottom: #1c3046; --art-sun: #e8e4d4; --art-cloud: #33465a;
+  --art-hill: #22381f; --art-ground: #2c4a26; --art-tree: #4f8f47; --art-trunk: #6b4a2e;
+  --art-clay: #a95f3f; --art-wheat: #b99a3e; --art-wheat-line: #8a7230; --art-rock: #6c7682;
+  --art-house: #c9bda5; --art-roof: #8f4330; --art-window: #f1d98b; --art-keep: #a89e8c;
+  --art-door: #4a3320; --art-wall: #7d7566; --art-pole: #c9bda5; --art-flag: #4caf50; --art-scaffold: #a5835a;
+  --hero-bg: #1b2a1b;
 }
 .art { display: block; width: 100%; }
 .art .sky-top { stop-color: var(--art-sky-top); }
@@ -459,3 +481,35 @@ svg.chart .hit { fill: transparent; }
 .mm-key.oasis { background: var(--series-3); transform: rotate(45deg) scale(0.85); }
 .mm-key.escape { height: 0; width: 14px; border-top: 2px dashed var(--warn-mark); }
 .mm-key.attacked { border: 2px solid var(--bad-mark); border-radius: 50%; }
+
+/* Theme button (brand) */
+.theme-btn { align-self: flex-start; margin-top: 6px; min-width: 32px; font-size: 14px; line-height: 1; padding: 4px 8px; }
+@media (max-width: 760px) { .theme-btn { margin: 0 0 0 auto; align-self: center; } [dir="rtl"] .theme-btn { margin: 0 auto 0 0; } }
+
+/* Health tab */
+.tabs a[data-tab="health"][data-tone="warn"]::after, .tabs a[data-tab="health"][data-tone="bad"]::after {
+  content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-inline-start: 6px; vertical-align: 1px; background: var(--warn-mark); }
+.tabs a[data-tab="health"][data-tone="bad"]::after { background: var(--bad-mark); }
+.health-head { flex-direction: row; align-items: center; gap: 14px; border-inline-start: 4px solid var(--good-mark); }
+.health-head.t-warn { border-inline-start-color: var(--warn-mark); }
+.health-head.t-bad { border-inline-start-color: var(--bad-mark); }
+.health-head h2 { font-size: 17px; }
+.health-head p { margin: 2px 0 0; }
+.hh-mark { flex: none; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; font-weight: 700; font-size: 18px; background: var(--good-bg); color: var(--good); }
+.health-head.t-warn .hh-mark { background: var(--warn-bg); color: var(--warn); }
+.health-head.t-bad .hh-mark { background: var(--bad-bg); color: var(--bad); }
+.hl-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.hl-row { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 2px 8px; padding: 7px 0; border-block-end: 1px solid var(--line); align-items: baseline; }
+.hl-row:last-child { border-block-end: 0; }
+.hl-mark { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; align-self: center; }
+.hl-row.t-good .hl-mark { background: var(--good-bg); color: var(--good); }
+.hl-row.t-warn .hl-mark { background: var(--warn-bg); color: var(--warn); }
+.hl-row.t-bad .hl-mark { background: var(--bad-bg); color: var(--bad); }
+.hl-row.t-muted .hl-mark { background: var(--bg); color: var(--muted); }
+.hl-label { font-weight: 500; overflow-wrap: anywhere; }
+.hl-value { text-align: end; color: var(--text-2); overflow-wrap: anywhere; }
+.hl-row.t-bad .hl-value { color: var(--bad); }
+.hl-row.t-warn .hl-value { color: var(--warn); }
+.hl-detail { grid-column: 2 / -1; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.hl-section[data-section="errors"] .hl-row { grid-template-columns: 20px auto minmax(0, 1fr); }
+.hl-section[data-section="errors"] .hl-value { text-align: start; color: var(--text); }

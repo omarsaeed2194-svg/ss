@@ -12,7 +12,10 @@
       <h1 data-i18n="app.name"></h1>
       <span id="server" class="muted small"></span>
     </div>
-    <span id="gold" class="muted small"></span>
+    <div class="top-end">
+      <span id="gold" class="muted small"></span>
+      <button type="button" class="icon-btn" id="themeBtn"></button>
+    </div>
   </header>
 
   <section class="toggles">
@@ -22,10 +25,22 @@
   </section>
 
   <div id="status" class="status"></div>
+
+  <section class="quick" aria-label="">
+    <button type="button" class="qa" id="qaCheck"><span aria-hidden="true">🔄</span> <span data-i18n="btn.checkNow"></span></button>
+    <button type="button" class="qa" id="qaFarms"><span aria-hidden="true">🐎</span> <span data-i18n="qa.farms"></span></button>
+    <button type="button" class="qa" id="qaPause"></button>
+    <button type="button" class="qa bad" id="qaEscape" hidden><span aria-hidden="true">🏃</span> <span data-i18n="qa.escape"></span></button>
+  </section>
+  <p id="qaMsg" class="small muted qa-msg" role="status"></p>
+
+  <div class="list-head">
+    <span id="villageCount" class="muted small"></span>
+    <button type="button" class="link small" id="viewBtn"></button>
+  </div>
   <main id="villages"></main>
 
   <footer class="bottom">
-    <button class="btn" id="checkNow" data-i18n="btn.checkNow"></button>
     <button class="btn" id="openGame" data-i18n="btn.openGame"></button>
     <button class="btn primary" id="openDashboard" data-i18n="btn.dashboard"></button>
   </footer>

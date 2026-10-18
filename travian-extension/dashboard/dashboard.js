@@ -1,4 +1,5 @@
-import { loadAll, command, statusLine, esc, fillSelect, troopInfo } from '../src/ui.js';
+import { loadAll, command, statusLine, esc, fillSelect, troopInfo, initTheme, nextTheme, themeIcon, THEMES } from '../src/ui.js';
+import { renderHealth } from './health.js';
 import { renderOverview } from './overview.js';
 import { renderAutopilot } from './autopilot.js';
 import { renderFarms } from './farms.js';
@@ -16,9 +17,15 @@ let buildVillageId = null;
 let lang = null;
 
 // ------------------------------------------------------------------ tabs ---
+initTheme();
+
 function showTab() {
   const name = (location.hash || '#overview').slice(1);
-  for (const a of document.querySelectorAll('.tabs a')) a.classList.toggle('active', a.dataset.tab === name);
+  for (const a of document.querySelectorAll('.tabs a')) {
+    a.classList.toggle('active', a.dataset.tab === name);
+    // Phone layout: the tab bar scrolls sideways; keep the open tab in view.
+    if (a.dataset.tab === name && a.parentElement.scrollWidth > a.parentElement.clientWidth) a.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
   for (const s of document.querySelectorAll('.tab')) s.classList.toggle('active', s.id === `tab-${name}`);
 }
 window.addEventListener('hashchange', showTab);
@@ -335,6 +342,7 @@ function renderLog() {
     : `<li class="muted">${esc(t('log.empty'))}</li>`;
 }
 $('clearLog').addEventListener('click', () => command('clearLog'));
+$('themeBtn').addEventListener('click', () => command('saveSettings', { settings: { theme: nextTheme(data.settings.theme || 'system') } }));
 
 // --------------------------------------------------------------- render ---
 $('checkNow').addEventListener('click', async (e) => {
@@ -351,6 +359,7 @@ function renderTicking(now) {
   renderBuildWhy(now);
   renderSync(now);
   renderTroopTable(now);
+  renderHealth(data, now);
 }
 
 function render() {
@@ -362,10 +371,15 @@ function render() {
     applyI18n();
     document.title = t('app.name');
     fillSelect($('language'), LANGUAGES);
+    fillSelect($('themeSelect'), THEMES.map((x) => [x, t(`theme.${x}`)]));
     fillSelect($('tgSummaryHour'), [[-1, t('tg.summaryOff')], ...Array.from({ length: 24 }, (_, h) => [h, `${String(h).padStart(2, '0')}:00`])]);
   }
   $('server').textContent = data.settings.server ? new URL(data.settings.server).host : t('server.none');
   $('version').textContent = t('app.version', { v: chrome.runtime.getManifest().version });
+  const theme = data.settings.theme || 'system';
+  $('themeBtn').textContent = themeIcon(theme);
+  $('themeBtn').title = t('theme.button', { name: t(`theme.${theme}`) });
+  $('themeBtn').setAttribute('aria-label', $('themeBtn').title);
   $('serverFull').textContent = data.settings.server || t('settings.notDetected');
   renderTicking(now);
   renderBuild(now, langChanged);

@@ -38,7 +38,7 @@
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0d0d0d;
     --panel: #1a1a19;
     --text: #f0efec;
@@ -64,6 +64,32 @@
     --series-4: #c98500;
     color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+  --bg: #0d0d0d;
+  --panel: #1a1a19;
+  --text: #f0efec;
+  --text-2: #c3c2b7;
+  --muted: #9a9890;
+  --line: #2c2c2a;
+  --border: rgba(255, 255, 255, 0.10);
+  --shadow: none;
+  --accent: #4caf50;
+  --accent-ink: #0b1a0c;
+  --accent-wash: #1b2a1b;
+  --good: #0ca30c;
+  --good-bg: #13260f;
+  --warn: #fab219;
+  --warn-bg: #2e2510;
+  --bad: #e66767;
+  --bad-bg: #3a1d1d;
+  --info: #86b6ef;
+  --info-bg: #142336;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -161,3 +187,4 @@ button, input, select { font: inherit; color: inherit; }
 .uicon.k-chief, .uicon.k-hero { color: var(--crop); }
 .uicon.k-settler { color: var(--wood); }
 .uicon.k-animal { color: var(--good-mark); }
+.good-text { color: var(--good); margin: 0; }

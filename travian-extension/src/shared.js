@@ -44,6 +44,7 @@ export const buildingName = (gid, fallback) =>
 
 export const DEFAULT_SETTINGS = {
   language: 'ar',
+  theme: 'system',          // system | light | dark
   server: '',
   watchEnabled: true,       // periodically re-check villages and send alerts
   botEnabled: false,        // perform queued actions (build, train, farm, adventures)
