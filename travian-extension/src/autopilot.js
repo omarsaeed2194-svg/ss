@@ -60,7 +60,8 @@ export function pickConstruct(v, tribeBase = null, skip = [], now = Date.now()) 
   if (!v.buildings || !v.buildings.length) return null;
   const has = (gid) => v.buildings.some((b) => b.gid === gid && (b.level > 0 || b.underConstruction));
   const level = (gid) => Math.max(0, ...v.buildings.filter((b) => b.gid === gid).map((b) => b.level || 0));
-  const empty = (slot) => { const b = v.buildings.find((x) => x.slot === slot); return !skip.includes(slot) && (!b || !b.gid); };
+  // Only a site the game showed as empty counts; one missing from the data might not be.
+  const empty = (slot) => { const b = v.buildings.find((x) => x.slot === slot); return !skip.includes(slot) && !!b && !b.gid; };
   const fields = v.fields || [];
   const avg = fields.length ? fields.reduce((n, f) => n + f.level, 0) / fields.length : 0;
   const sites = v.buildings.filter((b) => !b.gid && b.slot >= 19 && b.slot <= 38 && !skip.includes(b.slot)).map((b) => b.slot).sort((a, b) => a - b);
