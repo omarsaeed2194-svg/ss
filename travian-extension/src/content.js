@@ -92,6 +92,45 @@
     Array.from(root.querySelectorAll('input[name^="troop["], input[name^="troops["]'))
       .find((i) => i.type !== 'hidden' && i.getAttribute('name').endsWith(`[${field}]`));
 
+  // The alliance bonus form as the game draws it.
+  const BONUSES = ['TroopProductionSpeed', 'CPProduction', 'SmithyPower', 'MerchantCapacity'];
+  async function donateForm(form, amounts, bonus) {
+    const val = (id) => { const el = document.getElementById(id); return el ? el.value : null; };
+    if (val('limitReached') === '1') return { ok: false, code: 'donateLimit' };
+    const radios = Array.from(form.querySelectorAll('input[type="radio"][name="bonus"]'));
+    const radio = radios.find((r) => r.value === BONUSES[bonus]) || radios.find((r) => r.checked) || radios[0];
+    if (!radio) return { ok: false, code: 'noDonateForm' };
+    radio.checked = true;
+    radio.dispatchEvent(new Event('change', { bubbles: true }));
+    await sleep(rand(300, 700));
+    // What's left of today's limit, and each input's own maximum.
+    const left = Math.max(0, Number(val('dailyLimit') || Infinity) - Number(val('donatedToday') || 0));
+    const keys = ['wood', 'clay', 'iron', 'crop'];
+    const want = keys.map((k) => Math.max(0, Math.floor((amounts && amounts[k]) || 0)));
+    const total = want.reduce((n, x) => n + x, 0);
+    const scale = total > left ? left / total : 1;
+    const sent = {};
+    for (let i = 0; i < 4; i++) {
+      const input = document.getElementById(`donate${i + 1}`);
+      if (!input) return { ok: false, code: 'noDonateForm' };
+      const max = Number(((input.getAttribute('onkeyup') || '').match(/,\s*(\d+)\s*,/) || [])[1]);
+      let n = Math.floor(want[i] * scale);
+      if (Number.isFinite(max)) n = Math.min(n, max);
+      sent[keys[i]] = n;
+      setValue(input, n);
+      input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: '0' }));
+      await sleep(rand(150, 400));
+    }
+    if (!Object.values(sent).some((n) => n > 0)) return { ok: false, code: 'donateLimit' };
+    const btn = await waitFor(() => { const b = document.getElementById('donate_green'); return b && usable(b) ? b : null; }, 3000);
+    if (!btn) return { ok: false, code: 'noDonateButton' };
+    const box = document.querySelector('.bonus-donation-response');
+    const before = box ? box.textContent : '';
+    btn.click();
+    await waitFor(() => (box && box.textContent.trim() && box.textContent !== before) || document.querySelector('.toast.toastSuccess'), 8000);
+    return { ok: true, sent, message: box ? box.textContent.trim().slice(0, 200) : '' };
+  }
+
   const actions = {
     async upgrade() {
       const btn = document.querySelector('.upgradeButtonsContainer .section1 button.build') ||
@@ -281,11 +320,13 @@
       return done ? { ok: true } : { ok: false, code: 'noTransferConfirm' };
     },
 
-    // Alliance bonus donation. The page hasn't been checked against a saved
-    // copy, so it looks for the usual names: four resource inputs (lumber /
-    // clay / iron / crop, or r1..r4), opened by a bonus card's button if
-    // needed, and the form's own send button — never a gold one.
+    // Alliance bonus donation (alliance/bonuses): pick the bonus, type the
+    // amounts (the game listens for keyup), then the green "Contribute" —
+    // never the gold ×3 one. Other layouts fall back to the usual names.
     async donate({ amounts, bonus = -1 }) {
+      await waitFor(() => document.getElementById('content'), 5000);
+      const form = document.getElementById('contributionForm');
+      if (form) return donateForm(form, amounts, bonus);
       const NAMES = {
         wood: ['lumber', 'wood', 'r1', 'resource1', 'res1'], clay: ['clay', 'r2', 'resource2', 'res2'],
         iron: ['iron', 'r3', 'resource3', 'res3'], crop: ['crop', 'r4', 'resource4', 'res4'],

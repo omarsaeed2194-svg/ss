@@ -693,7 +693,9 @@ const JOBS = {
     };
     // The alliance bonus page; if it isn't where expected, try the alliance
     // page and follow the game's own link to the bonuses.
-    const bonus = plan && plan.donate ? plan.donate.bonus : -1;
+    // The plan's bonus (the test uses the village's plan too, if it has one).
+    const own = plan || escapes.find((p) => p.villageId === vid);
+    const bonus = own && own.donate ? own.donate.bonus : -1;
     const tried = new Set();
     let next = `${s.server}/alliance/bonuses`;
     let res = { ok: false, code: 'noDonateForm' };
@@ -710,18 +712,19 @@ const JOBS = {
       next = link && !tried.has(link) ? link : !res.ok && res.code === 'noDonateForm' && !tried.has(`${s.server}/alliance`) ? `${s.server}/alliance` : null;
     }
     if (!res.ok) { await fail(reasonText(res)); return; }
-    // Did the resources really leave the village?
+    // What actually went in (the daily limit or a box's maximum can cut it).
+    const given = res.sent || amounts;
     await sleep(rand(800, 1500));
     await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(vid)}`);
     ({ villages = {} } = await read(['villages']));
     const after = Object.values((villages[vid].resources || {}).stock || {}).reduce((n, x) => n + (x || 0), 0);
-    const given = Object.values(amounts).reduce((n, x) => n + x, 0);
-    if (before - after < given * 0.5) { await fail(t('reason.donateNotConfirmed')); return; }
-    if (job.test) { await log('success', t('log.donateTestOk', { what: amountsText(amounts) }), vid); return; }
-    await setState({ status: 'sent', amounts });
-    await log('success', t('log.donated', { what: amountsText(amounts), lands: fmtClock(tm.first) }), vid);
+    const sum = Object.values(given).reduce((n, x) => n + x, 0);
+    if (before - after < sum * 0.5) { await fail(t('reason.donateNotConfirmed')); return; }
+    if (job.test) { await log('success', t('log.donateTestOk', { what: amountsText(given) }), vid); return; }
+    await setState({ status: 'sent', amounts: given });
+    await log('success', t('log.donated', { what: amountsText(given), lands: fmtClock(tm.first) }), vid);
     await bump('donations');
-    await sendAlert({ kind: 'attacks', villageId: vid, title: t('alert.donated.title', { v: v.name }), body: t('alert.donated.body', { what: amountsText(amounts), lands: fmtClock(tm.first) }) });
+    await sendAlert({ kind: 'attacks', villageId: vid, title: t('alert.donated.title', { v: v.name }), body: t('alert.donated.body', { what: amountsText(given), lands: fmtClock(tm.first) }) });
   },
 
   async refresh(tabId, job, s) {
