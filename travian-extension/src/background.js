@@ -2057,8 +2057,9 @@ async function pollTelegram() {
 // ------------------------------------------------------------ web app --
 // The web app (Vercel) shows this browser's data and sends commands. Every
 // minute — every few seconds while someone has it open — the browser that
-// drives the game uploads the dashboard's data when it changed, runs the
-// commands waiting there and sends back their results.
+// drives the game checks in, runs the commands waiting there and sends back
+// their results. New data goes up at once while someone watches, otherwise
+// at most every 5 minutes (the free database plan counts traffic).
 let webBusy = false;
 let webFastUntil = 0;
 let webLooping = false;
@@ -2082,13 +2083,15 @@ async function webSync(force = false) {
       try { data.lease = (await chrome.storage.sync.get('lease')).lease || null; } catch (e) { data.lease = null; }
       const snap = snapshotOf(data, version);
       const hash = hashOf(snap.text);
-      const upload = force || round > 0 || hash !== webState.hash || Date.now() - (webState.sentAt || 0) > 10 * 60000;
+      // New data goes up at once while someone watches, else every 5 minutes at most.
+      const due = Date.now() - (webState.sentAt || 0) >= (webState.viewer ? 0 : 5 * 60000);
+      const upload = !snap.tooLarge && (force || round > 0 || (hash !== webState.hash && due));
       let res;
       try {
         res = await fetch(`${base}/api/agent`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${s.web.key}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ version, device: device.name, results, ...(upload && !snap.tooLarge ? { snapshot: snap.snapshot } : {}) }),
+          body: JSON.stringify({ version, device: device.name, results, snapshotAt: webState.snapshotAt || 0, ...(upload ? { snapshot: snap.snapshot } : {}) }),
         });
       } catch (e) {
         await noteService('web', false, t('web.unreachable'));
@@ -2100,7 +2103,7 @@ async function webSync(force = false) {
         return;
       }
       await noteService('web', true, snap.tooLarge ? t('web.tooLarge') : '');
-      webState = { hash: upload ? hash : webState.hash, sentAt: upload ? Date.now() : webState.sentAt, results: [] };
+      webState = { hash: upload ? hash : webState.hash, sentAt: upload ? Date.now() : webState.sentAt, snapshotAt: json.snapshotAt || webState.snapshotAt, viewer: !!json.viewer, results: [] };
       await chrome.storage.session.set({ webState });
       if (json.viewer) webFastUntil = Date.now() + 2 * 60000;
       results = [];
@@ -2128,7 +2131,7 @@ async function webSync(force = false) {
       webLooping = true;
       (async () => {
         while (webFastUntil > Date.now()) {
-          await sleep(4000);
+          await sleep(5000);
           await webSync();
         }
         webLooping = false;
