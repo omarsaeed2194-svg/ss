@@ -70,7 +70,7 @@ export function adviseVillage(v, data, now = Date.now()) {
     const escape = escapeStatus(v, plan, data.villages, now);
     add('critical', 'attack', t('tip.attack', { when: first ? t('tip.attackIn', { t: fmtDuration(first - now) }) : t('tip.attackSoon') }) +
       (escape ? ` ${t('tip.escapePart', { s: escape.text })}` : ''),
-    escape ? null : { type: 'tab', tab: 'troops', villageId: v.id, label: t('tip.actEscape') });
+    escape ? null : { type: 'tab', tab: 'defense', villageId: v.id, label: t('tip.actEscape') });
     if (scanned && !levelOf(v, CRANNY)) add('warning', 'shield', t('tip.crannyUrgent'));
     if (scanned && !wallOf(v)) add('warning', 'shield', t('tip.wallUrgent'));
   }

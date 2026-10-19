@@ -63,8 +63,8 @@ you're away:
   chose (Philosophy also raises culture points), presses the green
   Contribute — never the gold ×3 — and keeps within the daily limit.
 - **Troops** — the troops in each village and what the barracks, stable and
-  workshop are training (with finish times), in the Overview, the Troops tab
-  and the popup.
+  workshop are training (with finish times), in the Overview, the Troops &
+  training page and the popup.
 - **Autopilot** — one switch for when you're away. When a village's build
   queue is empty it picks the next upgrade itself (warehouse/granary when
   90% full → crop when the village is short of crop → Main Building up to the
@@ -75,10 +75,10 @@ you're away:
   rewards** into the village with the most free storage, and — if you tick it
   — tops up an upgrade that waits for resources with **just the missing amount
   from the hero's bag**. It sends the hero on adventures and starts farm lists
-  if you tick them. The Autopilot tab shows what it will do next in every
+  if you tick them. The Autopilot page shows what it will do next in every
   village. You can also queue a **new building on a free site** yourself in
-  the Build queue tab.
-- **Culture points** — a tab that shows your village slots and the progress
+  the Build queue page.
+- **Culture points** — a page that shows your village slots and the progress
   to the next one (read from the game's own sidebar on every page), the pace
   and an estimated date, and how many culture points each village makes a day.
   With **Autopilot builds for culture points** on, every village picks the
@@ -122,9 +122,18 @@ you're away:
   countdowns and attack warnings at a glance, plus **quick actions** (check
   now, send all farm lists, pause/resume everything, escape now) and one line
   per village when you have many (tap to open its card).
-- **Health tab** — whether the bot is running and where, what's switched off
+- **Health page** — whether the bot is running and where, what's switched off
   and why, each job's last success and failure, the last day's errors, and
   how fresh each village's data is.
+- **Dashboard menu in groups** — Overview, then **Economy** (Build queue,
+  Culture points), **Army** (Troops & training, Defense & escape, Farm lists,
+  Oasis raids), **Automation** (Autopilot, Hero & adventures) and **System**
+  (Alerts & Telegram, Settings, Health, Activity log). Every page has a title
+  and links to the pages that work with it (Defense → Troops, Alerts; Farm
+  lists → Oasis raids, Autopilot…). The Overview's troops, queues and
+  movements panels, each Health row and the tips open the page where that
+  thing is set up, and old links (`#raids`, `#escape`) still land on the
+  right page. On a phone the menu is one row that scrolls sideways.
 - **Light/dark** — follows your computer, or pick one (popup, dashboard or
   Settings). The dashboard works on a phone-sized window too.
 
@@ -193,11 +202,14 @@ themselves. Save them first:
 3. Open the **Dashboard** to:
    - **Build queue** — pick a village, then "Queue" fields or buildings to a
      target level, or add an auto-upgrade for resource fields.
-   - **Troops** — add training rules. (Open each barracks/stable once in
-     Travian so real unit names appear.)
-   - **Farms & hero** — turn on farm lists and adventures. (Open Rally Point →
-     Farm List once so your lists appear.)
-   - **Alerts** — set up phone alerts and press **Send test alert**.
+   - **Troops & training** — add training rules. (Open each barracks/stable
+     once in Travian so real unit names appear.)
+   - **Defense & escape** — an escape plan and/or an alliance donation for
+     villages that may be attacked.
+   - **Farm lists** — your own lists, the inactive finder, and the game's farm
+     lists. (Open Rally Point → Farm List once so the game's lists appear.)
+   - **Hero & adventures** — send the hero on adventures.
+   - **Alerts & Telegram** — set up phone alerts and press **Send test alert**.
 4. Flip **Automate actions** on (popup or dashboard sidebar).
 
 ### Phone alerts
@@ -224,7 +236,7 @@ themselves. Save them first:
   Travian tab, the bot stays idle for a few minutes so it doesn't switch your
   active village under you. Just having the game open doesn't count — the game
   reloads itself when timers finish, and that no longer pauses the bot.
-- **Why isn't it building?** Each village in the popup and the Build queue tab
+- **Why isn't it building?** Each village in the popup and the Build queue page
   shows the reason the next upgrade hasn't started (automation off, paused
   while you play, builders busy until…, waiting for resources…). "Check now"
   retries queued upgrades immediately.
@@ -267,17 +279,18 @@ src/escape.js          Troop escape: when to leave, where to, which troops
 src/telegram.js        Telegram commands, status and daily summary texts
 src/timeline.js        Events of the next hours for the Overview timeline
 src/units.js           Unit kinds and their icons
-src/health.js          The Health tab's report
+src/health.js          The Health page's report
 src/inactive.js        Inactive finder: population snapshots and verdicts
 src/reports.js         Raid reports matched to farms; pausing rules
 src/merchants.js       Resource balance suggestions between villages
 src/culture.js         Culture points: per-building values and costs, best picks, celebrations, pace
 src/ui.js / ui.css     Village cards and styles shared by popup and dashboard
 popup/                 Toolbar popup
-dashboard/             Full dashboard (also the extension's options page); overview.js renders the
-                       Overview tab, autopilot.js the Autopilot tab, farms.js the farm lists,
-                       escape.js the escape plans, finder.js the inactive finder, health.js the
-                       Health tab, minimap.js the map,
+dashboard/             Full dashboard (also the extension's options page); dashboard.js builds the
+                       grouped menu and each page's related links, overview.js renders the
+                       Overview, autopilot.js the Autopilot and Oasis raids pages, farms.js the
+                       farm lists, escape.js the Defense page, finder.js the inactive finder,
+                       culture.js the Culture page, health.js the Health page, minimap.js the map,
                        chart.js the 24-hour stock chart, art.js the village/hero drawings
 icons/                 Extension icons
 ```

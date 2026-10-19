@@ -21,16 +21,73 @@ let lang = null;
 // ------------------------------------------------------------------ tabs ---
 initTheme();
 
-function showTab() {
-  const name = (location.hash || '#overview').slice(1);
-  for (const a of document.querySelectorAll('.tabs a')) {
-    a.classList.toggle('active', a.dataset.tab === name);
-    // Phone layout: the tab bar scrolls sideways; keep the open tab in view.
-    if (a.dataset.tab === name && a.parentElement.scrollWidth > a.parentElement.clientWidth) a.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+// The menu, in groups. Every page has an icon and a few related pages, shown
+// as links under its title so features that work together stay one click apart.
+const NAV = [
+  { tabs: ['overview'] },
+  { group: 'nav.gEconomy', tabs: ['build', 'culture'] },
+  { group: 'nav.gArmy', tabs: ['troops', 'defense', 'farms', 'oasis'] },
+  { group: 'nav.gAuto', tabs: ['autopilot', 'hero'] },
+  { group: 'nav.gSystem', tabs: ['alerts', 'settings', 'health', 'log'] },
+];
+const ICONS = {
+  overview: '🏠', build: '🏗', culture: '🏛', troops: '⚔', defense: '🛡', farms: '🐎', oasis: '🌿',
+  autopilot: '🤖', hero: '🦸', alerts: '🔔', settings: '⚙', health: '🩺', log: '📜',
+};
+const RELATED = {
+  build: ['culture', 'autopilot'],
+  culture: ['build', 'autopilot'],
+  troops: ['defense', 'farms', 'oasis'],
+  defense: ['troops', 'alerts'],
+  farms: ['oasis', 'troops', 'autopilot'],
+  oasis: ['farms', 'autopilot'],
+  autopilot: ['build', 'culture', 'hero', 'farms', 'oasis'],
+  hero: ['autopilot', 'overview'],
+  alerts: ['defense', 'health'],
+  settings: ['alerts', 'health'],
+  health: ['log', 'settings'],
+  log: ['health'],
+};
+// Pages that moved: old links still land in the right place.
+const ALIASES = { raids: 'farms', escape: 'defense' };
+const label = (tab) => `<span class="nav-ic" aria-hidden="true">${ICONS[tab]}</span><span data-i18n="nav.${tab}"></span>`;
+
+function buildNav() {
+  $('tabs').innerHTML = NAV.map((g) => `<div class="nav-group" role="group"${g.group ? ` aria-labelledby="ng-${g.tabs[0]}"` : ''}>
+      ${g.group ? `<span class="nav-label" id="ng-${g.tabs[0]}" data-i18n="${g.group}"></span>` : ''}
+      ${g.tabs.map((tab) => `<a href="#${tab}" data-tab="${tab}">${label(tab)}</a>`).join('')}
+    </div>`).join('');
+  for (const [tab, list] of Object.entries(RELATED)) {
+    const head = document.createElement('header');
+    head.className = 'page-head';
+    head.innerHTML = `<h1>${label(tab)}</h1>
+      <div class="related"><span class="muted small" data-i18n="nav.related"></span>
+        ${list.map((x) => `<a href="#${x}" class="chip-link">${label(x)}</a>`).join('')}</div>`;
+    $(`tab-${tab}`).prepend(head);
   }
+  for (const a of document.querySelectorAll('[data-goto]')) a.innerHTML = `<span data-i18n="nav.${a.dataset.goto}"></span><span class="goto-arrow" aria-hidden="true"></span>`;
+}
+buildNav();
+
+function showTab() {
+  let name = (location.hash || '#overview').slice(1);
+  name = ALIASES[name] || name;
+  if (!$(`tab-${name}`)) name = 'overview';
+  for (const a of document.querySelectorAll('.tabs a')) a.classList.toggle('active', a.dataset.tab === name);
+  revealActive();
   for (const s of document.querySelectorAll('.tab')) s.classList.toggle('active', s.id === `tab-${name}`);
+  // A new page starts at its top (the phone's tab bar stays put).
+  if (showTab.last && showTab.last !== name) window.scrollTo({ top: 0 });
+  showTab.last = name;
 }
 window.addEventListener('hashchange', showTab);
+// Phone layout: the menu is one row that scrolls sideways; keep the open
+// page in view, also after the language (and so the widths) changed.
+function revealActive() {
+  const a = document.querySelector('.tabs a.active');
+  if (a && $('tabs').scrollWidth > $('tabs').clientWidth) a.scrollIntoView({ block: 'nearest', inline: 'center' });
+}
+window.matchMedia('(max-width: 760px)').addEventListener('change', revealActive);
 
 // -------------------------------------------------------------- helpers ---
 const villageOptions = () => sortedVillages(data.villages).map((v) => [v.id, `${v.name} ${coords(v.x, v.y)}`]);
@@ -254,7 +311,7 @@ $('trainTable').addEventListener('click', (e) => {
   if (b) command('removeTraining', { id: b.dataset.removeRule });
 });
 
-// ---------------------------------------------------------- farms & hero ---
+// ------------------------------------------ game farm lists and hero ---
 function renderRaids(now) {
   fillSelect($('farmVillage'), [['', t('raids.anyVillage')], ...villageOptions()], data.settings.farm.villageId);
   const lists = data.account.farmLists || [];
@@ -401,6 +458,7 @@ function render() {
     fillSelect($('language'), LANGUAGES);
     fillSelect($('themeSelect'), THEMES.map((x) => [x, t(`theme.${x}`)]));
     fillSelect($('tgSummaryHour'), [[-1, t('tg.summaryOff')], ...Array.from({ length: 24 }, (_, h) => [h, `${String(h).padStart(2, '0')}:00`])]);
+    revealActive();
   }
   $('server').textContent = data.settings.server ? new URL(data.settings.server).host : t('server.none');
   $('version').textContent = t('app.version', { v: chrome.runtime.getManifest().version });

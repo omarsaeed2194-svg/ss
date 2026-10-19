@@ -19,7 +19,7 @@ async function storageUse() {
 
 const rowHtml = (r) => `<li class="hl-row t-${r.tone}">
     <span class="hl-mark" aria-hidden="true">${MARK[r.tone] || ''}</span>
-    <span class="hl-label">${esc(r.label)}</span>
+    <span class="hl-label">${r.tab ? `<a href="#${r.tab}">${esc(r.label)}</a>` : esc(r.label)}</span>
     <span class="hl-value">${esc(r.value)}</span>
     ${r.detail ? `<span class="hl-detail">${esc(r.detail)}</span>` : ''}
   </li>`;

@@ -8,7 +8,12 @@ import { t } from './i18n.js';
 const HOUR = 3600000;
 const JOB_TYPES = ['refresh', 'build', 'train', 'farmList', 'farm', 'raid', 'escape', 'adventure', 'scan', 'quest', 'heroBag', 'reports', 'donate', 'celebrate'];
 
-const row = (tone, label, value, detail = '') => ({ tone, label, value, detail });
+// `tab`: the dashboard page where the thing is set up, linked from the row.
+const row = (tone, label, value, detail = '', tab = null) => ({ tone, label, value, detail, tab });
+const JOB_TAB = {
+  build: 'build', train: 'troops', farmList: 'farms', farm: 'farms', raid: 'oasis', escape: 'defense', adventure: 'hero',
+  scan: 'oasis', quest: 'autopilot', heroBag: 'hero', reports: 'farms', donate: 'defense', celebrate: 'culture',
+};
 
 // "good" when everything is fine, else the worst tone found.
 export function overallTone(sections) {
@@ -27,9 +32,9 @@ export function healthReport(data, now = Date.now()) {
 
   // ---- Engine: is anything running at all?
   const engine = [];
-  if (!s.server) engine.push(row('bad', t('health.server'), t('health.noServer'), t('health.noServerHelp')));
-  else if (st.loggedOut) engine.push(row('bad', t('health.server'), t('status.loggedOut'), t('health.loggedOutHelp')));
-  else engine.push(row('good', t('health.server'), new URL(s.server).host, st.lastPageAt ? t('health.lastPage', { ago: fmtAgo(st.lastPageAt, now) }) : ''));
+  if (!s.server) engine.push(row('bad', t('health.server'), t('health.noServer'), t('health.noServerHelp'), 'settings'));
+  else if (st.loggedOut) engine.push(row('bad', t('health.server'), t('status.loggedOut'), t('health.loggedOutHelp'), 'settings'));
+  else engine.push(row('good', t('health.server'), new URL(s.server).host, st.lastPageAt ? t('health.lastPage', { ago: fmtAgo(st.lastPageAt, now) }) : '', 'settings'));
   const every = (s.refreshMinutes || 10) * 60000;
   if (st.state === 'working') engine.push(row('good', t('health.lastRun'), t('health.runningNow'), st.note || ''));
   else if (!busy) engine.push(row('muted', t('health.lastRun'), st.lastRunAt ? fmtAgo(st.lastRunAt, now) : '—', t('health.allOff')));
@@ -40,50 +45,50 @@ export function healthReport(data, now = Date.now()) {
       late > every * 2.5 ? t('health.lateHelp') : t('health.everyN', { n: s.refreshMinutes })));
   }
   const other = leaseIsFresh(data.lease, now) && data.device && data.lease.deviceId !== data.device.id;
-  if (other) engine.push(row('warn', t('health.device'), data.lease.deviceName, t('health.otherDeviceHelp')));
-  else if (busy) engine.push(row('good', t('health.device'), t('health.thisDevice'), ''));
-  if ((st.userActiveUntil || 0) > now && s.pauseWhenPlaying) engine.push(row('warn', t('health.playing'), t('health.pausedUntil', { clock: fmtClock(st.userActiveUntil) }), t('health.playingHelp')));
-  if (auto && !withinActiveHours(s.activeHours, new Date(now))) engine.push(row('warn', t('health.activeHours'), `${s.activeHours.from}–${s.activeHours.to}`, t('health.outsideHours')));
+  if (other) engine.push(row('warn', t('health.device'), data.lease.deviceName, t('health.otherDeviceHelp'), 'settings'));
+  else if (busy) engine.push(row('good', t('health.device'), t('health.thisDevice'), '', 'settings'));
+  if ((st.userActiveUntil || 0) > now && s.pauseWhenPlaying) engine.push(row('warn', t('health.playing'), t('health.pausedUntil', { clock: fmtClock(st.userActiveUntil) }), t('health.playingHelp'), 'settings'));
+  if (auto && !withinActiveHours(s.activeHours, new Date(now))) engine.push(row('warn', t('health.activeHours'), `${s.activeHours.from}–${s.activeHours.to}`, t('health.outsideHours'), 'settings'));
   if (st.pausedAll || st.tgPaused) engine.push(row('warn', t('health.pausedAll'), fmtAgo((st.pausedAll || {}).at || now, now), t('health.pausedAllHelp')));
   sections.push({ key: 'engine', title: t('health.engine'), rows: engine });
 
   // ---- Features: on, off, or on but unable to work — and why.
   const feat = [];
-  const needAuto = (on, label, value) => {
-    if (!on) return row('muted', label, t('health.off'), '');
-    return auto ? row('good', label, value, '') : row('warn', label, value, t('health.needsAutomation'));
+  const needAuto = (on, label, value, tab) => {
+    if (!on) return row('muted', label, t('health.off'), '', tab);
+    return auto ? row('good', label, value, '', tab) : row('warn', label, value, t('health.needsAutomation'), tab);
   };
   feat.push(row(s.watchEnabled ? 'good' : 'warn', t('toggle.watch'), s.watchEnabled ? t('health.on') : t('health.off'), s.watchEnabled ? '' : t('health.watchOffHelp')));
   const tasks = Object.values(data.tasks || {}).reduce((n, l) => n + l.length, 0);
   feat.push(row(s.botEnabled ? 'good' : 'muted', t('toggle.bot'), s.botEnabled ? t('health.on') : t('health.off'),
-    !s.botEnabled && tasks ? t('health.tasksWaiting', { n: tasks }) : ''));
+    !s.botEnabled && tasks ? t('health.tasksWaiting', { n: tasks }) : '', 'build'));
   if (!s.botEnabled && tasks) feat[feat.length - 1].tone = 'warn';
   const ap = s.autopilot;
   feat.push(row(ap.enabled ? 'good' : 'muted', t('toggle.autopilot'), ap.enabled ? t('health.on') : t('health.off'),
-    ap.enabled ? ['build', 'adventures', 'farmLists', 'construct', 'quests', 'heroBag'].filter((k) => ap[k]).map((k) => t(`health.ap.${k}`)).filter(Boolean).join(t('list.sep')) : ''));
+    ap.enabled ? ['build', 'adventures', 'farmLists', 'construct', 'quests', 'heroBag'].filter((k) => ap[k]).map((k) => t(`health.ap.${k}`)).filter(Boolean).join(t('list.sep')) : '', 'autopilot'));
   const lists = (data.farms || []).filter((l) => l.enabled !== false);
-  feat.push(needAuto(lists.length > 0, t('health.farmLists'), t('health.nLists', { n: lists.length })));
+  feat.push(needAuto(lists.length > 0, t('health.farmLists'), t('health.nLists', { n: lists.length }), 'farms'));
   const raids = (data.raids || []).filter((r) => r.enabled !== false);
-  feat.push(needAuto(raids.length > 0, t('health.raids'), t('health.nRules', { n: raids.length })));
+  feat.push(needAuto(raids.length > 0, t('health.raids'), t('health.nRules', { n: raids.length }), 'oasis'));
   const train = (data.training || []).filter((r) => r.enabled !== false);
-  feat.push(needAuto(train.length > 0, t('health.training'), t('health.nRules', { n: train.length })));
+  feat.push(needAuto(train.length > 0, t('health.training'), t('health.nRules', { n: train.length }), 'troops'));
   const plans = (data.escapes || []).filter((p) => p.enabled !== false);
-  if (!plans.length) feat.push(row('muted', t('health.escapes'), t('health.off'), ''));
-  else if (!s.watchEnabled) feat.push(row('bad', t('health.escapes'), t('health.nPlans', { n: plans.length }), t('escape.warnWatch')));
-  else if (villages.length < 2) feat.push(row('bad', t('health.escapes'), t('health.nPlans', { n: plans.length }), t('escape.warnOneVillage')));
-  else feat.push(row('good', t('health.escapes'), t('health.nPlans', { n: plans.length }), t('health.escapesHelp')));
+  if (!plans.length) feat.push(row('muted', t('health.escapes'), t('health.off'), '', 'defense'));
+  else if (!s.watchEnabled) feat.push(row('bad', t('health.escapes'), t('health.nPlans', { n: plans.length }), t('escape.warnWatch'), 'defense'));
+  else if (villages.length < 2) feat.push(row('bad', t('health.escapes'), t('health.nPlans', { n: plans.length }), t('escape.warnOneVillage'), 'defense'));
+  else feat.push(row('good', t('health.escapes'), t('health.nPlans', { n: plans.length }), t('health.escapesHelp'), 'defense'));
   const balance = s.merchants && s.merchants.enabled;
-  if (balance) feat.push(needAuto(true, t('health.merchants'), t('health.on')));
+  if (balance) feat.push(needAuto(true, t('health.merchants'), t('health.on'), 'overview'));
   // Phone channels.
   const tg = s.telegram.token && s.telegram.chatId;
   const tgH = h.telegram || {};
-  if (!tg) feat.push(row('muted', 'Telegram', t('health.notSetUp'), ''));
-  else if (s.telegram.control !== false && tgH.at && !tgH.ok) feat.push(row('bad', 'Telegram', t('health.failing'), tgH.err || ''));
+  if (!tg) feat.push(row('muted', 'Telegram', t('health.notSetUp'), '', 'alerts'));
+  else if (s.telegram.control !== false && tgH.at && !tgH.ok) feat.push(row('bad', 'Telegram', t('health.failing'), tgH.err || '', 'alerts'));
   else feat.push(row('good', 'Telegram', s.telegram.control !== false ? t('health.tgControl') : t('health.tgAlertsOnly'),
-    tgH.okAt ? t('health.lastContact', { ago: fmtAgo(tgH.okAt, now) }) : ''));
-  feat.push(row(s.discord.webhookUrl ? 'good' : 'muted', 'Discord', s.discord.webhookUrl ? t('health.on') : t('health.notSetUp'), ''));
+    tgH.okAt ? t('health.lastContact', { ago: fmtAgo(tgH.okAt, now) }) : '', 'alerts'));
+  feat.push(row(s.discord.webhookUrl ? 'good' : 'muted', 'Discord', s.discord.webhookUrl ? t('health.on') : t('health.notSetUp'), '', 'alerts'));
   const remote = h.remote || {};
-  if (remote.at && !remote.ok && now - remote.at < 24 * HOUR) feat.push(row('bad', t('health.phoneAlerts'), t('health.failing'), remote.err || ''));
+  if (remote.at && !remote.ok && now - remote.at < 24 * HOUR) feat.push(row('bad', t('health.phoneAlerts'), t('health.failing'), remote.err || '', 'alerts'));
   sections.push({ key: 'features', title: t('health.features'), rows: feat });
 
   // ---- Jobs: last success and last failure of each kind of work.
@@ -94,7 +99,7 @@ export function healthReport(data, now = Date.now()) {
     const fails = (j.fails || []).filter((x) => now - x < 24 * HOUR).length;
     const lastBad = j.errAt && (!j.okAt || j.errAt > j.okAt);
     jobs.push({
-      ...row(lastBad ? 'bad' : fails ? 'warn' : 'good', t(`health.job.${type}`), j.okAt ? fmtAgo(j.okAt, now) : '—', lastBad ? j.err : fails ? t('health.failsToday', { n: fails }) : ''),
+      ...row(lastBad ? 'bad' : fails ? 'warn' : 'good', t(`health.job.${type}`), j.okAt ? fmtAgo(j.okAt, now) : '—', lastBad ? j.err : fails ? t('health.failsToday', { n: fails }) : '', JOB_TAB[type]),
       fails,
     });
   }

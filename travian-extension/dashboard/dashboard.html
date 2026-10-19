@@ -16,18 +16,7 @@
       <span id="version" class="muted small"></span>
       <button type="button" class="btn small ghost theme-btn" id="themeBtn"></button>
     </div>
-    <div class="tabs">
-      <a href="#overview" data-tab="overview" data-i18n="nav.overview"></a>
-      <a href="#build" data-tab="build" data-i18n="nav.build"></a>
-      <a href="#troops" data-tab="troops" data-i18n="nav.troops"></a>
-      <a href="#autopilot" data-tab="autopilot" data-i18n="nav.autopilot"></a>
-      <a href="#raids" data-tab="raids" data-i18n="nav.raids"></a>
-      <a href="#culture" data-tab="culture" data-i18n="nav.culture"></a>
-      <a href="#alerts" data-tab="alerts" data-i18n="nav.alerts"></a>
-      <a href="#settings" data-tab="settings" data-i18n="nav.settings"></a>
-      <a href="#health" data-tab="health" data-i18n="nav.health"></a>
-      <a href="#log" data-tab="log" data-i18n="nav.log"></a>
-    </div>
+    <div class="tabs" id="tabs"></div>
     <div class="side-toggles">
       <label class="switch"><input type="checkbox" data-setting="watchEnabled"> <span data-i18n="toggle.watch"></span></label>
       <label class="switch"><input type="checkbox" data-setting="botEnabled"> <span data-i18n="toggle.bot"></span></label>
@@ -39,7 +28,7 @@
   <main>
     <div id="status" class="status"></div>
 
-    <!-- Overview -->
+    <!-- ========================================================= Overview -->
     <section class="tab" id="tab-overview">
       <div class="filter-bar" id="ovFilterBar" role="toolbar">
         <span class="filter-label" data-i18n="ov.filter"></span>
@@ -99,7 +88,7 @@
               <div id="ovMap" class="minimap-wrap"></div>
             </section>
             <section class="panel">
-              <header class="panel-head"><h2 data-i18n="ov.troopsTitle"></h2><span id="ovTroopsMeta" class="muted small"></span></header>
+              <header class="panel-head"><h2 data-i18n="ov.troopsTitle"></h2><span class="head-end"><span id="ovTroopsMeta" class="muted small"></span><a href="#troops" class="small" data-goto="troops"></a></span></header>
               <div id="ovTroops"></div>
             </section>
             <section class="panel">
@@ -107,11 +96,11 @@
               <dl id="ovNext" class="kv"></dl>
             </section>
             <section class="panel">
-              <header class="panel-head"><h2 data-i18n="ov.queuesTitle"></h2></header>
+              <header class="panel-head"><h2 data-i18n="ov.queuesTitle"></h2><a href="#build" class="small" data-goto="build"></a></header>
               <ul id="ovQueues" class="feed"></ul>
             </section>
             <section class="panel">
-              <header class="panel-head"><h2 data-i18n="ov.movesTitle"></h2></header>
+              <header class="panel-head"><h2 data-i18n="ov.movesTitle"></h2><a href="#defense" class="small" data-goto="defense"></a></header>
               <ul id="ovMoves" class="feed"></ul>
             </section>
             <section class="panel">
@@ -127,9 +116,9 @@
       <div id="ovToast" class="toast" role="status" hidden></div>
     </section>
 
-    <!-- Build queue -->
+    <!-- ============================================== Economy: building -->
     <section class="tab" id="tab-build">
-      <div class="row">
+      <div class="row wrap">
         <label><span data-i18n="build.village"></span> <select id="buildVillage"></select></label>
         <span id="buildScan" class="muted small"></span>
       </div>
@@ -139,7 +128,13 @@
           <div id="buildWhy" class="status" hidden></div>
           <p class="muted small" data-i18n="build.queueHelp"></p>
           <ol id="taskList" class="tasks"></ol>
-          <h3 data-i18n="build.autoTitle"></h3>
+          <div class="row">
+            <label><span data-i18n="settings.builders"></span> <select data-setting="maxQueue">
+              <option value="1" data-i18n="settings.builders1"></option>
+              <option value="2" data-i18n="settings.builders2"></option>
+            </select></label>
+          </div>
+          <h3 class="gap" data-i18n="build.autoTitle"></h3>
           <p class="muted small" data-i18n="build.autoHelp"></p>
           <div class="row">
             <select id="fieldsResource">
@@ -170,56 +165,45 @@
       </div>
     </section>
 
-    <!-- Troops -->
+    <!-- ============================================ Economy: culture points -->
+    <section class="tab" id="tab-culture">
+      <div class="cols">
+        <div class="panel">
+          <h2 data-i18n="culture.nextTitle"></h2>
+          <div id="cuHead"></div>
+        </div>
+        <div class="panel">
+          <h2 data-i18n="culture.settings"></h2>
+          <label class="switch strong"><input type="checkbox" data-setting="culture.focus"> <span data-i18n="culture.focus"></span></label>
+          <p class="muted small indent" data-i18n="culture.focusHelp"></p>
+          <label><span data-i18n="culture.celebrate"></span> <select data-setting="culture.celebrate">
+            <option value="off" data-i18n="culture.celebrateOffOpt"></option>
+            <option value="small" data-i18n="culture.celebrateSmall"></option>
+            <option value="great" data-i18n="culture.celebrateGreat"></option>
+          </select></label>
+          <p class="muted small" id="cuCelebrateInfo"></p>
+          <p class="muted small" data-i18n="culture.celebrateHelp"></p>
+        </div>
+      </div>
+      <div class="panel">
+        <h2 data-i18n="culture.villagesTitle"></h2>
+        <div class="table-wrap"><table class="list" id="cuTable"></table></div>
+        <p class="muted small" data-i18n="culture.tableHelp"></p>
+      </div>
+    </section>
+
+    <!-- ================================================ Army: troops & training -->
     <section class="tab" id="tab-troops">
       <div class="panel">
         <h2 data-i18n="troops.overview"></h2>
         <p class="muted small" data-i18n="troops.overviewHelp"></p>
         <div class="table-wrap"><table class="list" id="troopTable"></table></div>
       </div>
-      <div class="panel" id="escapePanel">
-        <h2 data-i18n="escape.title"></h2>
-        <p class="muted small" data-i18n="escape.help"></p>
-        <div class="table-wrap"><table class="list" id="escapeTable"></table></div>
-        <h3 class="gap" id="escFormTitle"></h3>
-        <div class="row wrap">
-          <label><span data-i18n="escape.village"></span> <select id="escVillage"></select></label>
-          <label class="switch"><input type="checkbox" id="escTroops" checked> <span data-i18n="escape.moveTroops"></span></label>
-        </div>
-        <div class="row wrap" id="escTroopRow">
-          <label><span data-i18n="escape.to"></span> <select id="escTarget"></select></label>
-          <label><span data-i18n="escape.lead"></span> <input type="number" id="escLead" min="30" max="3600" value="120" class="num"> <span data-i18n="escape.seconds"></span></label>
-          <label class="switch"><input type="checkbox" id="escHero"> <span data-i18n="escape.hero"></span></label>
-          <label><span data-i18n="escape.spend"></span> <select id="escSpend"></select></label>
-          <p class="muted small" data-i18n="escape.spendHelp"></p>
-        </div>
-        <div class="row wrap" id="escUnitRow">
-          <label class="switch"><input type="checkbox" id="escAll" checked> <span data-i18n="escape.allUnits"></span></label>
-          <div id="escUnits" class="row wrap" hidden></div>
-        </div>
-        <h3 class="gap" data-i18n="donate.title"></h3>
-        <div class="row wrap">
-          <label class="switch"><input type="checkbox" id="escDonate"> <span data-i18n="donate.enable"></span></label>
-          <label><input type="number" id="escDonateSec" min="20" max="600" value="60" class="num"> <span data-i18n="donate.before"></span></label>
-          <label class="switch"><input type="checkbox" id="escKeepCranny" checked> <span data-i18n="donate.keepCranny"></span></label>
-          <label><span data-i18n="donate.bonus"></span> <select id="escBonus"></select></label>
-          <button class="btn small" id="escDonateTest" data-i18n="donate.test"></button>
-        </div>
-        <p class="muted small" data-i18n="donate.help"></p>
-        <div class="row wrap">
-          <button class="btn primary" id="escSave" data-i18n="escape.save"></button>
-          <span id="escMsg" class="small muted"></span>
-        </div>
-        <p class="muted small" data-i18n="escape.notes"></p>
-        <p id="escWarn" class="small warn-text" hidden></p>
-      </div>
       <div class="panel">
         <h2 data-i18n="troops.rules"></h2>
         <p class="muted small" data-i18n="troops.help"></p>
-        <table class="list" id="trainTable"></table>
-      </div>
-      <div class="panel">
-        <h3 data-i18n="troops.add"></h3>
+        <div class="table-wrap"><table class="list" id="trainTable"></table></div>
+        <h3 class="gap" data-i18n="troops.add"></h3>
         <div class="row wrap">
           <label><span data-i18n="troops.village"></span> <select id="trainVillage"></select></label>
           <label><span data-i18n="troops.building"></span> <select id="trainBuilding"></select></label>
@@ -232,65 +216,57 @@
       </div>
     </section>
 
-    <!-- Autopilot -->
-    <section class="tab" id="tab-autopilot">
-      <div class="cols">
-        <div class="panel">
-          <h2 data-i18n="ap.title"></h2>
-          <p class="muted small" data-i18n="ap.help"></p>
-          <label class="switch strong"><input type="checkbox" data-setting="autopilot.enabled"> <span data-i18n="ap.enable"></span></label>
-          <h3 class="gap" data-i18n="ap.what"></h3>
-          <label class="switch"><input type="checkbox" data-setting="autopilot.build"> <span data-i18n="ap.build"></span></label>
-          <div class="row indent"><label><span data-i18n="ap.fieldsMax"></span> <input type="number" min="1" max="20" data-setting="autopilot.fieldsMax" class="num"></label></div>
-          <p class="muted small indent" data-i18n="ap.buildHelp"></p>
-          <label class="switch indent"><input type="checkbox" data-setting="autopilot.construct"> <span data-i18n="ap.construct"></span></label>
-          <p class="muted small indent" data-i18n="ap.constructHelp"></p>
-          <label class="switch"><input type="checkbox" data-setting="autopilot.adventures"> <span data-i18n="ap.adventures"></span></label>
-          <label class="switch"><input type="checkbox" data-setting="autopilot.farmLists"> <span data-i18n="ap.farmLists"></span></label>
-          <label class="switch"><input type="checkbox" data-setting="autopilot.quests"> <span data-i18n="ap.quests"></span></label>
-          <p class="muted small indent" data-i18n="ap.questsHelp"></p>
-          <label class="switch"><input type="checkbox" data-setting="autopilot.heroBag"> <span data-i18n="ap.heroBag"></span></label>
-          <p class="muted small indent" data-i18n="ap.heroBagHelp"></p>
-          <p class="muted small" data-i18n="ap.raidsNote"></p>
-          <p class="muted small" data-i18n="ap.pauseNote"></p>
-        </div>
-        <div class="panel">
-          <h2 data-i18n="ap.planTitle"></h2>
-          <p class="muted small" data-i18n="ap.planHelp"></p>
-          <ul id="apPlan" class="feed"></ul>
-        </div>
+    <!-- ============================== Army: defence (escape + alliance donation) -->
+    <section class="tab" id="tab-defense">
+      <div class="panel" id="escapePanel">
+        <h2 data-i18n="escape.title"></h2>
+        <p class="muted small" data-i18n="escape.help"></p>
+        <div class="table-wrap"><table class="list" id="escapeTable"></table></div>
       </div>
       <div class="panel">
-        <h2 data-i18n="raid.title"></h2>
-        <p class="muted small" data-i18n="raid.help"></p>
-        <div class="table-wrap"><table class="list" id="raidTable"></table></div>
-        <h3 class="gap" data-i18n="raid.add"></h3>
+        <h2 id="escFormTitle"></h2>
         <div class="row wrap">
-          <label><span data-i18n="troops.village"></span> <select id="raidVillage"></select></label>
-          <label><span data-i18n="troops.unit"></span> <select id="raidUnit"></select></label>
-          <label><span data-i18n="raid.amount"></span> <input type="number" id="raidAmount" min="1" value="5" class="num"></label>
-          <label><span data-i18n="raid.radius"></span> <input type="number" id="raidRadius" min="1" max="30" value="7" class="num"></label>
-          <label><span data-i18n="troops.every"></span> <input type="number" id="raidEvery" min="10" value="30" class="num"> <span data-i18n="troops.min"></span></label>
-          <label><span data-i18n="raid.maxPerRun"></span> <input type="number" id="raidMax" min="1" max="20" value="3" class="num"></label>
-          <button class="btn primary" id="addRaid" data-i18n="raid.addBtn"></button>
+          <label><span data-i18n="escape.village"></span> <select id="escVillage"></select></label>
         </div>
-        <p class="muted small" data-i18n="raid.unitHelp"></p>
-      </div>
-      <div class="panel">
-        <header class="panel-head"><h2 id="oasisTitle"></h2><span id="oasisMeta" class="muted small"></span></header>
+        <div class="sub-cols">
+          <fieldset class="sub">
+            <legend><span aria-hidden="true">🏃</span> <span data-i18n="def.escapePart"></span></legend>
+            <label class="switch"><input type="checkbox" id="escTroops" checked> <span data-i18n="escape.moveTroops"></span></label>
+            <div class="row wrap" id="escTroopRow">
+              <label><span data-i18n="escape.to"></span> <select id="escTarget"></select></label>
+              <label><span data-i18n="escape.lead"></span> <input type="number" id="escLead" min="30" max="3600" value="120" class="num"> <span data-i18n="escape.seconds"></span></label>
+              <label class="switch"><input type="checkbox" id="escHero"> <span data-i18n="escape.hero"></span></label>
+              <label><span data-i18n="escape.spend"></span> <select id="escSpend"></select></label>
+              <p class="muted small" data-i18n="escape.spendHelp"></p>
+            </div>
+            <div class="row wrap" id="escUnitRow">
+              <label class="switch"><input type="checkbox" id="escAll" checked> <span data-i18n="escape.allUnits"></span></label>
+              <div id="escUnits" class="row wrap" hidden></div>
+            </div>
+          </fieldset>
+          <fieldset class="sub">
+            <legend><span aria-hidden="true">💰</span> <span data-i18n="donate.title"></span></legend>
+            <label class="switch"><input type="checkbox" id="escDonate"> <span data-i18n="donate.enable"></span></label>
+            <div class="row wrap">
+              <label><input type="number" id="escDonateSec" min="20" max="600" value="60" class="num"> <span data-i18n="donate.before"></span></label>
+              <label class="switch"><input type="checkbox" id="escKeepCranny" checked> <span data-i18n="donate.keepCranny"></span></label>
+              <label><span data-i18n="donate.bonus"></span> <select id="escBonus"></select></label>
+              <button class="btn small" id="escDonateTest" data-i18n="donate.test"></button>
+            </div>
+            <p class="muted small" data-i18n="donate.help"></p>
+          </fieldset>
+        </div>
         <div class="row wrap">
-          <button class="btn" id="scanOases" data-i18n="raid.scan"></button>
-          <label><span data-i18n="raid.manual"></span> <input type="text" id="targetXY" placeholder="12|-34" dir="ltr" size="9"></label>
-          <button class="btn" id="addTarget" data-i18n="raid.addTarget"></button>
-          <span id="targetMsg" class="small muted"></span>
+          <button class="btn primary" id="escSave" data-i18n="escape.save"></button>
+          <span id="escMsg" class="small muted"></span>
         </div>
-        <div class="table-wrap"><table class="list" id="oasisTable"></table></div>
-        <p class="muted small" data-i18n="raid.safety"></p>
+        <p class="muted small" data-i18n="escape.notes"></p>
+        <p id="escWarn" class="small warn-text" hidden></p>
       </div>
     </section>
 
-    <!-- Farms & hero -->
-    <section class="tab" id="tab-raids">
+    <!-- ===================================================== Army: farm lists -->
+    <section class="tab" id="tab-farms">
       <div class="panel">
         <h2 data-i18n="farm.title"></h2>
         <p class="muted small" data-i18n="farm.help"></p>
@@ -349,30 +325,101 @@
         <p id="finderMsg" class="small muted"></p>
       </div>
 
+      <div class="panel">
+        <h2 data-i18n="raids.farmLists"></h2>
+        <label class="switch"><input type="checkbox" data-setting="farm.enabled"> <span data-i18n="raids.auto"></span></label>
+        <div class="row wrap">
+          <label><span data-i18n="raids.every"></span> <input type="number" data-setting="farm.intervalMinutes" min="5" class="num"> <span data-i18n="raids.minutes"></span></label>
+          <label><span data-i18n="raids.fromVillage"></span> <select data-setting="farm.villageId" id="farmVillage"></select></label>
+        </div>
+        <h3 data-i18n="raids.lists"></h3>
+        <div id="farmLists"></div>
+        <p class="muted small" data-i18n="raids.help"></p>
+      </div>
+    </section>
+
+    <!-- =================================================== Army: oasis raids -->
+    <section class="tab" id="tab-oasis">
+      <div class="panel">
+        <h2 data-i18n="raid.title"></h2>
+        <p class="muted small" data-i18n="raid.help"></p>
+        <p class="muted small" data-i18n="raid.runNote"></p>
+        <div class="table-wrap"><table class="list" id="raidTable"></table></div>
+        <h3 class="gap" data-i18n="raid.add"></h3>
+        <div class="row wrap">
+          <label><span data-i18n="troops.village"></span> <select id="raidVillage"></select></label>
+          <label><span data-i18n="troops.unit"></span> <select id="raidUnit"></select></label>
+          <label><span data-i18n="raid.amount"></span> <input type="number" id="raidAmount" min="1" value="5" class="num"></label>
+          <label><span data-i18n="raid.radius"></span> <input type="number" id="raidRadius" min="1" max="30" value="7" class="num"></label>
+          <label><span data-i18n="troops.every"></span> <input type="number" id="raidEvery" min="10" value="30" class="num"> <span data-i18n="troops.min"></span></label>
+          <label><span data-i18n="raid.maxPerRun"></span> <input type="number" id="raidMax" min="1" max="20" value="3" class="num"></label>
+          <button class="btn primary" id="addRaid" data-i18n="raid.addBtn"></button>
+        </div>
+        <p class="muted small" data-i18n="raid.unitHelp"></p>
+      </div>
+      <div class="panel">
+        <header class="panel-head"><h2 id="oasisTitle"></h2><span id="oasisMeta" class="muted small"></span></header>
+        <div class="row wrap">
+          <button class="btn" id="scanOases" data-i18n="raid.scan"></button>
+          <label><span data-i18n="raid.manual"></span> <input type="text" id="targetXY" placeholder="12|-34" dir="ltr" size="9"></label>
+          <button class="btn" id="addTarget" data-i18n="raid.addTarget"></button>
+          <span id="targetMsg" class="small muted"></span>
+        </div>
+        <div class="table-wrap"><table class="list" id="oasisTable"></table></div>
+        <p class="muted small" data-i18n="raid.safety"></p>
+      </div>
+    </section>
+
+    <!-- =============================================== Automation: autopilot -->
+    <section class="tab" id="tab-autopilot">
       <div class="cols">
         <div class="panel">
-          <h2 data-i18n="raids.farmLists"></h2>
-          <label class="switch"><input type="checkbox" data-setting="farm.enabled"> <span data-i18n="raids.auto"></span></label>
-          <div class="row">
-            <label><span data-i18n="raids.every"></span> <input type="number" data-setting="farm.intervalMinutes" min="5" class="num"> <span data-i18n="raids.minutes"></span></label>
-          </div>
-          <div class="row">
-            <label><span data-i18n="raids.fromVillage"></span> <select data-setting="farm.villageId" id="farmVillage"></select></label>
-          </div>
-          <h3 data-i18n="raids.lists"></h3>
-          <div id="farmLists"></div>
-          <p class="muted small" data-i18n="raids.help"></p>
+          <h2 data-i18n="ap.title"></h2>
+          <p class="muted small" data-i18n="ap.help"></p>
+          <label class="switch strong"><input type="checkbox" data-setting="autopilot.enabled"> <span data-i18n="ap.enable"></span></label>
+          <h3 class="gap" data-i18n="ap.what"></h3>
+          <label class="switch"><input type="checkbox" data-setting="autopilot.build"> <span data-i18n="ap.build"></span></label>
+          <div class="row indent"><label><span data-i18n="ap.fieldsMax"></span> <input type="number" min="1" max="20" data-setting="autopilot.fieldsMax" class="num"></label></div>
+          <p class="muted small indent" data-i18n="ap.buildHelp"></p>
+          <label class="switch indent"><input type="checkbox" data-setting="autopilot.construct"> <span data-i18n="ap.construct"></span></label>
+          <p class="muted small indent" data-i18n="ap.constructHelp"></p>
+          <label class="switch"><input type="checkbox" data-setting="autopilot.adventures"> <span data-i18n="ap.adventures"></span></label>
+          <label class="switch"><input type="checkbox" data-setting="autopilot.farmLists"> <span data-i18n="ap.farmLists"></span></label>
+          <label class="switch"><input type="checkbox" data-setting="autopilot.quests"> <span data-i18n="ap.quests"></span></label>
+          <p class="muted small indent" data-i18n="ap.questsHelp"></p>
+          <label class="switch"><input type="checkbox" data-setting="autopilot.heroBag"> <span data-i18n="ap.heroBag"></span></label>
+          <p class="muted small indent" data-i18n="ap.heroBagHelp"></p>
+          <p class="muted small" data-i18n="ap.raidsNote"></p>
+          <p class="muted small" data-i18n="ap.pauseNote"></p>
         </div>
         <div class="panel">
-          <h2 data-i18n="hero.title"></h2>
-          <label class="switch"><input type="checkbox" data-setting="adventure.enabled"> <span data-i18n="hero.auto"></span></label>
-          <p class="muted small" data-i18n="hero.help"></p>
-          <div id="heroInfo" class="kv"></div>
+          <h2 data-i18n="ap.planTitle"></h2>
+          <p class="muted small" data-i18n="ap.planHelp"></p>
+          <ul id="apPlan" class="feed"></ul>
         </div>
       </div>
     </section>
 
-    <!-- Alerts -->
+    <!-- ==================================================== Automation: hero -->
+    <section class="tab" id="tab-hero">
+      <div class="cols">
+        <div class="panel">
+          <h2 data-i18n="hero.title"></h2>
+          <dl id="heroInfo" class="kv"></dl>
+        </div>
+        <div class="panel">
+          <h2 data-i18n="hero.advTitle"></h2>
+          <label class="switch"><input type="checkbox" data-setting="adventure.enabled"> <span data-i18n="hero.auto"></span></label>
+          <p class="muted small" data-i18n="hero.help"></p>
+          <h3 class="gap" data-i18n="hero.bagTitle"></h3>
+          <label class="switch"><input type="checkbox" data-setting="autopilot.heroBag"> <span data-i18n="ap.heroBag"></span></label>
+          <p class="muted small indent" data-i18n="ap.heroBagHelp"></p>
+          <p class="muted small" data-i18n="hero.apNote"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================== System: alerts -->
     <section class="tab" id="tab-alerts">
       <div class="cols">
         <div class="panel">
@@ -416,8 +463,28 @@
       </div>
     </section>
 
-    <!-- Settings -->
+    <!-- ================================================ System: settings -->
     <section class="tab" id="tab-settings">
+      <div class="cols">
+        <div class="panel">
+          <h2 data-i18n="settings.language"></h2>
+          <div class="row"><select data-setting="language" id="language"></select></div>
+          <h2 class="gap" data-i18n="theme.label"></h2>
+          <div class="row"><select data-setting="theme" id="themeSelect"></select></div>
+        </div>
+        <div class="panel">
+          <h2 data-i18n="settings.timing"></h2>
+          <div class="row"><label><span data-i18n="settings.checkEvery"></span> <input type="number" min="3" data-setting="refreshMinutes" class="num"> <span data-i18n="settings.minutes"></span></label></div>
+          <div class="row"><label><span data-i18n="settings.jitter"></span> <input type="number" min="0" max="60" data-setting="jitterPercent" class="num"> %</label></div>
+          <label class="switch"><input type="checkbox" data-setting="pauseWhenPlaying"> <span data-i18n="settings.pause"></span></label>
+          <div class="row indent"><label><span data-i18n="settings.resume"></span> <input type="number" min="1" data-setting="pauseMinutes" class="num"> <span data-i18n="settings.resumeAfter"></span></label></div>
+          <label class="switch"><input type="checkbox" data-setting="activeHours.enabled"> <span data-i18n="settings.activeHours"></span></label>
+          <div class="row indent">
+            <input type="time" data-setting="activeHours.from"> <span data-i18n="settings.and"></span> <input type="time" data-setting="activeHours.to">
+          </div>
+          <p class="muted small indent" data-i18n="settings.activeHelp"></p>
+        </div>
+      </div>
       <div class="panel">
         <h2 data-i18n="sync.title"></h2>
         <p class="muted small" data-i18n="sync.help"></p>
@@ -439,73 +506,21 @@
           <span id="backupResult" class="small muted"></span>
         </div>
       </div>
-      <div class="cols">
-        <div class="panel">
-          <h2 data-i18n="settings.language"></h2>
-          <div class="row"><select data-setting="language" id="language"></select></div>
-          <h2 class="gap" data-i18n="theme.label"></h2>
-          <div class="row"><select data-setting="theme" id="themeSelect"></select></div>
-          <h2 class="gap" data-i18n="settings.timing"></h2>
-          <div class="row"><label><span data-i18n="settings.checkEvery"></span> <input type="number" min="3" data-setting="refreshMinutes" class="num"> <span data-i18n="settings.minutes"></span></label></div>
-          <div class="row"><label><span data-i18n="settings.jitter"></span> <input type="number" min="0" max="60" data-setting="jitterPercent" class="num"> %</label></div>
-          <label class="switch"><input type="checkbox" data-setting="pauseWhenPlaying"> <span data-i18n="settings.pause"></span></label>
-          <div class="row indent"><label><span data-i18n="settings.resume"></span> <input type="number" min="1" data-setting="pauseMinutes" class="num"> <span data-i18n="settings.resumeAfter"></span></label></div>
-          <label class="switch"><input type="checkbox" data-setting="activeHours.enabled"> <span data-i18n="settings.activeHours"></span></label>
-          <div class="row indent">
-            <input type="time" data-setting="activeHours.from"> <span data-i18n="settings.and"></span> <input type="time" data-setting="activeHours.to">
-          </div>
-          <p class="muted small indent" data-i18n="settings.activeHelp"></p>
-        </div>
-        <div class="panel">
-          <h2 data-i18n="settings.building"></h2>
-          <div class="row">
-            <label><span data-i18n="settings.builders"></span> <select data-setting="maxQueue">
-              <option value="1" data-i18n="settings.builders1"></option>
-              <option value="2" data-i18n="settings.builders2"></option>
-            </select></label>
-          </div>
-          <h2 class="gap" data-i18n="settings.server"></h2>
-          <p><span id="serverFull" class="mono" dir="ltr"></span></p>
-          <p class="muted small" data-i18n="settings.serverHelp"></p>
-          <button class="btn danger" id="resetData" data-i18n="settings.reset"></button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Culture points -->
-    <section class="tab" id="tab-culture">
-      <div class="cols">
-        <div class="panel">
-          <h2 data-i18n="culture.nextTitle"></h2>
-          <div id="cuHead"></div>
-        </div>
-        <div class="panel">
-          <h2 data-i18n="culture.settings"></h2>
-          <label class="switch strong"><input type="checkbox" data-setting="culture.focus"> <span data-i18n="culture.focus"></span></label>
-          <p class="muted small indent" data-i18n="culture.focusHelp"></p>
-          <label><span data-i18n="culture.celebrate"></span> <select data-setting="culture.celebrate">
-            <option value="off" data-i18n="culture.celebrateOffOpt"></option>
-            <option value="small" data-i18n="culture.celebrateSmall"></option>
-            <option value="great" data-i18n="culture.celebrateGreat"></option>
-          </select></label>
-          <p class="muted small" id="cuCelebrateInfo"></p>
-          <p class="muted small" data-i18n="culture.celebrateHelp"></p>
-        </div>
-      </div>
       <div class="panel">
-        <h2 data-i18n="culture.villagesTitle"></h2>
-        <div class="table-wrap"><table class="list" id="cuTable"></table></div>
-        <p class="muted small" data-i18n="culture.tableHelp"></p>
+        <h2 data-i18n="settings.server"></h2>
+        <p><span id="serverFull" class="mono" dir="ltr"></span></p>
+        <p class="muted small" data-i18n="settings.serverHelp"></p>
+        <div class="row"><button class="btn danger" id="resetData" data-i18n="settings.reset"></button></div>
       </div>
     </section>
 
-    <!-- Health -->
+    <!-- ================================================== System: health -->
     <section class="tab" id="tab-health">
       <div class="panel health-head" id="healthHead"></div>
       <div class="cols" id="healthSections"></div>
     </section>
 
-    <!-- Log -->
+    <!-- ===================================================== System: log -->
     <section class="tab" id="tab-log">
       <div class="panel">
         <div class="row between">

@@ -430,7 +430,7 @@ function planEscapes(data, now) {
     const v = villages[p.villageId];
     if (v && donateDue(v, p, now)) jobs.push({ type: 'donate', planId: p.id, label: t('job.donate', { v: v.name }) });
   }
-  // "Test donation" from the Troops tab: a small amount, right now.
+  // "Test donation" from the Defense page: a small amount, right now.
   const test = schedule.donateTest && villages[schedule.donateTest.villageId];
   if (test) jobs.push({ type: 'donate', villageId: test.id, test: true, label: t('job.donateTest', { v: test.name }) });
   return jobs;

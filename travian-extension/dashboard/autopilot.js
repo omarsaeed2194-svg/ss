@@ -1,5 +1,5 @@
-// The Autopilot tab: what the autopilot will do next, oasis raid rules, and
-// the oases known around each village.
+// The Autopilot page (what the autopilot will do next) and the Oasis raids
+// page (raid rules and the oases known around each village).
 import { command, esc, fillSelect } from '../src/ui.js';
 import { sortedVillages, buildingName, taskLabel, fmtDuration, fmtAgo, buildStatus } from '../src/shared.js';
 import { pickAutoUpgrade, unitField, distance, oasisKey } from '../src/autopilot.js';

@@ -1,4 +1,4 @@
-// Farms tab: inactive finder — players whose villages stopped growing,
+// Farm lists page: inactive finder — players whose villages stopped growing,
 // found by looking at the map twice, a day apart.
 import { command, esc, fillSelect } from '../src/ui.js';
 import { sortedVillages, fmtAgo, fmtDuration, fmtNum } from '../src/shared.js';

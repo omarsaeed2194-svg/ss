@@ -1,5 +1,5 @@
-// Troops tab: escape plans — which village's troops leave when an attack
-// comes, where to, and how long before it lands.
+// Defense page: escape plans — which village's troops leave when an attack
+// comes, where to, and how long before it lands — and alliance donations.
 import { command, esc, fillSelect, escapeStatus } from '../src/ui.js';
 import { donateStatus } from '../src/escape.js';
 import { sortedVillages, buildingName } from '../src/shared.js';
@@ -124,6 +124,8 @@ const rerender = () => window.dispatchEvent(new CustomEvent('tvh:rerender-all'))
 const msg = (text, tone) => { $('escMsg').textContent = text; $('escMsg').className = `small ${tone === 'bad' ? 'bad' : tone === 'good' ? 'good-text' : 'muted'}`; };
 
 $('escVillage').addEventListener('change', () => { loadForm($('escVillage').value); msg(''); rerender(); });
+// A tip ("plan an escape") opens this page on its village.
+window.addEventListener('tvh:select-village', (e) => { loadForm(e.detail); msg(''); rerender(); });
 $('escTarget').addEventListener('change', () => { $('escTarget').dataset.want = $('escTarget').value; });
 $('escAll').addEventListener('change', () => { $('escUnits').hidden = $('escAll').checked; });
 $('escSpend').addEventListener('change', () => { $('escSpend').dataset.want = $('escSpend').value; });
