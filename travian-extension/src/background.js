@@ -698,9 +698,11 @@ const JOBS = {
     const bonus = own && own.donate ? own.donate.bonus : -1;
     const tried = new Set();
     let next = `${s.server}/alliance/bonuses`;
+    let at = next;
     let res = { ok: false, code: 'noDonateForm' };
     while (next && !res.ok && tried.size < 3) {
       tried.add(next);
+      at = next;
       try {
         await navigate(tabId, next, 15000); // an attack is close: don't wait long on a wrong address
         ({ res } = await act(tabId, { kind: 'donate', amounts, bonus }, false));
@@ -714,12 +716,29 @@ const JOBS = {
     if (!res.ok) { await fail(reasonText(res)); return; }
     // What actually went in (the daily limit or a box's maximum can cut it).
     const given = res.sent || amounts;
+    const sum = Object.values(given).reduce((n, x) => n + x, 0);
+    // Proof it went in: the bonus page's own "given today" count went up, or
+    // the stock dropped — measured against what the fields would have made
+    // meanwhile (on fast servers that hides a small donation).
+    let counted = res.donatedBefore != null && res.donatedAfter != null && res.donatedAfter - res.donatedBefore >= sum * 0.5;
+    if (!counted && res.donatedBefore != null) {
+      await sleep(rand(800, 1500));
+      try {
+        await navigate(tabId, at, 15000);
+        const { res: info } = await act(tabId, { kind: 'donateInfo' }, false);
+        counted = info && info.donatedToday != null && info.donatedToday - res.donatedBefore >= sum * 0.5;
+      } catch (e) {
+        if (e.loggedOut) throw e;
+      }
+    }
     await sleep(rand(800, 1500));
     await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(vid)}`);
     ({ villages = {} } = await read(['villages']));
-    const after = Object.values((villages[vid].resources || {}).stock || {}).reduce((n, x) => n + (x || 0), 0);
-    const sum = Object.values(given).reduce((n, x) => n + x, 0);
-    if (before - after < sum * 0.5) { await fail(t('reason.donateNotConfirmed')); return; }
+    const now2 = villages[vid].resourcesAt || Date.now();
+    const sumOf = (x) => Object.values(x || {}).reduce((n, y) => n + (y || 0), 0);
+    const expected = sumOf(estimateStock(v, now2)) || before;
+    const dropped = expected - sumOf((villages[vid].resources || {}).stock) >= sum * 0.5;
+    if (!counted && !dropped) { await fail(t('reason.donateNotConfirmed')); return; }
     if (job.test) { await log('success', t('log.donateTestOk', { what: amountsText(given) }), vid); return; }
     await setState({ status: 'sent', amounts: given });
     await log('success', t('log.donated', { what: amountsText(given), lands: fmtClock(tm.first) }), vid);

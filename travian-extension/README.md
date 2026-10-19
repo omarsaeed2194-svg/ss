@@ -58,7 +58,9 @@ you're away:
   seconds before the first attack lands (60 by default), so the attacker
   finds nothing to steal; it can keep what the crannies hide, and works with
   or without moving the troops. It has its own precise timer, runs with
-  automation off, and checks afterwards that the stock really dropped. Press
+  automation off, and checks afterwards that it really went in (the alliance
+  page's own count of today's donations, or the stock allowing for what the
+  fields made meanwhile). Press
   **Test now** (donates 10 of each) once while you watch. It picks the bonus you
   chose (Philosophy also raises culture points), presses the green
   Contribute — never the gold ×3 — and keeps within the daily limit.

@@ -126,9 +126,17 @@
     if (!btn) return { ok: false, code: 'noDonateButton' };
     const box = document.querySelector('.bonus-donation-response');
     const before = box ? box.textContent : '';
+    // The page's own count of what was given today: the surest check.
+    const donatedBefore = donatedToday();
     btn.click();
-    await waitFor(() => (box && box.textContent.trim() && box.textContent !== before) || document.querySelector('.toast.toastSuccess'), 8000);
-    return { ok: true, sent, message: box ? box.textContent.trim().slice(0, 200) : '' };
+    await waitFor(() => (box && box.textContent.trim() && box.textContent !== before) || document.querySelector('.toast.toastSuccess')
+      || (donatedBefore != null && donatedToday() > donatedBefore), 8000);
+    return { ok: true, sent, message: box ? box.textContent.trim().slice(0, 200) : '', donatedBefore, donatedAfter: donatedToday() };
+  }
+  function donatedToday() {
+    const el = document.getElementById('donatedToday');
+    const n = el && el.value !== '' ? Number(el.value) : NaN;
+    return Number.isFinite(n) ? n : null;
   }
 
   const actions = {
@@ -323,6 +331,13 @@
     // Alliance bonus donation (alliance/bonuses): pick the bonus, type the
     // amounts (the game listens for keyup), then the green "Contribute" —
     // never the gold ×3 one. Other layouts fall back to the usual names.
+    // What the alliance bonus page says was given today (to check a donation).
+    async donateInfo() {
+      await waitFor(() => document.getElementById('content'), 5000);
+      await waitFor(() => document.getElementById('donatedToday'), 3000);
+      return { ok: true, donatedToday: donatedToday() };
+    },
+
     async donate({ amounts, bonus = -1 }) {
       await waitFor(() => document.getElementById('content'), 5000);
       const form = document.getElementById('contributionForm');
