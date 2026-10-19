@@ -3,6 +3,7 @@
 import { command, esc, fillSelect } from '../src/ui.js';
 import { sortedVillages, buildingName, taskLabel, fmtDuration, fmtAgo, buildStatus } from '../src/shared.js';
 import { pickAutoUpgrade, unitField, distance, oasisKey } from '../src/autopilot.js';
+import { expansionPlan } from '../src/expansion.js';
 import { tribeBase } from '../src/units.js';
 import { t, coords } from '../src/i18n.js';
 
@@ -41,13 +42,14 @@ function renderPlan(now) {
   const s = data.settings;
   const ap = s.autopilot;
   const rows = [];
+  const plan = s.expansion.enabled ? expansionPlan(data, now) : null;
   for (const v of sortedVillages(data.villages)) {
     const queued = (data.tasks[v.id] || [])[0];
     const why = buildStatus(v, data, now);
     let what;
     if (queued) what = t('ap.planQueued', { task: taskLabel(queued, v) });
     else if (ap.build) {
-      const pick = pickAutoUpgrade(v, s, now, tribeBase(data.villages));
+      const pick = pickAutoUpgrade(v, s, now, tribeBase(data.villages), plan);
       what = pick && pick.saving ? t('ap.planSaving', { kind: t(`culture.kind.${pick.kind}`) })
         : pick && pick.construct ? t('ap.planConstruct', { name: buildingName(pick.gid), slot: pick.slot })
         : pick ? t('ap.planPick', { name: buildingName(pick.gid), n: pick.level + 1, why: t(`auto.why.${pick.why}`) })

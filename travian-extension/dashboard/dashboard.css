@@ -251,7 +251,7 @@ table.list tr.attacked td { background: var(--bad-bg); }
 table.list tr.selected td { background: var(--accent-wash); }
 table.list tr.off td { color: var(--muted); }
 .ft-form { display: flex; flex-direction: column; gap: 10px; }
-.ft-form textarea { width: 100%; max-width: 520px; font: inherit; font-variant-numeric: tabular-nums; border: 1px solid var(--border); background: var(--bg); border-radius: 8px; padding: 6px 9px; color: var(--text); }
+#expTargets, .ft-form textarea { width: 100%; max-width: 520px; font: inherit; font-variant-numeric: tabular-nums; border: 1px solid var(--border); background: var(--bg); border-radius: 8px; padding: 6px 9px; color: var(--text); }
 .troop-editor { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 12px; }
 .troop-box { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; border-radius: 8px; background: var(--bg); font-size: 12px; }
 .troop-box input { width: 64px; }

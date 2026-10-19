@@ -92,6 +92,18 @@ you're away:
   the last one ends; the village saves for it, and the extension checks that
   the resources really went. You get an alert (and Telegram) when a new
   village slot opens.
+- **New villages** *(experimental)* — instead of taking one Residence to 20,
+  every village takes its Residence (or Palace) to 10 and trains three
+  settlers once; the village they found does the same. One village works on
+  it per free culture points slot (one always gets ready ahead). The
+  autopilot builds the Residence (Main Building to 5 first), automation
+  trains the settlers when a slot is free or 85 % there, and you get an alert
+  when they are home, with where to found: your own list of places, or the
+  nearest free valley the map showed (with its field layout). Sending them
+  stays with you: open the valley in the game and press "Found new village".
+  The extension notices the founding, and the new village is next. On the
+  Culture page; the Residence's settler form and the valley layouts haven't
+  been checked against a saved page yet.
 - **Telegram control** — besides alerts, the bot answers commands sent to it
   in Arabic or English: `status`/`الحالة`, `pause`/`وقف`, `resume`/`شغل`,
   `check`/`افحص`, `farms`/`مزارع`, `escape`/`اهرب`, `summary`/`ملخص`. Commands
@@ -103,7 +115,11 @@ you're away:
   coordinates you add), opens each oasis right before sending and only raids
   when it has **no animals and no owner**, and only confirms when the
   confirmation page names that same oasis. If a step fails, the Activity log
-  says which one (for example "could not find the Raid option").
+  says which one (for example "could not find the Raid option"). If the map
+  service refuses the extension's own request, it opens the map page and
+  reads what the game itself loads there (checked against a saved map page,
+  with a stand-in for the game's map script). The same look also notes free
+  valleys for the new-village plan.
 - **Overview dashboard** — filter by village; headline numbers (stock,
   production, net crop, time until storage is full, incoming attacks, builders);
   **alerts & tips** worked out from each village's state (attacks, starvation,
@@ -286,6 +302,8 @@ src/inactive.js        Inactive finder: population snapshots and verdicts
 src/reports.js         Raid reports matched to farms; pausing rules
 src/merchants.js       Resource balance suggestions between villages
 src/culture.js         Culture points: per-building values and costs, best picks, celebrations, pace
+src/expansion.js       New villages: who builds a Residence, trains settlers, where to found
+src/mapHook.js         On the map page only: passes on the map tiles the game loads
 src/ui.js / ui.css     Village cards and styles shared by popup and dashboard
 popup/                 Toolbar popup
 dashboard/             Full dashboard (also the extension's options page); dashboard.js builds the

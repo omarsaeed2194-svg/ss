@@ -5,11 +5,12 @@ import {
   estimateStock, fmtDuration, fmtClock, withinActiveHours, sortedVillages, taskLabel, buildingName,
   buildBlock, fmtNum,
 } from './shared.js';
-import { pickAutoUpgrade, troopsHome, raidTargets, oasisKey, farmTargets, coversTroops, cleanTroops, buildCategory, bagShortfall } from './autopilot.js';
+import { pickAutoUpgrade, troopsHome, raidTargets, oasisKey, farmTargets, coversTroops, cleanTroops, buildCategory, bagShortfall, distance } from './autopilot.js';
 import { tribeBase } from './units.js';
 import { recordMapVillages } from './inactive.js';
 import { applyReports } from './reports.js';
 import { savingFor, canAfford, CELEBRATIONS } from './culture.js';
+import { expansionPlan, settlerHome, foundedNow, SETTLERS } from './expansion.js';
 import { firstAttack, escapeTiming, escapeDone, escapeDue, escapeTarget, escapeTroops, TOO_LATE_MS, donateTiming, donateDone, donateDue, donationAmounts, amountsText, sameAttack } from './escape.js';
 import { parseCommand, statusText, summaryText, helpText } from './telegram.js';
 import { t, setLanguage, coords, ltr } from './i18n.js';
@@ -797,9 +798,11 @@ const JOBS = {
       // Autopilot: nothing queued by the player, so pick an upgrade now.
       if (!v.fields || !v.fieldsAt) await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(vid)}`);
       if (!v.buildings || !v.buildingsAt) await navigate(tabId, `${s.server}/dorf2.php?newdid=${encodeURIComponent(vid)}`);
-      ({ villages = {} } = await read(['villages']));
+      const fresh = await read(['villages', 'account', 'expansion']);
+      villages = fresh.villages || {};
       v = villages[vid];
-      const pick = pickAutoUpgrade(v, s, Date.now(), tribeBase(villages));
+      const plan = s.expansion.enabled ? expansionPlan({ ...fresh, settings: s }, Date.now()) : null;
+      const pick = pickAutoUpgrade(v, s, Date.now(), tribeBase(villages), plan);
       if (!pick) {
         await patchVillage(vid, { autoIdleUntil: Date.now() + AUTO_IDLE_MS });
         await log('info', t('log.autoNothing', { n: s.autopilot.fieldsMax }), vid);
@@ -978,6 +981,34 @@ const JOBS = {
     });
   },
 
+  // New-village plan: settlers in the village's Residence (or Palace). The
+  // game offers them only while the building has a free slot.
+  async settlers(tabId, job, s) {
+    const { villages = {} } = await read(['villages']);
+    const v = villages[job.villageId];
+    if (!v) return;
+    const mark = (patch) => update(['expansion'], (d) => {
+      d.expansion = d.expansion || {};
+      d.expansion[v.id] = { ...(d.expansion[v.id] || {}), ...patch };
+    });
+    await mark({ trainAt: Date.now() });
+    const home = settlerHome(v);
+    if (!home) return;
+    const page = await navigate(tabId, `${s.server}/build.php?newdid=${encodeURIComponent(v.id)}&gid=${home.gid}`);
+    const unit = page.buildPage && page.buildPage.trainable.find((u) => u.field === 't10');
+    if (!unit) {
+      await mark({ noSlotAt: Date.now() });
+      await log('info', t('log.settlersNoSlot', { b: buildingName(home.gid) }), v.id);
+      return;
+    }
+    const amount = Math.min(job.need, unit.max);
+    if (amount < 1) { await log('info', t('log.settlersNoRes'), v.id); return; }
+    const { res } = await act(tabId, { kind: 'train', field: 't10', amount }, true);
+    if (!res.ok) throw new Error(reasonText(res));
+    await log('success', t('log.settlersTraining', { n: amount, b: buildingName(home.gid) }), v.id);
+    await bump('trained', amount);
+  },
+
   // Oases around a village, from the game's map. Results go into `oases`.
   async scan(tabId, job, s) {
     const vid = job.villageId;
@@ -991,7 +1022,20 @@ const JOBS = {
     });
     if (!v || v.x == null) return;
     await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(vid)}`);
-    const { res } = await act(tabId, { kind: 'scanMap', x: v.x, y: v.y }, false);
+    let { res } = await act(tabId, { kind: 'scanMap', x: v.x, y: v.y }, false);
+    // Refused or empty: open the map page itself and read what the game
+    // loads there (zoomed out, centred on the village).
+    if (!res.ok || !res.tiles) {
+      const first = res;
+      try {
+        await navigate(tabId, `${s.server}/karte.php?zoom=3&x=${v.x}&y=${v.y}`);
+        ({ res } = await act(tabId, { kind: 'mapTiles' }, false));
+      } catch (e) {
+        if (e.loggedOut) throw e;
+        res = { ok: false, code: 'mapApi' };
+      }
+      if (!res.ok) res = first.ok ? res : first;
+    }
     await update(['raids'], (d) => {
       for (const r of d.raids || []) if (r.villageId === vid) r.scannedAt = Date.now();
     });
@@ -1011,6 +1055,16 @@ const JOBS = {
       }
     });
     await log('info', t('log.scanned', { n: res.oases.length }), vid);
+    // Free valleys, for the new-village plan.
+    if (res.valleys) {
+      await update(['valleys'], (d) => {
+        const out = {};
+        // Keep what's still recent elsewhere on the map; this area is redrawn.
+        for (const [k, x] of Object.entries(d.valleys || {})) if (now - (x.scannedAt || 0) < 3 * 86400000 && distance(x, v) > 15) out[k] = x;
+        for (const x of res.valleys) out[oasisKey(x.x, x.y)] = { ...x, scannedAt: now };
+        d.valleys = out;
+      });
+    }
     // Player villages and their population, for the inactive finder.
     if (res.villages && res.villages.length) {
       await update(['mapVillages', 'villages'], (d) => {
@@ -1318,6 +1372,41 @@ const JOBS = {
 
 const automationOn = (s) => s.botEnabled || s.autopilot.enabled;
 
+// New-village plan bookkeeping, every tick: an alert when a village's
+// settlers are ready (with where to found), and noticing the founding.
+async function expansionWatch(s, data, now) {
+  if (!s.expansion.enabled) return;
+  const plan = expansionPlan({ ...data, settings: s }, now);
+  const count = Object.keys(data.villages || {}).length;
+  const changes = {};
+  const news = [];
+  for (const r of plan.rows) {
+    if (foundedNow(r.st, r.v, count, now)) {
+      changes[r.id] = { founded: true, foundedAt: now };
+      news.push(['founded', r]);
+    } else if (r.step === 'ready' && !r.st.readyCount) {
+      changes[r.id] = { readyCount: count, readyAt: now };
+      news.push(['ready', r]);
+    } else if (r.st.readyCount && r.step !== 'ready' && r.step !== 'sent') {
+      changes[r.id] = { readyCount: null, readyAt: null }; // settlers lost or never sent: start over
+    }
+  }
+  if (!Object.keys(changes).length) return;
+  await update(['expansion'], (d) => {
+    d.expansion = d.expansion || {};
+    for (const [id, patch] of Object.entries(changes)) d.expansion[id] = { ...(d.expansion[id] || {}), ...patch };
+  });
+  for (const [kind, r] of news) {
+    if (kind === 'founded') {
+      await log('success', t('log.expansionFounded', { v: r.v.name }), r.id);
+      continue;
+    }
+    const where = r.target ? `${coords(r.target.x, r.target.y)}` : t('exp.noTarget');
+    await log('success', t('log.settlersReady', { n: SETTLERS, v: r.v.name, where }), r.id);
+    await sendAlert({ villageId: r.id, title: t('alert.settlersReady.title', { v: r.v.name }), body: t('alert.settlersReady.body', { n: SETTLERS, where }) });
+  }
+}
+
 function planRefresh(s, data, now, force) {
   const { villages = {}, schedule = {} } = data;
   if (!(s.watchEnabled || automationOn(s) || force)) return [];
@@ -1372,6 +1461,12 @@ function planActions(s, data, now) {
     if ((v.celebrationFailAt || 0) > now - 12 * 3600000 || (v.celebrationCheckAt || 0) > now) continue;
     const c = savingFor(v, s.culture.celebrate, now);
     if (c && !c.tooSmall && canAfford(v, c.cost, now)) jobs.push({ type: 'celebrate', villageId: v.id, kind: c.kind, label: t('job.celebrate', { v: v.name }) });
+  }
+  // New-village plan: settlers where a Residence 10 and a slot are ready.
+  if (s.expansion.enabled) {
+    for (const r of expansionPlan({ ...data, settings: s }, now).rows) {
+      if (r.step === 'train' && r.need > 0 && !((r.st.trainAt || 0) > now - 30 * 60000)) jobs.push({ type: 'settlers', villageId: r.id, need: r.need, label: t('job.settlers', { v: r.v.name }) });
+    }
   }
   if (auto && ap.quests && account.questClaimable && now >= (schedule.questAt || 0)) jobs.push({ type: 'quest', label: t('job.quest') });
   // A build waiting for resources the hero carries in the bag.
@@ -1441,7 +1536,7 @@ async function runJobs(tabId, jobs, s, force) {
   return true;
 }
 
-const DATA_KEYS = ['settings', 'villages', 'tasks', 'training', 'raids', 'farms', 'escapes', 'schedule', 'account', 'status'];
+const DATA_KEYS = ['settings', 'villages', 'tasks', 'training', 'raids', 'farms', 'escapes', 'schedule', 'account', 'status', 'expansion', 'valleys', 'mapVillages'];
 let running = false;
 let rerunForced = false; // "Check now" pressed while a run was in progress
 let rerunSoon = false;   // a dashboard request (e.g. map scan) arrived during a run
@@ -1481,6 +1576,7 @@ async function tick(force = false, soon = false) {
       await setStatus({ state: 'paused', note: '' });
       return {};
     }
+    await expansionWatch(s, data, now);
     const refreshJobs = planRefresh(s, data, now, force);
     if (!refreshJobs.length && !planActions(s, data, now).length) {
       await setStatus({ state: 'idle', note: '' });
@@ -1708,6 +1804,18 @@ const COMMANDS = {
     await patchSchedule({ scanVillage: villageId, finderVillage: villageId, finderScanAt: Date.now() + 12 * 3600000 });
     tick(false, true);
   },
+  // New-village plan: the player marks a village as done (founded) or left
+  // out, or clears what was noted about it.
+  async expansionMark({ villageId, patch }) {
+    const clean = {};
+    if (patch && 'skip' in patch) clean.skip = !!patch.skip;
+    if (patch && 'founded' in patch) clean.founded = !!patch.founded;
+    if (patch && patch.reset) Object.assign(clean, { noSlotAt: null, readyCount: null, readyAt: null, trainAt: null });
+    await update(['expansion'], (d) => {
+      d.expansion = d.expansion || {};
+      d.expansion[villageId] = { ...(d.expansion[villageId] || {}), ...clean };
+    });
+  },
   async finderStop() {
     await patchSchedule({ finderVillage: null, finderScanAt: null });
   },
@@ -1831,8 +1939,8 @@ const COMMANDS = {
     return { pulled, pushed };
   },
   async resetData() {
-    await update(['villages', 'account', 'schedule', 'alertMemo', 'status', 'history', 'oases', 'mapVillages'], (d) => {
-      d.villages = {}; d.account = {}; d.schedule = {}; d.alertMemo = {}; d.status = {}; d.history = {}; d.oases = {}; d.mapVillages = {};
+    await update(['villages', 'account', 'schedule', 'alertMemo', 'status', 'history', 'oases', 'mapVillages', 'valleys', 'expansion'], (d) => {
+      d.villages = {}; d.account = {}; d.schedule = {}; d.alertMemo = {}; d.status = {}; d.history = {}; d.oases = {}; d.mapVillages = {}; d.valleys = {}; d.expansion = {};
     });
     await refreshBadge();
   },

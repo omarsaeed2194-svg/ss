@@ -1,12 +1,16 @@
 // Culture tab: progress towards the next village, culture points per
 // village, celebrations, and what the autopilot would build for culture.
-import { esc } from '../src/ui.js';
+import { esc, command } from '../src/ui.js';
 import { sortedVillages, buildingName, fmtNum, fmtDuration, fmtClock, estimateStock, RESOURCES } from '../src/shared.js';
-import { t, dateLocale } from '../src/i18n.js';
+import { t, dateLocale, coords } from '../src/i18n.js';
 import { villageCp, bestCpUpgrade, savingFor, expansionEta, CELEBRATIONS } from '../src/culture.js';
+import { expansionPlan, VALLEY_FIELDS, SLOT_LEVEL } from '../src/expansion.js';
+import { parseCoordList, distance } from '../src/autopilot.js';
 
 const $ = (id) => document.getElementById(id);
 let last = '';
+let lastExp = '';
+let data = null;
 
 const when = (ts) => new Date(ts).toLocaleString(dateLocale(), { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 const thLevel = (v) => Math.max(0, ...(v.buildings || []).filter((b) => b.gid === 24).map((b) => b.level || 0));
@@ -28,7 +32,66 @@ function celebrationText(v, data, now) {
   return { tone: 'warn', text: t('culture.saving', { kind: t(`culture.kind.${save.kind}`), pct }) };
 }
 
-export function renderCulture(data, now) {
+// New villages: every village's step, its settlers and where to found.
+const STEP_TONE = { ready: 'good-text', training: 'good-text', founded: 'muted', skipped: 'muted', later: 'muted', noSlot: 'warn', waitSlot: 'warn' };
+function renderExpansion(now) {
+  const s = data.settings;
+  const plan = expansionPlan(data, now);
+  const ex = data.account.expansion;
+  $('expMeta').textContent = plan.enabled && ex && ex.total != null ? t('exp.slotsFree', { n: plan.slotsFree }) : '';
+  const auto = s.autopilot.enabled && s.autopilot.build && (s.botEnabled || s.autopilot.enabled);
+  $('expWarn').hidden = !plan.enabled || auto;
+  $('expWarn').textContent = t('exp.needAuto');
+  const head = ['th.village', 'exp.th.home', 'exp.th.settlers', 'exp.th.step', 'exp.th.target'].map((k) => `<th>${esc(t(k))}</th>`).join('');
+  const rows = plan.rows.map((r) => {
+    const home = r.home ? `${r.home.level}/${SLOT_LEVEL}` : '—';
+    const done = r.step === 'founded' || r.step === 'skipped';
+    const set = done ? '—' : [r.settlers.home ? t('exp.home', { n: r.settlers.home }) : '', r.settlers.training ? t('exp.inTraining', { n: r.settlers.training }) : ''].filter(Boolean).join(' · ') || '—';
+    const tg = r.target;
+    const where = tg ? `<span class="mono">${esc(coords(tg.x, tg.y))}</span> <small class="muted">${esc(tg.own ? t('exp.yours') : `${VALLEY_FIELDS[tg.type] || '?'} · ${t('exp.dist', { d: distance(tg, r.v).toFixed(1) })}`)}</small>
+      ${s.server ? ` <a href="${esc(`${s.server}/position_details.php?x=${tg.x}&y=${tg.y}`)}" target="_blank" rel="noopener">${esc(t('exp.openValley'))}</a>` : ''}` : '—';
+    const btn = (label, patch) => `<button class="btn small" data-exp="${esc(r.id)}" data-patch='${esc(JSON.stringify(patch))}'>${esc(t(label))}</button>`;
+    const actions = r.step === 'founded' ? btn('exp.undo', { founded: false, reset: true })
+      : r.step === 'skipped' ? btn('exp.include', { skip: false, reset: true })
+        : `${btn('exp.markFounded', { founded: true })} ${btn('exp.skip', { skip: true })}`;
+    return `<tr${plan.active.has(r.id) ? ' class="selected"' : ''}>
+      <td>${esc(r.v.name)}</td><td class="mono">${esc(home)}</td><td>${esc(set)}</td>
+      <td class="${STEP_TONE[r.step] || ''}">${esc(t(`exp.step.${r.step}`))}</td><td>${where}</td>
+      <td class="actions">${actions}</td></tr>`;
+  }).join('');
+  const html = plan.rows.length ? `<tr>${head}<th></th></tr>${rows}` : `<tr><td class="muted">${esc(t('build.noVillages'))}</td></tr>`;
+  if (html !== lastExp && !$('expTable').contains(document.activeElement)) { lastExp = html; $('expTable').innerHTML = html; }
+  $('expTable').closest('.table-wrap').hidden = !plan.enabled;
+  if (document.activeElement !== $('expTargets') && $('expTargets').dataset.sig !== JSON.stringify(s.expansion.targets)) {
+    $('expTargets').dataset.sig = JSON.stringify(s.expansion.targets);
+    $('expTargets').value = (s.expansion.targets || []).join('\n');
+  }
+  $('expValleys').textContent = t('exp.valleys', { n: Object.keys(data.valleys || {}).length });
+  const first = plan.rows.find((r) => plan.active.has(r.id)) || plan.rows[0];
+  $('expScan').hidden = !first;
+  if (first) { $('expScan').textContent = t('exp.scan', { v: first.v.name }); $('expScan').dataset.village = first.id; }
+}
+
+$('expTable').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-exp]');
+  if (b) command('expansionMark', { villageId: b.dataset.exp, patch: JSON.parse(b.dataset.patch) });
+});
+$('expSaveTargets').addEventListener('click', async () => {
+  const list = parseCoordList($('expTargets').value);
+  const bad = list.filter((x) => x.error).map((x) => x.error);
+  const targets = [...new Set(list.filter((x) => !x.error).map((x) => `${x.x}|${x.y}`))];
+  await command('saveSettings', { settings: { expansion: { ...data.settings.expansion, targets } } });
+  $('expMsg').textContent = bad.length ? t('exp.badLines', { list: bad.join(t('list.sep')) }) : t('exp.saved', { n: targets.length });
+  $('expMsg').className = `small ${bad.length ? 'bad' : 'good-text'}`;
+});
+$('expScan').addEventListener('click', async (e) => {
+  e.target.disabled = true;
+  try { await command('scanOases', { villageId: e.target.dataset.village }); $('expMsg').textContent = t('exp.scanning'); $('expMsg').className = 'small good-text'; } finally { setTimeout(() => { e.target.disabled = false; }, 4000); }
+});
+
+export function renderCulture(d, now) {
+  data = d;
+  renderExpansion(now);
   const villages = sortedVillages(data.villages);
   const ex = data.account.expansion;
   const eta = expansionEta(data.account.cpHistory, now);

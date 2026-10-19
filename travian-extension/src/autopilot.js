@@ -3,6 +3,7 @@
 // oases a raid rule may hit.
 import { RESOURCES, FIELD_RESOURCE, capacityFor, estimateStock } from './shared.js';
 import { savingFor, bestCpUpgrade } from './culture.js';
+import { expansionBuild } from './expansion.js';
 
 const MAP_SIZE = 401; // standard Travian map, -200..200
 
@@ -80,11 +81,12 @@ export function pickConstruct(v, tribeBase = null, skip = [], now = Date.now(), 
 
 // The next upgrade for a village with nothing queued, or null. In order:
 // a storage that is nearly full, crop when the village is close to
-// starving, (culture focus) saving for a celebration, missing basic
-// buildings, (culture focus) the most culture points per resource, the
-// Main Building when it lags behind the fields, then the lowest resource
-// field (favouring the resource produced least).
-export function pickAutoUpgrade(v, s, now = Date.now(), tribeBase = null) {
+// starving, (new-village plan) the Residence to 10, (culture focus) saving
+// for a celebration, missing basic buildings, (culture focus) the most
+// culture points per resource, the Main Building when it lags behind the
+// fields, then the lowest resource field (favouring the resource produced
+// least).
+export function pickAutoUpgrade(v, s, now = Date.now(), tribeBase = null, plan = null) {
   const ap = s.autopilot;
   const skip = v.autoSkip && v.autoSkip.until > now ? v.autoSkip.slots || [] : [];
   const free = (b) => b && !b.underConstruction && !b.maxLevel && !skip.includes(b.slot);
@@ -110,6 +112,10 @@ export function pickAutoUpgrade(v, s, now = Date.now(), tribeBase = null) {
     const crop = lowest(fields.filter((f) => FIELD_RESOURCE[f.gid] === 'crop' && below(f)));
     if (crop) return { slot: crop.slot, gid: crop.gid, level: crop.level, why: 'crop' };
   }
+
+  // 2b. New-village plan: this village's Residence (or Palace) to 10.
+  const exp = expansionBuild(v, plan, tribeBase);
+  if (exp && !skip.includes(exp.slot)) return exp;
 
   // 3. Culture points focus, part 1: a celebration is due — save for it
   // (or first make the storage big enough to hold its cost).

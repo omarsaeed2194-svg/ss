@@ -413,6 +413,20 @@
     return { loaded: !!box && !qs(doc, '.inventoryPageWrapper.loading'), items };
   }
 
+  // Free valleys (somewhere to found a village) from the same map answer:
+  // "{k.vt}" in the title, nobody's tile, and "{k.fN}" its field layout.
+  function valleysFromTiles(tiles) {
+    const out = [];
+    for (const tile of tiles || []) {
+      const pos = tile.position || tile;
+      const all = `${tile.title || ''} ${tile.text || ''}`;
+      if (pos.x == null || pos.y == null || !/\{k\.vt\}/.test(all) || tile.uid > 0 || tile.did > 0) continue;
+      const f = all.match(/\{k\.f(\d+)\}/);
+      out.push({ x: Number(pos.x), y: Number(pos.y), type: f ? Number(f[1]) : null });
+    }
+    return out;
+  }
+
   // Player villages from the same map answer: the tooltip text carries
   // "{k.spieler} name", "{k.einwohner} population", "{k.allianz} tag".
   function villagesFromTiles(tiles) {
@@ -546,7 +560,7 @@
   const api = {
     num, parsePage, parseResources, parseVillages, parseBuildQueue, parseFields, parseBuildings, parseMovements,
     parseBuildPage, parseFarmLists, parseHero, pageType, parseTroops, parseTrainingQueue, parseTile, parseSendPage,
-    oasesFromTiles, villagesFromTiles, unitOf, parseNewBuildings, parseQuests, parseInventory, parseReports, parseExpansion,
+    oasesFromTiles, villagesFromTiles, valleysFromTiles, unitOf, parseNewBuildings, parseQuests, parseInventory, parseReports, parseExpansion,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TravianParser = api;

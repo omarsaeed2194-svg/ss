@@ -139,6 +139,17 @@
     return Number.isFinite(n) ? n : null;
   }
 
+  // Map tiles the game loaded on the map page, passed on by mapHook.js.
+  const mapTiles = new Map();
+  window.addEventListener('message', (e) => {
+    if (e.source !== window || !e.data || e.data.source !== 'tvh-map' || !Array.isArray(e.data.tiles)) return;
+    for (const tile of e.data.tiles) {
+      const pos = tile && (tile.position || tile);
+      if (pos && pos.x != null && pos.y != null && mapTiles.size < 5000) mapTiles.set(`${pos.x}|${pos.y}`, tile);
+    }
+  });
+  const readTiles = (tiles) => ({ tiles: tiles.length, oases: P.oasesFromTiles(tiles), villages: P.villagesFromTiles(tiles), valleys: P.valleysFromTiles(tiles) });
+
   const actions = {
     async upgrade() {
       const btn = document.querySelector('.upgradeButtonsContainer .section1 button.build') ||
@@ -255,7 +266,16 @@
       if (!res.ok) return { ok: false, code: 'mapApi', status: res.status };
       const json = await res.json().catch(() => null);
       const tiles = (json && (json.tiles || (json.response && json.response.tiles))) || [];
-      return { ok: true, tiles: tiles.length, oases: P.oasesFromTiles(tiles), villages: P.villagesFromTiles(tiles) };
+      return { ok: true, ...readTiles(tiles) };
+    },
+
+    // On the map page (karte.php): the tiles the game itself loaded there.
+    async mapTiles() {
+      window.postMessage({ source: 'tvh-map-get' }, location.origin);
+      await waitFor(() => mapTiles.size > 0, 12000);
+      await sleep(rand(1500, 2500)); // the rest of the view arrives in parts
+      if (!mapTiles.size) return { ok: false, code: 'mapApi' };
+      return { ok: true, ...readTiles([...mapTiles.values()]) };
     },
 
     // Empty building site: the chosen building's "Construct" button.

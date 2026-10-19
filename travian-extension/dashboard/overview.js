@@ -13,6 +13,7 @@ import { renderStockChart } from './chart.js';
 import { villageArt, heroArt } from './art.js';
 import { wallOf } from '../src/advisor.js';
 import { pickAutoUpgrade } from '../src/autopilot.js';
+import { expansionPlan } from '../src/expansion.js';
 import { unitIcon, tribeBase } from '../src/units.js';
 import { timelineEvents, laneOf, moveLabel } from '../src/timeline.js';
 import { minimapSvg } from './minimap.js';
@@ -295,9 +296,10 @@ function renderNext(scope, data, now) {
   const ap = s.autopilot;
   const on = s.botEnabled || ap.enabled;
   if (s.watchEnabled || on) rows.push([t('ov.nextCheck'), left(sched.refreshAt)]);
+  const plan = s.expansion.enabled ? expansionPlan(data, now) : null;
   for (const v of scope) {
     const list = data.tasks[v.id] || [];
-    const pick = !list.length && ap.enabled && ap.build ? pickAutoUpgrade(v, s, now, tribeBase(data.villages)) : null;
+    const pick = !list.length && ap.enabled && ap.build ? pickAutoUpgrade(v, s, now, tribeBase(data.villages), plan) : null;
     if (!list.length && !pick) continue;
     const why = buildStatus(v, data, now);
     const what = list.length ? taskLabel(list[0], v) : pick.saving ? t('ap.planSaving', { kind: t(`culture.kind.${pick.kind}`) }) : pick.construct ? t('ov.autoConstruct', { name: buildingName(pick.gid) }) : t('ov.autoPick', { name: buildingName(pick.gid), n: pick.level + 1 });

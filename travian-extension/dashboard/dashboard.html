@@ -190,6 +190,22 @@
         <div class="table-wrap"><table class="list" id="cuTable"></table></div>
         <p class="muted small" data-i18n="culture.tableHelp"></p>
       </div>
+      <div class="panel" id="expPanel">
+        <header class="panel-head"><h2 data-i18n="exp.title"></h2><span id="expMeta" class="muted small"></span></header>
+        <label class="switch strong"><input type="checkbox" data-setting="expansion.enabled"> <span data-i18n="exp.enable"></span></label>
+        <p class="muted small" data-i18n="exp.help"></p>
+        <p id="expWarn" class="small warn-text" hidden></p>
+        <div class="table-wrap"><table class="list" id="expTable"></table></div>
+        <h3 class="gap" data-i18n="exp.targetsTitle"></h3>
+        <label class="field"><span data-i18n="exp.targets"></span>
+          <textarea id="expTargets" rows="3" dir="ltr" placeholder="12|-34"></textarea></label>
+        <div class="row wrap">
+          <button class="btn" id="expSaveTargets" data-i18n="exp.saveTargets"></button>
+          <button class="btn ghost" id="expScan"></button>
+          <span id="expMsg" class="small muted"></span>
+        </div>
+        <p id="expValleys" class="muted small"></p>
+      </div>
     </section>
 
     <!-- ================================================ Army: troops & training -->

@@ -71,6 +71,8 @@ export const DEFAULT_SETTINGS = {
   // Culture points: focus = the autopilot builds for culture points;
   // celebrate = off | small | great, held in every village with a Town Hall.
   culture: { focus: false, celebrate: 'off' },
+  // New villages: every village trains settlers once from Residence 10.
+  expansion: { enabled: false, targets: [] },
 };
 
 export function mergeSettings(saved) {
