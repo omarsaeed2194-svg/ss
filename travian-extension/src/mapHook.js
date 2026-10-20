@@ -43,7 +43,7 @@
   if (origFetch) {
     window.fetch = function (input) {
       const p = origFetch.apply(this, arguments);
-      const url = typeof input === 'string' ? input : input && input.url;
+      const url = input instanceof Request ? input.url : String(input);
       if (isApi(url)) p.then((r) => r.clone().json().then((j) => pass(url, r.status, j), () => pass(url, r.status, null))).catch(() => {});
       return p;
     };
@@ -51,16 +51,28 @@
 
   // In a hidden tab (the bot's own) the browser stops animation frames, and
   // a map that waits for one would never load: while hidden, run them on a
-  // timer instead (ids negative, so they can still be cancelled).
+  // timer instead (ids negative, so they can still be cancelled). Each one
+  // starts from a message, not from the frame before, so the timers don't
+  // chain (Chrome slows chained timers in hidden tabs to one a minute).
   const raf = window.requestAnimationFrame && window.requestAnimationFrame.bind(window);
   const caf = window.cancelAnimationFrame && window.cancelAnimationFrame.bind(window);
   if (raf && caf) {
+    let seq = 0;
+    const pending = new Map(); // id -> timer (0 until it is set)
     window.requestAnimationFrame = function (cb) {
       if (!document.hidden) return raf(cb);
-      return -setTimeout(() => cb(performance.now()), 50);
+      const id = -(++seq);
+      pending.set(id, 0);
+      const c = new MessageChannel();
+      c.port1.onmessage = () => {
+        c.port1.close();
+        if (pending.has(id)) pending.set(id, setTimeout(() => { if (pending.delete(id)) cb(performance.now()); }, 50));
+      };
+      c.port2.postMessage(0);
+      return id;
     };
     window.cancelAnimationFrame = function (id) {
-      if (id < 0) clearTimeout(-id); else caf(id);
+      if (id < 0) { clearTimeout(pending.get(id)); pending.delete(id); } else caf(id);
     };
   }
 

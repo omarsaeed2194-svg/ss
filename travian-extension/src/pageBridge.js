@@ -28,28 +28,35 @@
     return r;
   }
 
-  async function mapPosition({ x, y, zoomLevel }) {
+  // Tries the call shapes the game's client has had; `prefer` (the one that
+  // worked last) goes first. The game's version goes back too, for the
+  // extension's own request when none of these work.
+  async function mapPosition({ x, y, zoomLevel, prefer }) {
     const attempts = [];
     const body = { x, y, zoomLevel, ignorePositions: [] };
+    const game = (window.Travian && window.Travian.Game) || {};
+    const version = game.version != null ? String(game.version) : null;
     const api = window.Travian && window.Travian.api;
-    const tries = [];
+    let tries = [];
     if (api && typeof api.post === 'function') {
       tries.push(['api.post data', () => api.post('map/position', { data: body })]);
       tries.push(['api.post', () => api.post('map/position', body)]);
     }
     if (typeof api === 'function') tries.push(['api', () => api('map/position', { method: 'POST', data: { data: body } })]);
+    if (prefer) tries = [...tries.filter(([how]) => how === prefer), ...tries.filter(([how]) => how !== prefer)];
     for (const [how, run] of tries) {
       try {
-        const json = await Promise.race([settle(run()), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 12000))]);
+        const json = await Promise.race([settle(run()), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 9000))]);
         const tiles = findTiles(json);
         attempts.push({ how, ok: !!tiles, shape: shape(json), tiles: tiles ? tiles.length : 0 });
-        if (tiles) return { ok: true, tiles, attempts };
+        if (tiles) return { ok: true, how, tiles, attempts, version };
       } catch (e) {
-        attempts.push({ how, ok: false, error: String((e && (e.message || e.statusText || e.status)) || e).slice(0, 200) });
+        const status = e && (e.status || (e.response && e.response.status));
+        attempts.push({ how, ok: false, ...(status ? { status } : {}), error: String((e && (e.message || e.statusText)) || e).slice(0, 200) });
       }
     }
     if (!tries.length) attempts.push({ how: 'api', ok: false, error: `Travian.api is ${typeof api}` });
-    return { ok: false, attempts };
+    return { ok: false, attempts, version };
   }
 
   window.addEventListener('message', async (e) => {

@@ -46,6 +46,16 @@ export async function command(name, args) {
   return res.result;
 }
 
+// Is the player typing or choosing inside this element? (A focused button
+// or checkbox doesn't count: tables redraw after those are clicked.)
+// The switches that let the bot act in the game (scheduled rules need one).
+export const automationOn = (s) => !!(s && (s.botEnabled || (s.autopilot && s.autopilot.enabled)));
+
+export function editingIn(el) {
+  const a = document.activeElement;
+  return !!a && !!el && el.contains(a) && a.matches('input:not([type="checkbox"]):not([type="radio"]):not([type="button"]), select, textarea');
+}
+
 // Replace a <select>'s options only when they changed, keeping the choice.
 export function fillSelect(sel, options, selected) {
   const sig = JSON.stringify(options);
