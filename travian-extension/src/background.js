@@ -1207,7 +1207,7 @@ const JOBS = {
     // the wait for an answer. Returns the areas still missing.
     const pageRead = async (c, rest) => {
       try {
-        await navigate(tabId, `${s.server}/karte.php?zoom=3&x=${c.x}&y=${c.y}`);
+        await navigate(tabId, `${s.server}/karte.php?zoom=3&x=${c.x}&y=${c.y}`, 25000); // the map page loads in seconds
         let left = rest;
         let last = null;
         const missing = [];
