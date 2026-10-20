@@ -24,7 +24,7 @@ export function diagnosticsReport(data, env, now = Date.now()) {
   add(`Travian Helper diagnostics — ${clock(now)} UTC`);
   add(`Extension ${env.version} · ${env.browser} · UI ${s.language || '?'}`);
   add(`Server: ${s.server ? new URL(s.server).host : 'not detected'}`);
-  add(`Switches: watch ${onOff(s.watchEnabled)} · automate ${onOff(s.botEnabled)} · autopilot ${onOff(ap.enabled)}`
+  add(`Switches: watch ${onOff(s.watchEnabled)} · automate ${onOff(s.botEnabled)} · brain ${s.brain && s.brain.enabled ? `on (army ${s.brain.armyShare}%, ${s.brain.maxActions}/round, defence ${onOff(s.brain.defense)})` : 'off'} · autopilot ${onOff(ap.enabled)}`
     + ` (${['build', 'construct', 'adventures', 'farmLists', 'quests', 'heroBag'].filter((k) => ap[k]).join(', ') || '—'})`
     + ` · culture focus ${onOff(s.culture && s.culture.focus)} · celebrate ${(s.culture && s.culture.celebrate) || 'off'}`
     + ` · new villages ${onOff(s.expansion && s.expansion.enabled)} · heal ${onOff(s.heal && s.heal.enabled)}`

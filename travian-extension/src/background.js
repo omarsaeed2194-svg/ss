@@ -11,6 +11,7 @@ import { recordMapVillages } from './inactive.js';
 import { applyReports } from './reports.js';
 import { savingFor, canAfford, CELEBRATIONS } from './culture.js';
 import { expansionPlan, settlerHome, foundedNow, SETTLERS } from './expansion.js';
+import { brainPlan, fieldTarget, defensePlan, unitPrefs, isOffensive } from './brain.js';
 import { SNAPSHOT_KEYS, webBase, snapshotOf, hashOf, cleanRemote } from './web.js';
 import { firstAttack, escapeTiming, escapeDone, escapeDue, escapeTarget, escapeTroops, TOO_LATE_MS, donateTiming, donateDone, donateDue, donationAmounts, amountsText, sameAttack } from './escape.js';
 import { parseCommand, statusText, summaryText, helpText } from './telegram.js';
@@ -145,6 +146,7 @@ async function refreshBadge() {
   let text = '', color = '#16a34a';
   if (attacked) { text = String(attacked); color = '#dc2626'; }
   else if (status.loggedOut) { text = '!'; color = '#ea580c'; }
+  else if (s.brain.enabled) { text = 'AI'; }
   else if (s.autopilot.enabled) { text = 'AUTO'; }
   else if (s.botEnabled) { text = 'ON'; }
   await chrome.action.setBadgeText({ text });
@@ -362,6 +364,9 @@ async function processPage(state, tabId) {
   // A new attack on a village with an escape or donation plan: read its
   // arrival time now, even in the middle of a long run.
   if (newlyAttacked.length) {
+    // The brain makes its escape plan the moment the attack shows.
+    const live = mergeSettings((await read(['settings'])).settings);
+    if (live.brain.enabled && live.brain.defense) await brainDefense(await read(['villages', 'escapes']));
     const { escapes = [] } = await read(['escapes']);
     if (escapes.some((p) => p.enabled !== false && newlyAttacked.includes(p.villageId))) {
       urgent = true;
@@ -938,10 +943,12 @@ const JOBS = {
       villages = fresh.villages || {};
       v = villages[vid];
       const plan = s.expansion.enabled ? expansionPlan({ ...fresh, settings: s }, Date.now()) : null;
-      const pick = pickAutoUpgrade(v, s, Date.now(), tribeBase(villages), plan);
+      // With the brain on, the fields go as high as this village is ready for.
+      const sv = s.brain.enabled ? { ...s, autopilot: { ...s.autopilot, construct: true, fieldsMax: fieldTarget(v) } } : s;
+      const pick = pickAutoUpgrade(v, sv, Date.now(), tribeBase(villages), plan);
       if (!pick) {
         await patchVillage(vid, { autoIdleUntil: Date.now() + AUTO_IDLE_MS });
-        await log('info', t('log.autoNothing', { n: s.autopilot.fieldsMax }), vid);
+        await log('info', t('log.autoNothing', { n: sv.autopilot.fieldsMax }), vid);
         return;
       }
       if (pick.saving) {
@@ -1110,6 +1117,35 @@ const JOBS = {
         if (r) r.nextAt = Date.now() + next;
       });
     }
+  },
+
+  // The brain's troops: a share of what the stores pay for, of the unit
+  // the village's role calls for (defence or attack), in barracks or stable.
+  async brainTrain(tabId, job, s) {
+    const vid = job.villageId;
+    await patchVillage(vid, { brainTrainAt: Date.now() + jittered(s.brain.everyMinutes * 60000, s.jitterPercent) });
+    const page = await navigate(tabId, `${s.server}/build.php?newdid=${encodeURIComponent(vid)}&gid=${job.gid}`);
+    const list = (page.buildPage && page.buildPage.trainable) || [];
+    const { villages = {} } = await read(['villages']);
+    if (!villages[vid]) return;
+    const bname = buildingName(job.gid);
+    // What this building trains is known now: the role's units first; for
+    // defence never an attack unit, and never chiefs or settlers.
+    const base = tribeBase(villages);
+    const prefs = unitPrefs(base, job.kind, job.gid);
+    const fits = (u) => u.field !== 't9' && u.field !== 't10' && (job.kind === 'off' || !isOffensive(u.field, base));
+    const order = [...prefs.map((f) => list.find((u) => u.field === f)).filter(Boolean), ...list.filter((u) => !prefs.includes(u.field) && fits(u))];
+    const unit = order.find((u) => u.max > 0);
+    if (!unit) {
+      await log('info', t(list.length ? 'log.brainNoRes' : 'log.brainNoUnit', { b: bname }), vid);
+      return;
+    }
+    const amount = Math.max(1, Math.floor(unit.max * job.share));
+    const { res } = await act(tabId, { kind: 'train', field: unit.field, amount }, true);
+    if (!res.ok) throw new Error(reasonText(res));
+    await log('success', t('log.brainTrained', { n: amount, u: unit.name || unit.field, b: bname, why: t(`brain.why.${job.why}`) }), vid);
+    await bump('trained', amount);
+    await patchVillage(vid, { brainLast: { at: Date.now(), n: amount, unit: unit.name || unit.field, gid: job.gid, why: job.why } });
   },
 
   // Hospital: heal every wounded unit the resources pay for.
@@ -1605,7 +1641,7 @@ const JOBS = {
   },
 };
 
-const automationOn = (s) => s.botEnabled || s.autopilot.enabled;
+const automationOn = (s) => s.botEnabled || s.autopilot.enabled || s.brain.enabled;
 
 // New-village plan bookkeeping, every tick: an alert when a village's
 // settlers are ready (with where to found), and noticing the founding.
@@ -1679,7 +1715,9 @@ const jobKey = (job) => `${job.type}:${job.villageId || job.listId || (job.rule 
 function planAutomation(s, data, now, jobs) {
   const { villages = {}, tasks = {}, training = [], raids = [], farms = [], schedule = {}, account = {} } = data;
   const farmNow = new Set(schedule.farmNow || []);
-  const ap = s.autopilot;
+  // The brain runs the autopilot's building, adventures and rewards itself
+  // (farm lists stay the player's own choice: they attack players).
+  const ap = s.brain.enabled ? { ...s.autopilot, enabled: true, build: true, construct: true, adventures: true, quests: true } : s.autopilot;
   const auto = ap.enabled;
   if (schedule.finderVillage && villages[schedule.finderVillage] && schedule.scanVillage !== schedule.finderVillage && now >= (schedule.finderScanAt || 0)) {
     jobs.push({ type: 'scan', villageId: schedule.finderVillage, label: t('job.scan', { v: villages[schedule.finderVillage].name }) });
@@ -1727,6 +1765,16 @@ function planAutomation(s, data, now, jobs) {
     }
   }
   if (auto && ap.quests && account.questClaimable && now >= (schedule.questAt || 0)) jobs.push({ type: 'quest', label: t('job.quest') });
+  // The brain's troops: a few villages a round, each every so often.
+  if (s.brain.enabled) {
+    let n = 0;
+    for (const p of brainPlan({ ...data, settings: s }, s, now, tribeBase(villages))) {
+      if (n >= s.brain.maxActions) break;
+      if (!p.train || p.train.skip || (p.v.brainTrainAt || 0) > now) continue;
+      jobs.push({ type: 'brainTrain', villageId: p.id, gid: p.train.gid, kind: p.train.kind, share: p.train.share, why: p.train.why, label: t('job.brainTrain', { v: p.v.name }) });
+      n += 1;
+    }
+  }
   // A build waiting for resources the hero carries in the bag.
   if (auto && ap.heroBag) {
     const bag = account.heroBag;
@@ -1822,6 +1870,25 @@ const DATA_KEYS = ['settings', 'villages', 'tasks', 'training', 'raids', 'farms'
 let running = false;
 let rerunForced = false; // "Check now" pressed while a run was in progress
 let rerunSoon = false;   // a dashboard request (e.g. map scan) arrived during a run
+// The brain's defence: a village under attack with no escape plan gets one
+// that moves its attack units (and the hero) out; the defence stays.
+async function brainDefense(data) {
+  const base = tribeBase(data.villages || {});
+  const add = [];
+  for (const v of Object.values(data.villages || {})) {
+    if ((data.escapes || []).some((p) => p.villageId === v.id)) continue;
+    const plan = defensePlan(v, base);
+    if (plan) add.push({ ...plan, id: uid() });
+  }
+  if (!add.length) return;
+  await update(['escapes'], (d) => {
+    const have = new Set((d.escapes || []).map((p) => p.villageId));
+    d.escapes = [...(d.escapes || []), ...add.filter((p) => !have.has(p.villageId))];
+  });
+  data.escapes = (await read(['escapes'])).escapes || [];
+  for (const p of add) await log('alert', t('log.brainDefense', { v: data.villages[p.villageId].name }), p.villageId);
+}
+
 // The minute alarm during a long run: an escape that is due (or one whose
 // first try failed) goes ahead of the rest of the run.
 async function noteEscapeWork() {
@@ -1852,6 +1919,7 @@ async function tick(force = false, soon = false) {
       await setStatus({ state: 'blocked', note: '' });
       return {};
     }
+    if (s.brain.enabled && s.brain.defense) await brainDefense(data);
     const escapeWork = escapeRefreshIds(data, now).length > 0 || planEscapes(data, now).length > 0;
     // Only one browser drives the game. "Check now" here takes over.
     if (s.watchEnabled || automationOn(s) || force || escapeWork) {
@@ -1917,7 +1985,7 @@ const COMMANDS = {
       for (const [k, val] of Object.entries(settings || {})) next[k] = isObj(val) && isObj(cur[k]) ? { ...cur[k], ...val } : val;
       d.settings = mergeSettings(next);
       // Switched back on by hand: "paused with Pause all" no longer holds.
-      if (d.status && (d.settings.botEnabled || d.settings.autopilot.enabled)) { delete d.status.pausedAll; delete d.status.tgPaused; }
+      if (d.status && automationOn(d.settings)) { delete d.status.pausedAll; delete d.status.tgPaused; }
     });
     await refreshBadge();
   },
@@ -2150,10 +2218,10 @@ const COMMANDS = {
     await update(['settings', 'status'], (d) => {
       const st = mergeSettings(d.settings);
       // Pausing twice keeps what was on before the first time.
-      const was = (d.status || {}).pausedAll || { botEnabled: st.botEnabled, autopilot: st.autopilot.enabled, at: Date.now() };
+      const was = (d.status || {}).pausedAll || { botEnabled: st.botEnabled, autopilot: st.autopilot.enabled, brain: st.brain.enabled, at: Date.now() };
       d.status = { ...(d.status || {}), pausedAll: was };
       delete d.status.tgPaused;
-      d.settings = mergeSettings({ ...st, botEnabled: false, autopilot: { ...st.autopilot, enabled: false } });
+      d.settings = mergeSettings({ ...st, botEnabled: false, autopilot: { ...st.autopilot, enabled: false }, brain: { ...st.brain, enabled: false } });
     });
     await refreshBadge();
     await log('info', t(from === 'telegram' ? 'log.tgPaused' : 'log.paused'));
@@ -2164,7 +2232,7 @@ const COMMANDS = {
       const status = d.status || {};
       // Nothing paused (the popup's ▶ with everything off): automation on.
       const was = status.pausedAll || status.tgPaused || { botEnabled: true, autopilot: st.autopilot.enabled };
-      d.settings = mergeSettings({ ...st, botEnabled: was.botEnabled || !was.autopilot, autopilot: { ...st.autopilot, enabled: !!was.autopilot } });
+      d.settings = mergeSettings({ ...st, botEnabled: was.botEnabled || (!was.autopilot && !was.brain), autopilot: { ...st.autopilot, enabled: !!was.autopilot }, brain: { ...st.brain, enabled: !!was.brain } });
       delete status.pausedAll; delete status.tgPaused;
       d.status = status;
     });
