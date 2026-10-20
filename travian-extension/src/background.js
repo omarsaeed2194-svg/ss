@@ -325,8 +325,10 @@ async function processPage(state, tabId) {
       d.oases = d.oases || {};
       const key = oasisKey(tile.x, tile.y);
       const prev = d.oases[key];
+      // The tile's own page beats the map: no oasis there (no animal table
+      // either) and it isn't raided again.
       if (tile.isOasis || prev) {
-        d.oases[key] = { ...(prev || {}), x: tile.x, y: tile.y, owned: tile.owned, animals: tile.animals, checkedAt: now, notOasis: !tile.isOasis && !(prev && prev.fromScan) };
+        d.oases[key] = { ...(prev || {}), x: tile.x, y: tile.y, owned: tile.owned, animals: tile.animals, checkedAt: now, notOasis: !tile.isOasis && (!(prev && prev.fromScan) || tile.animals == null) };
       }
     }
 
@@ -1237,6 +1239,7 @@ const JOBS = {
       for (const [k, l] of [['oases', r.oases], ['villages', r.villages], ['valleys', r.valleys]]) for (const x of l || []) found[k].set(`${x.x}|${x.y}`, x);
       found.tiles += r.tiles;
       if (!found.sample.length) found.sample = r.sample || [];
+      found.summary = found.summary || r.summary || null;
       found.method = found.method || r.method;
     };
     // One map page at `c`, then the others from it, in batches well inside
@@ -1267,29 +1270,39 @@ const JOBS = {
         return [c, ...rest];
       }
     };
-    let missing = await pageRead(centers[0], centers.slice(1));
-    // Areas the game's request couldn't be reused for: the map page at each
-    // of them (a few at most).
-    for (let pages = 0; found.tiles && missing.length && pages < 8; pages++) {
-      await sleep(rand(1200, 2500));
-      const [c, ...rest] = missing;
-      const left = await pageRead(c, []);
-      missing = [...rest, ...left.filter((x) => x !== c)];
-    }
-    if (!found.tiles) {
+    // The map page, then each area it couldn't reach through the game's
+    // own request on its own map page (a few at most).
+    const pageScan = async () => {
+      let left = await pageRead(centers[0], centers.slice(1));
+      for (let pages = 0; found.tiles && left.length && pages < 8; pages++) {
+        await sleep(rand(1200, 2500));
+        const [c, ...rest] = left;
+        const again = await pageRead(c, []);
+        left = [...rest, ...again.filter((x) => x !== c)];
+      }
+      return left;
+    };
+    // The extension's own request (with the game's version) for every area.
+    const requestScan = async () => {
       try {
         await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(todo[0].id)}`);
         const { res: r } = await act(tabId, { kind: 'scanMap', centers }, false);
         attempts.push(...(r.diag || []));
         if (!r.ok && !(r.diag || []).length) attempts.push({ how: 'request', ok: false, error: reasonText(r) });
         take(r);
-        if (ok(r)) missing = r.missing || [];
+        return ok(r) ? r.missing || [] : centers;
       } catch (e) {
         if (e.loggedOut) throw e;
         attempts.push({ how: 'request', ok: false, error: e.message });
+        return centers;
       }
-    }
-    const res = { ok: found.tiles > 0, tiles: found.tiles, oases: [...found.oases.values()], villages: [...found.villages.values()], valleys: [...found.valleys.values()], method: found.method, sample: found.sample };
+    };
+    // The way that worked last time goes first (on some servers the map
+    // page loads nothing in the bot tab, but the request works).
+    const { account: acc = {} } = await read(['account']);
+    let missing = acc.mapMethod === 'request' ? await requestScan() : await pageScan();
+    if (!found.tiles) missing = acc.mapMethod === 'request' ? await pageScan() : await requestScan();
+    const res = { ok: found.tiles > 0, tiles: found.tiles, oases: [...found.oases.values()], villages: [...found.villages.values()], valleys: [...found.valleys.values()], method: found.method, sample: found.sample, summary: found.summary };
     const at = Date.now();
     const scanned = new Set(todo.map((v) => v.id));
     const where = todo.map((v) => v.name).join(t('list.sep'));
@@ -1301,7 +1314,7 @@ const JOBS = {
       d.account.mapDiag = {
         at, village: where, areas: centers.length, missing: missing.length, ok: ok(res), method: res.method || null, tiles: res.tiles || 0,
         oases: res.oases.length, players: res.villages.length, valleys: res.valleys.length,
-        attempts: attempts.slice(0, 24), sample: res.sample || [],
+        attempts: attempts.slice(0, 24), sample: res.sample || [], summary: res.summary || null,
       };
       if (ok(res)) d.account.mapMethod = res.method;
     });
