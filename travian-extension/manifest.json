@@ -36,6 +36,16 @@
         "https://*.travian.com/*"
       ],
       "js": [
+        "src/pageBridge.js"
+      ],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://*.travian.com/*"
+      ],
+      "js": [
         "src/parser.js",
         "src/content.js"
       ],

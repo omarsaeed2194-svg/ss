@@ -141,14 +141,32 @@
 
   // Map tiles the game loaded on the map page, passed on by mapHook.js.
   const mapTiles = new Map();
+  const mapNotes = [];
   window.addEventListener('message', (e) => {
-    if (e.source !== window || !e.data || e.data.source !== 'tvh-map' || !Array.isArray(e.data.tiles)) return;
+    if (e.source !== window || !e.data) return;
+    if (e.data.source === 'tvh-map-note' && e.data.note && mapNotes.length < 30) mapNotes.push(e.data.note);
+    if (e.data.source !== 'tvh-map' || !Array.isArray(e.data.tiles)) return;
     for (const tile of e.data.tiles) {
       const pos = tile && (tile.position || tile);
       if (pos && pos.x != null && pos.y != null && mapTiles.size < 5000) mapTiles.set(`${pos.x}|${pos.y}`, tile);
     }
   });
-  const readTiles = (tiles) => ({ tiles: tiles.length, oases: P.oasesFromTiles(tiles), villages: P.villagesFromTiles(tiles), valleys: P.valleysFromTiles(tiles) });
+  // A few raw tiles (shortened) for the diagnostics report: if the game's
+  // format differs from what the readers expect, this shows how.
+  const sample = (tiles) => tiles.slice(0, 3).map((t) => JSON.stringify(t).slice(0, 400));
+  const readTiles = (tiles) => ({ tiles: tiles.length, oases: P.oasesFromTiles(tiles), villages: P.villagesFromTiles(tiles), valleys: P.valleysFromTiles(tiles), sample: sample(tiles) });
+
+  // The page's own world (pageBridge.js) can use the game's API client.
+  function bridge(kind, args, timeout = 30000) {
+    const id = Math.random().toString(36).slice(2);
+    return new Promise((resolve) => {
+      const done = (result) => { window.removeEventListener('message', on); clearTimeout(timer); resolve(result); };
+      const on = (e) => { if (e.source === window && e.data && e.data.source === 'tvh-bridge-reply' && e.data.id === id) done(e.data.result); };
+      const timer = setTimeout(() => done({ ok: false, attempts: [{ how: 'bridge', ok: false, error: 'no answer from the page' }] }), timeout);
+      window.addEventListener('message', on);
+      window.postMessage({ source: 'tvh-bridge', id, kind, args }, location.origin);
+    });
+  }
 
   const actions = {
     async upgrade() {
@@ -273,6 +291,11 @@
 
     // Oases around a point, from the same map API the game's map uses.
     async scanMap({ x, y }) {
+      // 1. The game's own API client (carries whatever the game adds to its requests).
+      const viaGame = await bridge('mapPosition', { x, y, zoomLevel: 3 });
+      const diag = [...(viaGame.attempts || [])];
+      if (viaGame.ok && viaGame.tiles && viaGame.tiles.length) return { ok: true, method: 'game', diag, ...readTiles(viaGame.tiles) };
+      // 2. The extension's own request.
       const headers = { 'Content-Type': 'application/json; charset=UTF-8', 'X-Requested-With': 'XMLHttpRequest' };
       const version = gameVersion();
       if (version) headers['X-Version'] = version;
@@ -283,21 +306,25 @@
           body: JSON.stringify({ data: { x, y, zoomLevel: 3, ignorePositions: [] } }),
         });
       } catch (e) {
-        return { ok: false, code: 'mapApi' };
+        diag.push({ how: 'fetch', ok: false, error: e.message });
+        return { ok: false, code: 'mapApi', diag };
       }
-      if (!res.ok) return { ok: false, code: 'mapApi', status: res.status };
       const json = await res.json().catch(() => null);
-      const tiles = (json && (json.tiles || (json.response && json.response.tiles))) || [];
-      return { ok: true, ...readTiles(tiles) };
+      const tiles = P.findTiles(json) || [];
+      diag.push({ how: 'fetch', ok: res.ok && tiles.length > 0, status: res.status, shape: P.shapeOf(json), tiles: tiles.length, ...(res.ok ? {} : { body: JSON.stringify(json).slice(0, 300) }) });
+      if (!res.ok || !tiles.length) return { ok: false, code: 'mapApi', status: res.status, diag };
+      return { ok: true, method: 'fetch', diag, ...readTiles(tiles) };
     },
 
     // On the map page (karte.php): the tiles the game itself loaded there.
     async mapTiles() {
       window.postMessage({ source: 'tvh-map-get' }, location.origin);
-      await waitFor(() => mapTiles.size > 0, 12000);
-      await sleep(rand(1500, 2500)); // the rest of the view arrives in parts
-      if (!mapTiles.size) return { ok: false, code: 'mapApi' };
-      return { ok: true, ...readTiles([...mapTiles.values()]) };
+      await waitFor(() => mapTiles.size > 0, 15000);
+      if (mapTiles.size) await sleep(rand(1500, 2500)); // the rest of the view arrives in parts
+      const diag = mapNotes.map((n) => ({ how: `page ${n.path}`, ok: n.tiles > 0, status: n.status, shape: n.shape, tiles: n.tiles }));
+      if (!mapNotes.length) diag.push({ how: 'page', ok: false, error: 'no API answer seen on the map page (hook not run, or the game loaded nothing)' });
+      if (!mapTiles.size) return { ok: false, code: 'mapApi', diag };
+      return { ok: true, method: 'page', diag, ...readTiles([...mapTiles.values()]) };
     },
 
     // Empty building site: the chosen building's "Construct" button.
@@ -454,16 +481,33 @@
     },
   };
 
+  // What the page looked like when an action failed, for the diagnostics
+  // report: which page, its forms, buttons and fields (no values).
+  function probe() {
+    const build = document.getElementById('build');
+    const content = document.getElementById('content') || document.body;
+    const shown = (el) => el.getClientRects().length > 0;
+    const title = document.querySelector('.titleInHeader, h1');
+    return {
+      path: (location.pathname + location.search).replace(/([?&])newdid=\d+&?/, '$1').slice(0, 100),
+      title: title ? title.textContent.replace(/\s+/g, ' ').trim().slice(0, 60) : '',
+      build: build ? build.className : null,
+      forms: Array.from(content.querySelectorAll('form')).map((f) => f.getAttribute('name') || f.id || (f.getAttribute('action') || '').replace(/^https?:\/\/[^/]+/, '').slice(0, 60)).slice(0, 6),
+      buttons: Array.from(content.querySelectorAll('button')).filter(shown).map((b) => `${b.id ? `#${b.id}` : ''}.${Array.from(b.classList).slice(0, 4).join('.')}${b.disabled ? '[disabled]' : ''}`).slice(0, 12),
+      inputs: Array.from(content.querySelectorAll('input[name]')).map((i) => i.getAttribute('name')).slice(0, 20),
+    };
+  }
+
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (!msg || msg.type !== 'ACTION') return undefined;
     const fn = actions[msg.action && msg.action.kind];
     if (!fn) {
-      sendResponse({ ok: false, code: 'unknownAction' });
+      sendResponse({ ok: false, code: 'unknownAction', probe: probe() });
       return undefined;
     }
     sleep(rand(400, 1200))
       .then(() => fn(msg.action))
-      .then(sendResponse, (e) => sendResponse({ ok: false, reason: e.message }));
+      .then((r) => sendResponse(r && r.ok === false ? { ...r, probe: probe() } : r), (e) => sendResponse({ ok: false, reason: e.message, probe: probe() }));
     return true;
   });
 

@@ -8,7 +8,7 @@ import { escapeStatus, donateStatus } from './escape.js';
 
 export { escapeStatus };
 
-export const STORAGE_KEYS = ['settings', 'villages', 'account', 'tasks', 'training', 'raids', 'farms', 'escapes', 'oases', 'schedule', 'status', 'log', 'device', 'syncState', 'history', 'health', 'stats', 'mapVillages', 'valleys', 'expansion'];
+export const STORAGE_KEYS = ['settings', 'villages', 'account', 'tasks', 'training', 'raids', 'farms', 'escapes', 'oases', 'schedule', 'status', 'log', 'device', 'syncState', 'history', 'health', 'stats', 'mapVillages', 'valleys', 'expansion', 'diag'];
 
 export async function loadAll() {
   const data = await chrome.storage.local.get(STORAGE_KEYS);
@@ -30,6 +30,7 @@ export async function loadAll() {
   data.mapVillages = data.mapVillages || {};
   data.valleys = data.valleys || {};
   data.expansion = data.expansion || {};
+  data.diag = data.diag || {};
   applyTheme(data.settings.theme);
   try {
     data.lease = (await chrome.storage.sync.get('lease')).lease || null;

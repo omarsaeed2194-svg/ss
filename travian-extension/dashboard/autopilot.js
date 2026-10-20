@@ -110,6 +110,12 @@ function oasisStatus(o) {
 function renderOases(now) {
   const v = data.villages[$('raidVillage').value];
   $('oasisTitle').textContent = v ? t('raid.oasesNear', { v: v.name }) : t('raid.oases');
+  // How the last map read went (details in Health → diagnostics report).
+  const md = data.account.mapDiag;
+  $('mapDiagLine').textContent = !md ? '' : md.ok
+    ? t('map.lastOk', { ago: fmtAgo(md.at, now), n: md.tiles, o: md.oases, how: t(`map.how.${md.method || 'fetch'}`) })
+    : t('map.lastFail', { ago: fmtAgo(md.at, now) });
+  $('mapDiagLine').className = `small ${md && !md.ok ? 'bad' : 'muted'}`;
   if (!v) { $('oasisTable').innerHTML = ''; $('oasisMeta').textContent = ''; return; }
   const rules = data.raids.filter((r) => r.villageId === v.id);
   const radius = Math.max(7, ...rules.map((r) => r.radius || 0));

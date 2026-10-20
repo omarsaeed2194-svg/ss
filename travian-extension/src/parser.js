@@ -334,7 +334,8 @@
       const pos = tile.position || tile;
       const title = String(tile.title || '');
       const body = String(tile.text || '');
-      const oasis = /\{k\.(fo|bt)\}/.test(title) || (tile.did === -1 && /unit u(3[1-9]|40)\b/.test(body));
+      // "{k.fo}"/"{k.bt}" in the title, or did -1 (an oasis) on servers whose titles differ.
+      const oasis = /\{k\.(fo|bt)\}/.test(title) || (tile.did === -1 && !/\{k\.vt\}/.test(title));
       if (!oasis || pos.x == null || pos.y == null) continue;
       let animals = 0;
       for (const m of body.matchAll(/unit u(\d+)\b[\s\S]*?class="value[^"]*"[^>]*>\s*([\d,.]+)/g)) animals += num(m[2]) || 0;
@@ -412,6 +413,23 @@
     }
     return { loaded: !!box && !qs(doc, '.inventoryPageWrapper.loading'), items };
   }
+
+  // A list of map tiles anywhere in an answer from the map service:
+  // objects with a position (the format has changed over the years).
+  const isTile = (t) => t && typeof t === 'object' && ((t.position && t.position.x != null && t.position.y != null) ||
+    (t.x != null && t.y != null && ('did' in t || 'uid' in t || 'title' in t || 'text' in t)));
+  function findTiles(json, depth = 0) {
+    if (!json || typeof json !== 'object' || depth > 6) return null;
+    if (Array.isArray(json)) {
+      if (json.length && json.every(isTile)) return json;
+      for (const it of json) { const f = findTiles(it, depth + 1); if (f) return f; }
+      return null;
+    }
+    if (Array.isArray(json.tiles) && json.tiles.length) return json.tiles;
+    for (const k of Object.keys(json)) { const f = findTiles(json[k], depth + 1); if (f) return f; }
+    return null;
+  }
+  const shapeOf = (v) => (v && typeof v === 'object' ? (Array.isArray(v) ? `array(${v.length})` : `{${Object.keys(v).slice(0, 12).join(',')}}`) : typeof v);
 
   // Free valleys (somewhere to found a village) from the same map answer:
   // "{k.vt}" in the title, nobody's tile, and "{k.fN}" its field layout.
@@ -576,7 +594,7 @@
   const api = {
     num, parsePage, parseResources, parseVillages, parseBuildQueue, parseFields, parseBuildings, parseMovements,
     parseBuildPage, parseFarmLists, parseHero, pageType, parseTroops, parseTrainingQueue, parseTile, parseSendPage,
-    oasesFromTiles, villagesFromTiles, valleysFromTiles, unitOf, parseNewBuildings, parseQuests, parseInventory, parseReports, parseExpansion,
+    oasesFromTiles, villagesFromTiles, valleysFromTiles, findTiles, shapeOf, unitOf, parseNewBuildings, parseQuests, parseInventory, parseReports, parseExpansion,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TravianParser = api;

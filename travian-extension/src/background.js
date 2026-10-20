@@ -501,6 +501,14 @@ async function navigate(tabId, url, timeout = PAGE_TIMEOUT_MS) {
 
 // Ask the content script to click something. If the click navigates, wait
 // for the next page and return it alongside the content script's answer.
+// The last failed actions and what their page looked like (diagnostics).
+async function noteFailedAction(action, res) {
+  await update(['diag'], (d) => {
+    const diag = d.diag = d.diag || {};
+    diag.actions = [{ at: Date.now(), kind: action.kind, code: res.code || null, reason: res.reason || null, status: res.status || null, probe: res.probe || null }, ...(diag.actions || [])].slice(0, 20);
+  });
+}
+
 async function act(tabId, action, expectNavigation) {
   const page = expectNavigation ? waitForPage(tabId) : null;
   let res;
@@ -516,6 +524,7 @@ async function act(tabId, action, expectNavigation) {
   }
   if (!res || !res.ok) {
     if (page) page.cancel();
+    await noteFailedAction(action, res || { ok: false, code: 'noResponse' });
     return { res: res || { ok: false, code: 'noResponse' } };
   }
   return { res, page: page ? await page : null };
@@ -1054,26 +1063,52 @@ const JOBS = {
       if (d.schedule.finderVillage === vid) d.schedule.finderScanAt = Date.now() + jittered(12 * 3600000, 15);
     });
     if (!v || v.x == null) return;
-    await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(vid)}`);
-    let { res } = await act(tabId, { kind: 'scanMap', x: v.x, y: v.y }, false);
-    // Refused or empty: open the map page itself and read what the game
-    // loads there (zoomed out, centred on the village).
-    if (!res.ok || !res.tiles) {
-      const first = res;
+    // Two ways to read the map: a request (through the game's own API
+    // client, else the extension's), or the map page itself, reading what
+    // the game loads there (zoomed out, centred on the village). The way
+    // that worked last time goes first. Every attempt is kept for the
+    // diagnostics report.
+    const { account = {} } = await read(['account']);
+    const attempts = [];
+    const ok = (r) => !!(r && r.ok && r.tiles);
+    const direct = async () => {
+      await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(vid)}`);
+      const { res: r } = await act(tabId, { kind: 'scanMap', x: v.x, y: v.y }, false);
+      attempts.push(...(r.diag || []));
+      return r;
+    };
+    const page = async () => {
       try {
         await navigate(tabId, `${s.server}/karte.php?zoom=3&x=${v.x}&y=${v.y}`);
-        ({ res } = await act(tabId, { kind: 'mapTiles' }, false));
+        const { res: r } = await act(tabId, { kind: 'mapTiles' }, false);
+        attempts.push(...(r.diag || []));
+        return r;
       } catch (e) {
         if (e.loggedOut) throw e;
-        res = { ok: false, code: 'mapApi' };
+        attempts.push({ how: 'page', ok: false, error: e.message });
+        return { ok: false, code: 'mapApi' };
       }
-      if (!res.ok) res = first.ok ? res : first;
+    };
+    const order = account.mapMethod === 'page' ? [page, direct] : [direct, page];
+    let res = await order[0]();
+    if (!ok(res)) {
+      const second = await order[1]();
+      if (ok(second) || !res.ok) res = second;
     }
-    await update(['raids'], (d) => {
-      for (const r of d.raids || []) if (r.villageId === vid) r.scannedAt = Date.now();
+    const at = Date.now();
+    await update(['raids', 'account'], (d) => {
+      for (const r of d.raids || []) if (r.villageId === vid) r.scannedAt = at;
+      d.account = d.account || {};
+      d.account.mapDiag = {
+        at, village: v.name, ok: ok(res), method: res.method || null, tiles: res.tiles || 0,
+        oases: (res.oases || []).length, players: (res.villages || []).length, valleys: (res.valleys || []).length,
+        attempts: attempts.slice(0, 20), sample: res.sample || [],
+      };
+      if (ok(res)) d.account.mapMethod = res.method === 'page' ? 'page' : 'direct';
     });
-    if (!res.ok) {
-      await log('error', t('log.scanFailed', { reason: res.status ? `HTTP ${res.status}` : reasonText(res) }), vid);
+    if (!ok(res)) {
+      const why = attempts.map((a) => `${a.how}: ${a.ok ? 'ok' : a.status ? `HTTP ${a.status}` : a.error || '—'}`).join(' · ').slice(0, 220);
+      await log('error', t('log.scanFailed', { reason: why || reasonText(res) }), vid);
       return;
     }
     const now = Date.now();
