@@ -33,17 +33,23 @@ export function armyPct(v, role, s, stage = null) {
   return role === 'military' ? Math.min(90, base * 2) : base;
 }
 
-// The buildings' purse after a new look at the stores.
+// The buildings' purse after a new look at the stores: whatever came in
+// since the last look (production, loot, merchants, the hero) is split by
+// the village's ratio; what went out (troops, the player's own spending)
+// comes off the army's part first. The brain's own buildings are paid from
+// the purse when they start (see the build job).
 export function laneUpdate(prev, res, pct, now = Date.now()) {
   if (!res || !res.stock) return prev || null;
-  if (!prev || prev.pct !== pct || !prev.build) {
-    return { pct, at: now, build: Object.fromEntries(RESOURCES.map((k) => [k, Math.floor(((res.stock[k] || 0) * (100 - pct)) / 100)])) };
+  const stock = Object.fromEntries(RESOURCES.map((k) => [k, res.stock[k] || 0]));
+  if (!prev || prev.pct !== pct || !prev.build || !prev.last) {
+    return { pct, at: now, last: stock, build: Object.fromEntries(RESOURCES.map((k) => [k, Math.floor((stock[k] * (100 - pct)) / 100)])) };
   }
-  const h = Math.max(0, (now - prev.at) / 3600000);
-  const prod = res.production || {};
   const build = {};
-  for (const k of RESOURCES) build[k] = Math.floor(Math.min(res.stock[k] || 0, (prev.build[k] || 0) + (Math.max(0, prod[k] || 0) * (100 - pct) * h) / 100 + 1e-6));
-  return { pct, at: now, build };
+  for (const k of RESOURCES) {
+    const came = stock[k] - (prev.last[k] || 0);
+    build[k] = Math.floor(Math.min(stock[k], (prev.build[k] || 0) + (came > 0 ? (came * (100 - pct)) / 100 : 0) + 1e-6));
+  }
+  return { pct, at: now, last: stock, build };
 }
 
 // The buildings' purse and the army's part now (estimated since the last look).
