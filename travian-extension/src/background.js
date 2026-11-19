@@ -624,8 +624,24 @@ async function navigate(tabId, url, timeout = PAGE_TIMEOUT_MS) {
 async function noteFailedAction(action, res) {
   await update(['diag'], (d) => {
     const diag = d.diag = d.diag || {};
-    diag.actions = [{ at: Date.now(), kind: action.kind, code: res.code || null, reason: res.reason || null, status: res.status || null, probe: res.probe || null }, ...(diag.actions || [])].slice(0, 20);
+    // At most four of one kind, so one repeating failure doesn't hide the others.
+    let same = 0;
+    const older = (diag.actions || []).filter((x) => x.kind !== action.kind || ++same < 4);
+    diag.actions = [{ at: Date.now(), kind: action.kind, code: res.code || null, reason: res.reason || null, status: res.status || null, probe: res.probe || null }, ...older].slice(0, 20);
   });
+}
+
+// A page that couldn't be read: its outline goes into the report too.
+async function notePageMiss(tabId, kind, code) {
+  try {
+    const res = await Promise.race([
+      chrome.tabs.sendMessage(tabId, { type: 'ACTION', action: { kind: 'probe' } }),
+      new Promise((resolve) => setTimeout(() => resolve(null), 8000)),
+    ]);
+    await noteFailedAction({ kind }, { code, probe: res && res.probe });
+  } catch (e) {
+    await noteFailedAction({ kind }, { code });
+  }
 }
 
 const ACTION_TIMEOUT_MS = 3 * 60000; // a frozen tab must not hold the bot forever
@@ -847,15 +863,18 @@ async function refreshVillages(tabId, job, s) {
     const first = await navigate(tabId, `${s.server}/dorf1.php`);
     ids = (first.villages || []).map((v) => v.id).filter((id) => id !== first.villageId);
   }
+  let missNoted = false;
   for (const id of ids) {
     if (urgent && !job.quick) break; // an escape is due: let it run first
-    await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(id)}`);
+    const d1 = await navigate(tabId, `${s.server}/dorf1.php?newdid=${encodeURIComponent(id)}`);
+    if (!d1.fields && !missNoted) { missNoted = true; await notePageMiss(tabId, 'page:dorf1', 'noFields'); }
     if (job.quick) continue;
     ({ villages = {} } = await read(['villages']));
     const v = villages[id];
     if (v && (!v.buildingsAt || Date.now() - v.buildingsAt > BUILDINGS_RESCAN_MS)) {
       await sleep(rand(1200, 3000));
-      await navigate(tabId, `${s.server}/dorf2.php?newdid=${encodeURIComponent(id)}`);
+      const d2 = await navigate(tabId, `${s.server}/dorf2.php?newdid=${encodeURIComponent(id)}`);
+      if (!d2.buildings && !missNoted) { missNoted = true; await notePageMiss(tabId, 'page:dorf2', 'noBuildings'); }
     }
     // What's in training: look once, and again after a queue runs out.
     ({ villages = {} } = await read(['villages']));
@@ -1113,7 +1132,10 @@ const JOBS = {
     const empty = task.gid && (!site || !site.gid);
     const page = await navigate(tabId, `${s.server}/build.php?newdid=${encodeURIComponent(vid)}&id=${slot}${empty ? `&category=${buildCategory(task.gid)}` : ''}`);
     const bp = page.buildPage;
-    if (!bp) throw new Error(t('err.noBuildPage'));
+    if (!bp) {
+      await notePageMiss(tabId, 'page:build', 'noBuildPage');
+      throw new Error(t('err.noBuildPage'));
+    }
     let title = bp.title || t('task.slot', { n: slot });
     const now = Date.now();
     let contract = null;
@@ -1303,6 +1325,7 @@ const JOBS = {
         ...(b.exact ? [] : list.filter((u) => !prefs.includes(u.field) && armyUnit(u.field, base, kind) && unitKind(u.unit) !== 'scout'))];
       const unit = order.find((u) => u.max > 0);
       if (!unit) {
+        if (!page.buildPage) await notePageMiss(tabId, 'page:train', 'noBuildPage');
         await log('info', t(b.exact && !order.length ? 'log.brainUnitMissing' : list.length ? 'log.brainNoRes' : 'log.brainNoUnit', { b: bname }), vid);
         continue;
       }
@@ -1451,7 +1474,10 @@ const JOBS = {
     if (!h) return;
     const page = await navigate(tabId, `${s.server}/build.php?newdid=${encodeURIComponent(v.id)}&id=${h.slot}&gid=${h.gid}`);
     const list = (page.buildPage && page.buildPage.hospital) || null;
-    if (!list) throw new Error(t('err.noHospital'));
+    if (!list) {
+      await notePageMiss(tabId, 'page:hospital', 'noHospital');
+      throw new Error(t('err.noHospital'));
+    }
     await patchVillage(v.id, { wounded: list.map(({ unit, name, count, max }) => ({ unit, name, count, max })), woundedAt: Date.now() });
     if (!list.length) return;
     if (!list.some((u) => u.max > 0)) {
@@ -1940,7 +1966,8 @@ const JOBS = {
     const { res } = await act(tabId, { kind: 'adventure' }, false);
     if (res.ok) await log('success', t('log.heroSent', { to: res.detail ? t('log.heroTo', { where: ltr(res.detail) }) : '' }));
     else await log('info', t('log.adventureInfo', { reason: reasonText(res) }));
-    await patchSchedule({ adventureAt: Date.now() + jittered(15 * 60000, s.jitterPercent) });
+    // No adventure the hero can start now (tired, hurt, none left): look again in an hour.
+    await patchSchedule({ adventureAt: Date.now() + jittered((res.ok || res.code !== 'noAdventure' ? 15 : 60) * 60000, s.jitterPercent) });
     // Pick up the hero's new status for the dashboard.
     await sleep(rand(1500, 3000));
     await navigate(tabId, `${s.server}/dorf1.php`);

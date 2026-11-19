@@ -33,26 +33,38 @@
     return null;
   }
 
+  // Which page this is: by its address, old (…php) or new — Travian moved
+  // its pages (/build.php → /building, the old addresses forward to the new
+  // ones) — and, for any other new address, by what it shows: the resource
+  // fields, the village's building sites, a building's page.
   function pageType(doc, url) {
     if (doc.getElementById('loginScene')) return 'login';
     if (!doc.getElementById('stockBar') && !doc.getElementById('servertime')) return 'unknown';
-    const p = url.pathname;
-    if (p.endsWith('/dorf1.php')) return 'dorf1';
-    if (p.endsWith('/dorf2.php')) return 'dorf2';
-    if (p.endsWith('/build.php')) {
-      const gid = url.searchParams.get('gid');
-      const tt = url.searchParams.get('tt');
-      if (gid === '16' && tt === '99') return 'farmlist';
-      if (tt === '2' && (gid === '16' || url.searchParams.get('id') === '39')) return 'send';
-      if (tt === '1' && (gid === '16' || url.searchParams.get('id') === '39')) return 'rally';
-      if (gid === '17' && url.searchParams.get('t') === '5') return 'market';
-      return 'build';
-    }
-    if (p.endsWith('/position_details.php')) return 'tile';
+    const p = url.pathname.replace(/\/+$/, '');
+    const q = (k) => url.searchParams.get(k);
+    const build = doc.getElementById('build');
+    const bgid = build && (String(build.className).match(/\bgid(\d+)\b/) || [])[1];
+    const isRally = q('gid') === '16' || q('id') === '39' || bgid === '16' || (q('id') === '16' && !bgid);
+    if (/\/dorf1(\.php)?$/.test(p)) return 'dorf1';
+    if (/\/dorf2(\.php)?$/.test(p)) return 'dorf2';
+    if (/\/position_details(\.php)?$/.test(p)) return 'tile';
     if (p.startsWith('/hero/adventures')) return 'adventures';
     if (p.startsWith('/hero/inventory')) return 'inventory';
-    if ((p.startsWith('/report') || p.endsWith('/berichte.php')) && !url.searchParams.get('id')) return 'reports';
+    if ((p.startsWith('/report') || p.endsWith('/berichte.php')) && !q('id')) return 'reports';
     if (p === '/tasks' || p.startsWith('/tasks/')) return 'tasks';
+    // Old addresses (…php) are what they say; any newer one by what it shows.
+    const legacy = /\.php$/.test(p);
+    if (/\/build(\.php|ing)?$/.test(p) || (!legacy && build)) {
+      const tt = q('tt');
+      if (tt === '99' && isRally) return 'farmlist';
+      if (tt === '2' && isRally) return 'send';
+      if (tt === '1' && isRally) return 'rally';
+      if ((q('gid') === '17' || bgid === '17') && q('t') === '5') return 'market';
+      return 'build';
+    }
+    if (!legacy && doc.getElementById('resourceFieldContainer')) return 'dorf1';
+    if (!legacy && doc.getElementById('villageContent') && qs(doc, '.buildingSlot')) return 'dorf2';
+    if (!legacy && doc.getElementById('tileDetails')) return 'tile';
     return 'other';
   }
 
@@ -634,11 +646,21 @@
   const isHospital = (doc, gidMatch) => !!gidMatch && (['46', '48'].includes(gidMatch[1]) ||
     (HOSPITAL_NAME.test(text(qs(doc, '.titleInHeader') || qs(doc, 'h1'))) && !!qs(doc, '.troop:not(.empty) .cta input.text[name^="t"]')));
 
-  // build.php for an existing building / field / empty site.
+  // The green "upgrade" button: never the "faster with a video" one, nor the
+  // gold ones (master builder, NPC). Newer pages (textButtonV2) may not mark
+  // it "build": then the green button among the upgrade buttons.
+  function upgradeButton(doc) {
+    return qs(doc, '.upgradeButtonsContainer .section1 button.build:not(.videoFeatureButton)') ||
+      qs(doc, '.upgradeButtonsContainer button.green.build:not(.videoFeatureButton)') ||
+      qsa(qs(doc, '.upgradeButtonsContainer') || qs(doc, '.upgradeBuilding'), 'button')
+        .find((b) => b.classList.contains('green') && !/video|gold|builder|exchange|npc/i.test(b.className)) || null;
+  }
+
+  // A building's page (build.php, now /building) for an existing building /
+  // field / empty site.
   function parseBuildPage(doc, url) {
     const slot = num(url.searchParams.get('id'));
-    const upgrade = qs(doc, '.upgradeButtonsContainer .section1 button.build:not(.videoFeatureButton)') ||
-      qs(doc, '.upgradeButtonsContainer button.green.build:not(.videoFeatureButton)');
+    const upgrade = upgradeButton(doc);
     const contract = doc.getElementById('contract') || qs(doc, '[id^="contract_building"]');
     const error = qs(contract || doc, '.errorMessage');
     const waitTimer = qs(error, '.timer');
@@ -762,7 +784,7 @@
   const api = {
     num, parsePage, parseResources, parseVillages, parseBuildQueue, parseFields, parseBuildings, parseMovements,
     parseBuildPage, parseFarmLists, parseHero, pageType, parseTroops, parseTrainingQueue, parseTile, parseSendPage,
-    oasesFromTiles, villagesFromTiles, valleysFromTiles, tileSummary, findTiles, shapeOf, unitOf, parseNewBuildings, buildingNeeds, parseResearch, parseIncoming, parseMarket, parseQuests, parseInventory, parseReports, parseExpansion,
+    oasesFromTiles, villagesFromTiles, valleysFromTiles, tileSummary, findTiles, shapeOf, unitOf, parseNewBuildings, buildingNeeds, parseResearch, parseIncoming, parseMarket, upgradeButton, parseQuests, parseInventory, parseReports, parseExpansion,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TravianParser = api;

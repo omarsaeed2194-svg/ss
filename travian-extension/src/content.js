@@ -225,9 +225,9 @@
 
   const actions = {
     async upgrade() {
-      // Not the "faster with a video" button next to it (opens a video, no new page).
-      const btn = document.querySelector('.upgradeButtonsContainer .section1 button.build:not(.videoFeatureButton)') ||
-        document.querySelector('.upgradeButtonsContainer button.green.build:not(.videoFeatureButton)');
+      // Not the "faster with a video" button next to it (opens a video, no
+      // new page), nor the gold ones.
+      const btn = P.upgradeButton(document);
       if (!usable(btn)) return { ok: false, code: 'noUpgradeButton' };
       setTimeout(() => btn.click(), 50);
       return { ok: true, navigating: true };
@@ -610,6 +610,9 @@
       return { ok: true, detail: where };
     },
   };
+
+  // Just the page's outline, asked for when a page couldn't be read.
+  actions.probe = async () => ({ ok: true, probe: probe() });
 
   // What the page looked like when an action failed, for the diagnostics
   // report: which page, its forms, buttons and fields (no values).
