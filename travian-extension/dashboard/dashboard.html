@@ -30,6 +30,26 @@
     <div id="status" class="status"></div>
 
     <!-- ========================================================= Overview -->
+    <!-- ============================================================ Empire -->
+    <section class="tab" id="tab-empire">
+      <div class="panel">
+        <h2 data-i18n="emp.title"></h2>
+        <p class="muted small" data-i18n="emp.help"></p>
+        <div class="emp-cards" id="empCards"></div>
+      </div>
+      <div class="cols">
+        <div class="panel">
+          <h2><span data-i18n="emp.round"></span> <small class="muted" id="empRoundAt"></small></h2>
+          <p class="muted small" data-i18n="emp.roundHelp"></p>
+          <ul class="feed" id="empRound"></ul>
+        </div>
+      </div>
+      <div class="panel">
+        <h2 data-i18n="emp.villages"></h2>
+        <div class="table-wrap"><table class="list" id="empTable"></table></div>
+      </div>
+    </section>
+
     <section class="tab" id="tab-overview">
       <div class="filter-bar" id="ovFilterBar" role="toolbar">
         <span class="filter-label" data-i18n="ov.filter"></span>
@@ -309,6 +329,19 @@
         </div>
       </div>
 
+      <div class="panel" id="fsPanel">
+        <h2 data-i18n="farm.sugTitle"></h2>
+        <p class="muted small" data-i18n="farm.sugHelp"></p>
+        <div class="row wrap">
+          <label class="switch"><input type="checkbox" data-setting="farmTune.enabled"> <span data-i18n="farm.tune"></span></label>
+          <label><span data-i18n="farm.sugRadius"></span> <input type="number" min="5" max="60" data-setting="farmTune.radius" class="num"></label>
+        </div>
+        <p class="muted small indent" data-i18n="farm.tuneHelp"></p>
+        <p class="muted small" id="fsInfo"></p>
+        <div class="table-wrap"><table class="list" id="fsTable"></table></div>
+        <p class="small" id="fsMsg" aria-live="polite"></p>
+      </div>
+
       <div class="panel" id="ftPanel" hidden>
         <header class="panel-head"><h2 id="ftTitle"></h2><span id="ftMeta" class="muted small"></span></header>
         <div class="row wrap">
@@ -425,6 +458,8 @@
           <p class="muted small indent" data-i18n="brain.reinforceHelp"></p>
           <label class="switch"><input type="checkbox" data-setting="brain.transfers"> <span data-i18n="brain.transfers"></span></label>
           <p class="muted small indent" data-i18n="brain.transfersHelp"></p>
+          <label class="switch"><input type="checkbox" data-setting="brain.supply"> <span data-i18n="brain.supply"></span></label>
+          <p class="muted small indent" data-i18n="brain.supplyHelp"></p>
           <p class="muted small" data-i18n="brain.limits"></p>
           <p id="brainWarn" class="small warn" hidden></p>
         </div>
@@ -482,6 +517,16 @@
         <div class="panel">
           <h2 data-i18n="hero.title"></h2>
           <dl id="heroInfo" class="kv"></dl>
+          <h3 class="gap" data-i18n="hero.pointsTitle"></h3>
+          <label><span data-i18n="hero.pointsLabel"></span> <select data-setting="hero.points">
+            <option value="balanced" data-i18n="hero.points.balanced"></option>
+            <option value="fight" data-i18n="hero.points.fight"></option>
+            <option value="resources" data-i18n="hero.points.resources"></option>
+            <option value="off" data-i18n="hero.points.off"></option>
+          </select></label>
+          <p class="muted small indent" data-i18n="hero.pointsHelp"></p>
+          <label class="switch"><input type="checkbox" data-setting="hero.revive"> <span data-i18n="hero.revive"></span></label>
+          <p class="muted small indent" data-i18n="hero.reviveHelp"></p>
         </div>
         <div class="panel">
           <h2 data-i18n="hero.advTitle"></h2>

@@ -6,6 +6,9 @@ import { unitField, distance, parseCoordList, cleanTroops } from '../src/autopil
 import { t, coords } from '../src/i18n.js';
 import { fieldKind, kindIcon, tribeBase } from '../src/units.js';
 import { farmScore } from '../src/reports.js';
+import { farmSuggestions, defaultTroops, lootOf, listLoot, lootText } from '../src/farmtune.js';
+import { trackingInfo } from '../src/inactive.js';
+import { playersInfo } from '../src/players.js';
 
 const $ = (id) => document.getElementById(id);
 const FIELDS = Array.from({ length: 10 }, (_, i) => `t${i + 1}`);
@@ -52,14 +55,16 @@ function reportCell(tg, now) {
   const title = t('farm.reportTitle', { raids: st.raids, full: st.full, empty: st.empty, losses: st.losses });
   return `<span class="${tone}" title="${esc(title)}">${REPORT_ICON[st.last.result] || ''} ${esc(t(`report.${st.last.result}`))}</span>
     ${st.last.carry ? ` <span title="${esc(t(`report.carry.${st.last.carry}`))}">${CARRY_ICON[st.last.carry]}</span>` : ''}
-    <small class="muted">· ${esc(t('farm.score', { n: farmScore(tg) }))} · ${esc(fmtAgo(st.last.at, now))}</small>
-    ${tg.pausedBy === 'report' && tg.enabled === false ? `<br><span class="tag busy">${esc(t('farm.pausedReport'))}</span>` : ''}`;
+    <small class="muted">· ${esc(t('farm.score', { n: farmScore(tg) }))}${(() => { const x = lootOf(tg, tribeBase(data.villages), now); return x ? ` · ${lootText(x.perHour)}/${esc(t('emp.hour'))}` : ''; })()} · ${esc(fmtAgo(st.last.at, now))}</small>
+    ${tg.pausedBy === 'report' && tg.enabled === false ? `<br><span class="tag busy">${esc(t('farm.pausedReport'))}</span>` : ''}
+    ${tg.pausedBy === 'empty' && tg.enabled === false ? `<br><span class="tag busy">${esc(t('farm.pausedEmpty'))}</span>` : ''}`;
 }
 
 // ------------------------------------------------------------------ lists ---
 function renderLists(now) {
   fillSelect($('flVillage'), villageOptions());
-  const head = ['farm.name', 'th.village', 'farm.targets', 'th.every', 'farm.mission', 'th.next', 'th.on'].map((k) => `<th>${esc(t(k))}</th>`).join('');
+  const head = ['farm.name', 'th.village', 'farm.targets', 'th.every', 'farm.mission', 'farm.loot', 'th.next', 'th.on'].map((k) => `<th>${esc(t(k))}</th>`).join('');
+  const base = tribeBase(data.villages);
   $('farmListTable').innerHTML = lists().length
     ? `<tr>${head}<th></th></tr>` + lists().map((l) => {
       const v = data.villages[l.villageId];
@@ -71,6 +76,7 @@ function renderLists(now) {
         <td class="mono">${on} / ${(l.targets || []).length}</td>
         <td class="mono">${esc(t('troops.everyMin', { n: l.everyMinutes }))}</td>
         <td>${esc(t(l.eventType === 3 ? 'farm.attack' : 'farm.raid'))}</td>
+        <td class="mono" title="${esc(t('farm.lootHelp'))}">${(() => { const x = listLoot(l, base, now); return x.raids ? `${lootText(x.perHour)}/${esc(t('emp.hour'))}` : '—'; })()}</td>
         <td class="mono">${esc(next)}</td>
         <td><label class="switch"><input type="checkbox" data-fl-toggle="${esc(l.id)}" ${l.enabled === false ? '' : 'checked'}></label></td>
         <td class="actions">
@@ -81,6 +87,56 @@ function renderLists(now) {
     }).join('')
     : `<tr><td class="muted">${esc(t('farm.noLists'))}</td></tr>`;
 }
+
+// ------------------------------------------------------------ suggestions ---
+// Villages of inactive players near the villages, to add to a list (the
+// list's usual troops) or turn down.
+function renderSuggestions(now) {
+  const s = data.settings;
+  const tr = trackingInfo(data.mapVillages, now);
+  const pi = playersInfo(data.players, now);
+  $('fsInfo').textContent = t('farm.sugInfo', { villages: tr.tracked, players: pi.known, still: pi.still });
+  if (!s.farmTune.enabled) { $('fsTable').innerHTML = ''; return; }
+  const list = farmSuggestions(data, { radius: s.farmTune.radius, now });
+  if (editingIn($('fsTable'))) return;
+  if (!list.length) { $('fsTable').innerHTML = `<tr><td class="muted">${esc(t('farm.sugNone'))}</td></tr>`; return; }
+  const head = ['farm.coords', 'farm.sugWho', 'farm.sugPop', 'farm.sugDist', 'farm.sugList'].map((k) => `<th>${esc(t(k))}</th>`).join('');
+  $('fsTable').innerHTML = `<tr>${head}<th></th></tr>` + list.map((c) => {
+    const own = lists().filter((l) => l.villageId === c.from);
+    const opts = [...own, ...lists().filter((l) => l.villageId !== c.from)];
+    const key = `${c.x}|${c.y}`;
+    return `<tr>
+      <td class="mono">${esc(coords(c.x, c.y))}</td>
+      <td>${esc(c.name || '—')}<br><small class="muted">${esc(c.player || '')}</small></td>
+      <td class="mono">${c.pop ?? '—'}</td>
+      <td class="mono">${c.distance}<br><small class="muted">${esc((data.villages[c.from] || {}).name || '')}</small></td>
+      <td>${opts.length ? `<select data-fs-list="${esc(key)}">${opts.map((l) => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join('')}</select>` : `<span class="muted">${esc(t('farm.sugNoList'))}</span>`}</td>
+      <td class="actions">${opts.length ? `<button class="btn small" data-fs-add="${esc(key)}" data-name="${esc(c.name || c.player || '')}">${esc(t('farm.sugAdd'))}</button>` : ''}
+        <button class="btn small ghost" data-fs-ignore="${esc(key)}">${esc(t('farm.sugIgnore'))}</button></td>
+    </tr>`;
+  }).join('');
+}
+
+$('fsTable').addEventListener('click', async (e) => {
+  const add = e.target.closest('[data-fs-add]');
+  const ignore = e.target.closest('[data-fs-ignore]');
+  if (add) {
+    const key = add.dataset.fsAdd;
+    const sel = document.querySelector(`[data-fs-list="${CSS.escape(key)}"]`);
+    const l = lists().find((x) => x.id === (sel && sel.value));
+    if (!l) return;
+    const troops = defaultTroops(l);
+    if (!Object.keys(troops).length) { $('fsMsg').textContent = t('farm.sugNeedTroops', { list: l.name }); $('fsMsg').className = 'small bad'; return; }
+    const [x, y] = key.split('|').map(Number);
+    add.disabled = true;
+    const r = await command('addFarmTargets', { listId: l.id, targets: [{ x, y, name: add.dataset.name, type: 'village', troops }] });
+    $('fsMsg').textContent = r && r.added ? t('farm.sugAdded', { list: l.name }) : t('farm.sugNotAdded');
+    $('fsMsg').className = `small ${r && r.added ? 'good-text' : 'bad'}`;
+  } else if (ignore) {
+    ignore.disabled = true;
+    await command('ignoreFarmSuggestion', { key: ignore.dataset.fsIgnore });
+  }
+});
 
 // --------------------------------------------------------------- targets ---
 function lastResult(tg, now) {
@@ -173,6 +229,7 @@ export function renderFarms(d, now) {
   if (selected && !current() && selected !== justAdded) selected = '';
   if (!selected && lists().length) selected = lists()[0].id;
   renderLists(now);
+  renderSuggestions(now);
   renderTargets(now);
 }
 

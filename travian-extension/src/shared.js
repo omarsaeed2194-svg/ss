@@ -96,7 +96,16 @@ export const DEFAULT_SETTINGS = {
   // roles: { villageId: 'auto' | 'economy' | 'military' | 'off' }.
   // villages: { villageId: { army: %, inf / cav / siege: troops wanted,
   // infUnit / cavUnit / siegeUnit: 't1'… } } (src/budget.js).
-  brain: { enabled: false, armyShare: 30, maxActions: 3, everyMinutes: 30, defense: true, reinforce: true, transfers: true, roles: {}, villages: {} },
+  // supply: economy villages send their army's part to the army village
+  // (src/supply.js); a village's own tick in villages[id].supply wins.
+  brain: { enabled: false, armyShare: 30, maxActions: 3, everyMinutes: 30, defense: true, reinforce: true, transfers: true, supply: true, roles: {}, villages: {} },
+  // Farm lists that look after themselves (src/farmtune.js): suggested
+  // targets from inactive players within `radius`, troops tuned from the
+  // reports (which are then read even when "reports" is off).
+  farmTune: { enabled: true, radius: 20 },
+  // The hero: where new attribute points go ('balanced' = 1 fighting
+  // strength + 3 production, 'fight', 'resources', 'off'), and reviving.
+  hero: { points: 'balanced', revive: true },
   // Dashboard: only the main pages, the brain's key switches on its page.
   simpleMode: false,
 };
@@ -132,6 +141,8 @@ function keepInRange(s) {
   fix(s.brain, 'armyShare', 5, 90, d.brain.armyShare);
   fix(s.brain, 'maxActions', 1, 10, d.brain.maxActions);
   fix(s.brain, 'everyMinutes', 10, 240, d.brain.everyMinutes);
+  fix(s.farmTune, 'radius', 5, 60, d.farmTune.radius);
+  if (!['balanced', 'fight', 'resources', 'off'].includes(s.hero && s.hero.points)) s.hero = { ...d.hero, ...(s.hero || {}), points: d.hero.points };
   fix(s.autopilot, 'fieldsMax', 1, 21, d.autopilot.fieldsMax);
   fix(s.alerts, 'storageHours', 0, 48, d.alerts.storageHours);
   return s;

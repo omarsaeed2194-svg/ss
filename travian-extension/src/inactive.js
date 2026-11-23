@@ -20,10 +20,12 @@ export function recordMapVillages(store, list, now = Date.now(), own = []) {
     const same = prev && prev.did === m.did;
     const seen = same ? [...(prev.seen || [])] : [];
     const last = seen[seen.length - 1];
-    if (!last || last[1] !== m.pop || now - last[0] > 3600000) seen.push([now, m.pop]);
+    // A spot without a population (map servers that give only ids) adds no look.
+    if (m.pop != null && (!last || last[1] !== m.pop || now - last[0] > 3600000)) seen.push([now, m.pop]);
     // The first look is the baseline a verdict needs: always kept.
     const kept = seen.length > KEEP ? [seen[0], ...seen.slice(-(KEEP - 1))] : seen;
-    out[key] = { x: m.x, y: m.y, did: m.did, uid: m.uid, aid: m.aid, name: m.name, player: m.player, alliance: m.alliance, pop: m.pop, seen: kept };
+    out[key] = { x: m.x, y: m.y, did: m.did, uid: m.uid, aid: m.aid, name: m.name || (prev && prev.name) || '', player: m.player || (prev && prev.player) || '',
+      alliance: m.alliance || (prev && prev.alliance) || '', pop: m.pop ?? (prev && prev.pop) ?? null, seen: kept };
   }
   // Keep the store small: drop the villages looked at longest ago.
   const keys = Object.keys(out);

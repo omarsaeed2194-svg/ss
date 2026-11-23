@@ -16,6 +16,10 @@ import { learnReqs } from './buildplan.js';
 import { mergeIncoming, attackVerdict, reinforcePlan, speedFactor, speedSample } from './attacks.js';
 import { transferPlan, fitMerchants } from './merchants.js';
 import { laneUpdate, armyPct, buildBudget, armyNow, peakUpdate } from './budget.js';
+import { playersToCheck, recordProfile } from './players.js';
+import { tuneTargets } from './farmtune.js';
+import { supplyPlan } from './supply.js';
+import { coordinate } from './coordinator.js';
 import { SNAPSHOT_KEYS, webBase, snapshotOf, hashOf, cleanRemote } from './web.js';
 import { firstAttack, escapeTiming, escapeDone, escapeDue, escapeTarget, escapeTroops, TOO_LATE_MS, donateTiming, donateDone, donateDue, donationAmounts, amountsText, sameAttack } from './escape.js';
 import { parseCommand, statusText, summaryText, helpText } from './telegram.js';
@@ -33,6 +37,9 @@ const HISTORY_STEP_MS = 5 * 60 * 1000;
 const HISTORY_KEEP_MS = 24 * 3600 * 1000;
 const AUTO_IDLE_MS = 30 * 60 * 1000;      // autopilot found nothing to build: look again later
 const AUTO_SKIP_MS = 2 * 3600 * 1000;     // an upgrade the game refused: try others first
+const RADIUS_MIN = 10;                     // players looked up at least this far around the villages
+// Hero attribute points per level (4), by the player's choice.
+const HERO_POINTS = { balanced: { power: 1, productionPoints: 3 }, fight: { power: 4 }, resources: { productionPoints: 4 } };
 const SCAN_EVERY_MS = 12 * 3600 * 1000;   // re-scan the map for oases
 const TROOP_BUILDINGS = [19, 20, 21, 29, 30];
 
@@ -166,7 +173,7 @@ async function processPage(state, tabId) {
   const events = []; // [level, message, villageId] for the activity log
   const newlyAttacked = [];
 
-  await update(['settings', 'villages', 'account', 'status', 'alertMemo', 'history', 'oases'], (d) => {
+  await update(['settings', 'villages', 'account', 'status', 'alertMemo', 'history', 'oases', 'players', 'mapVillages'], (d) => {
     const s = mergeSettings(d.settings);
     setLanguage(s.language);
     d.status = d.status || {};
@@ -363,6 +370,12 @@ async function processPage(state, tabId) {
     }
     alerts.push(...Object.values(attackAlerts));
 
+    // A player's profile: their population, and their villages' on the map store.
+    if (state.profile && state.profile.uid > 0 && (state.profile.villages || []).length) {
+      const r = recordProfile(d.players || {}, d.mapVillages || {}, state.profile, now);
+      d.players = r.players;
+      d.mapVillages = r.mapVillages;
+    }
     // A map tile: remember oases (and what guards them) for raids.
     const tile = state.tile;
     if (tile && tile.x != null && tile.y != null) {
@@ -1239,7 +1252,8 @@ const JOBS = {
     if (task.auto && s.brain.enabled && bp.cost && !['storage', 'crop', 'storeShort'].includes(why)) {
       const base = tribeBase(villages);
       const role = villageRole(v, sortedVillages(villages), s);
-      const tp = trainPick(v, role, base, s, now);
+      const list = sortedVillages(villages);
+      const tp = trainPick(v, role, base, s, now, { hasArmy: list.some((x) => villageRole(x, list, s) === 'military') });
       const idle = ['targetsDone', 'noArmyShare', 'roleOff', 'noBarracks', 'economyFirst'].includes(tp.skip);
       const budget = idle ? { ok: true } : buildBudget(v, bp.cost, now);
       if (!budget.ok) {
@@ -1311,6 +1325,7 @@ const JOBS = {
     // The army's part of the stores, shared between the buildings: each
     // one's slice of what is left when it trains.
     const slice = (job.share || 0) / builds.length;
+    const byKind = {};
     for (const [k, b] of builds.entries()) {
       if (k) await sleep(rand(1500, 3500));
       const page = await navigate(tabId, `${s.server}/build.php?newdid=${encodeURIComponent(vid)}&gid=${b.gid}`);
@@ -1330,8 +1345,9 @@ const JOBS = {
         continue;
       }
       let amount = Math.max(1, Math.floor(unit.max * Math.min(1, slice / Math.max(0.05, 1 - k * slice))));
-      // Never past the player's target.
-      if (b.left != null) amount = Math.min(amount, b.left);
+      // Never past the player's target (shared by a kind's barracks and great barracks).
+      if (b.left != null) amount = Math.min(amount, b.left - (byKind[b.cat] || 0));
+      if (amount < 1) continue;
       // Troops eat crop: keep the village's crop above zero.
       if (crop != null) {
         const each = upkeepOf(unit.field, base);
@@ -1344,6 +1360,7 @@ const JOBS = {
       await log('success', t('log.brainTrained', { n: amount, u: unit.name || unit.field, b: bname, why: t(`brain.why.${job.why}`) }), vid);
       await bump('trained', amount);
       done.push({ n: amount, unit: unit.name || unit.field, gid: b.gid });
+      byKind[b.cat] = (byKind[b.cat] || 0) + amount;
     }
     if (done.length) {
       await patchVillage(vid, { brainLast: { at: Date.now(), n: done.reduce((n, x) => n + x.n, 0), unit: done.map((x) => `${x.n} × ${x.unit}`).join(t('list.sep')), gid: done[0].gid, why: job.why, list: done } });
@@ -1461,6 +1478,67 @@ const JOBS = {
     await patchVillage(to.id, { transferPending: { at: Date.now(), until: Date.now() + 2 * 3600000, from: from.id, amounts } });
     await log('success', t('log.brainTransfer', { what: amountsText(amounts), from: from.name, to: to.name, why: t(`brain.transferWhy.${job.why}`) }), to.id);
     await bump('transfers');
+  },
+
+  // Players near the villages: one profile after another (their villages'
+  // population, for the inactive finder and the farm suggestions).
+  async profiles(tabId, job, s) {
+    await patchSchedule({ profilesAt: Date.now() + jittered(30 * 60000, s.jitterPercent) });
+    let read = 0;
+    for (const [i, uid] of (job.uids || []).entries()) {
+      if (urgent) break;
+      if (i) await sleep(rand(3000, 8000));
+      const page = await navigate(tabId, `${s.server}/profile/${encodeURIComponent(uid)}`);
+      if (!page.profile || !(page.profile.villages || []).length) {
+        // Not readable: note it (with the page's outline) and leave it for a day.
+        await update(['players'], (d) => { d.players = { ...(d.players || {}), [uid]: { ...((d.players || {})[uid] || { uid, seen: [] }), checkedAt: Date.now() + 12 * 3600000 } }; });
+        await notePageMiss(tabId, 'page:profile', 'noProfile');
+        await log('info', t('log.profileUnread'));
+        break;
+      }
+      read += 1;
+    }
+    if (read) await log('info', t('log.profilesRead', { n: read }));
+  },
+
+  // New attribute points for the hero, the way the player chose.
+  async heroPoints(tabId, job, s) {
+    await patchSchedule({ heroPointsAt: Date.now() + 10 * 60000 });
+    const page = await navigate(tabId, `${s.server}/hero/attributes`);
+    if (!page.heroAttributes) {
+      await notePageMiss(tabId, 'page:hero', 'noHeroAttributes');
+      await patchSchedule({ heroPointsAt: Date.now() + 6 * 3600000 });
+      await log('info', t('log.heroPointsUnread'));
+      return;
+    }
+    const add = HERO_POINTS[s.hero.points] || HERO_POINTS.balanced;
+    const before = page.heroAttributes;
+    const { res } = await act(tabId, { kind: 'heroPoints', add }, false);
+    if (!res.ok) throw new Error(reasonText(res));
+    // Saved? The page shows the new values afterwards (and the level-up
+    // mark goes, or stays for more points).
+    await sleep(rand(1500, 3000));
+    const after = (await navigate(tabId, `${s.server}/hero/attributes`)).heroAttributes;
+    const saved = after && Object.entries(add).every(([k, n]) => before[k] != null && after[k] != null && after[k] >= before[k] + n);
+    if (!saved) {
+      await log('error', t('log.heroPointsUnconfirmed'));
+      return;
+    }
+    await log('success', t('log.heroPoints', { how: t(`hero.points.${s.hero.points}`) }));
+  },
+
+  // The hero died: revive it (the game asks for resources, never gold here).
+  async heroRevive(tabId, job, s) {
+    await patchSchedule({ heroReviveAt: Date.now() + jittered(60 * 60000, s.jitterPercent) });
+    await navigate(tabId, `${s.server}/hero/attributes`);
+    const { res } = await act(tabId, { kind: 'heroRevive' }, false);
+    if (!res.ok) {
+      await log('info', t('log.heroReviveNot', { reason: reasonText(res) }));
+      return;
+    }
+    await log('success', t('log.heroRevived'));
+    await sleep(rand(2000, 4000));
+    await navigate(tabId, `${s.server}/dorf1.php`); // the hero's new status
   },
 
   // Hospital: heal every wounded unit the resources pay for.
@@ -1896,6 +1974,12 @@ const JOBS = {
     for (const c of changes.filter((x) => x.paused)) {
       await log('alert', t('log.farmPausedReport', { name: c.target, xy: coords(c.x, c.y), list: c.list, why: t(`report.${c.result}`) }));
     }
+    // The lists tune their own troops from what came back.
+    if (s.brain.enabled && s.farmTune.enabled) {
+      let tuned = [];
+      await update(['farms'], (d) => { const r = tuneTargets(d.farms || []); d.farms = r.lists; tuned = r.changes; });
+      for (const c of tuned) await log(c.what === 'paused' ? 'alert' : 'info', t(`log.farmTune.${c.what}`, { name: c.target || coords(c.x, c.y), list: c.list }));
+    }
     if (changes.length) await log('info', t('log.reportsRead', { n: changes.length, full: changes.filter((c) => c.carry === 'full').length }));
   },
 
@@ -2040,7 +2124,12 @@ function planActions(s, data, now) {
   if (!automationOn(s) || !withinActiveHours(s.activeHours, new Date(now))) return jobs;
   // A job that just failed waits a little before it is tried again.
   const backoff = schedule.backoff || {};
-  return planAutomation(s, data, now, jobs).filter((j) => j.asked || !(backoff[jobKey(j)] > now));
+  const planned = planAutomation(s, data, now, jobs).filter((j) => j.asked || !(backoff[jobKey(j)] > now));
+  // One referee for everything planned (src/coordinator.js): priority
+  // order, and what may not run together this round.
+  const { run, held } = coordinate(planned, data, now);
+  run.held = held;
+  return run;
 }
 
 const jobKey = (job) => `${job.type}:${job.villageId || job.listId || (job.rule && job.rule.id) || ''}`;
@@ -2106,7 +2195,8 @@ function planAutomation(s, data, now, jobs) {
     jobs.push({ type: 'farmList', listId: list.id, label: t('job.farmList', { list: list.name }) });
   }
   if ((s.farm.enabled || (auto && ap.farmLists)) && now >= (schedule.farmAt || 0)) jobs.push({ type: 'farm', label: t('job.farm') });
-  if (s.reports.enabled && schedule.reportsDue && now >= schedule.reportsDue) jobs.push({ type: 'reports', label: t('job.reports') });
+  // Raid reports: when switched on, and for the farm lists' own tuning.
+  if ((s.reports.enabled || (s.brain.enabled && s.farmTune.enabled && farms.length)) && schedule.reportsDue && now >= schedule.reportsDue) jobs.push({ type: 'reports', label: t('job.reports') });
   // Celebrations in every village with a Town Hall, once affordable.
   for (const v of sortedVillages(villages)) {
     if ((v.celebrationFailAt || 0) > now - 12 * 3600000 || (v.celebrationCheckAt || 0) > now) continue;
@@ -2131,15 +2221,17 @@ function planAutomation(s, data, now, jobs) {
   if (s.brain.enabled) {
     const base = tribeBase(villages);
     let n = 0;
-    // Resources to where they are needed: one transfer a round.
+    const thinking = brainPlan({ ...data, settings: s }, s, now, base);
+    // Resources to where they are needed: one transfer a round — a village
+    // waiting to build first, else a supply village feeding the army one.
     if (s.brain.transfers) {
-      const tr = transferPlan(villages, now)[0];
+      const roles = Object.fromEntries(thinking.map((p) => [p.id, p.role]));
+      const tr = transferPlan(villages, now)[0] || (s.brain.supply ? supplyPlan(data, s, roles, base, now)[0] : null);
       if (tr) {
         jobs.push({ type: 'brainTransfer', villageId: tr.from, targetId: tr.to, amounts: tr.amounts, why: tr.why, label: t('job.brainTransfer', { from: villages[tr.from].name, to: villages[tr.to].name }) });
         n += 1;
       }
     }
-    const thinking = brainPlan({ ...data, settings: s }, s, now, base);
     for (const p of thinking) {
       if (n >= s.brain.maxActions) break;
       if (!p.train || p.train.skip || (p.v.brainTrainAt || 0) > now) continue;
@@ -2154,6 +2246,17 @@ function planAutomation(s, data, now, jobs) {
       jobs.push({ type: 'brainResearch', villageId: p.id, gid: r.gid, label: t('job.brainResearch', { v: p.v.name, b: buildingName(r.gid) }) });
       n += 1;
     }
+  }
+  // The hero: new attribute points placed, and revived when dead.
+  if (s.brain.enabled || auto) {
+    const hero = account.hero || {};
+    if (hero.levelUp && s.hero.points !== 'off' && now >= (schedule.heroPointsAt || 0)) jobs.push({ type: 'heroPoints', label: t('job.heroPoints') });
+    if (hero.dead && s.hero.revive && now >= (schedule.heroReviveAt || 0)) jobs.push({ type: 'heroRevive', label: t('job.heroRevive') });
+  }
+  // Players near the villages, from their profiles (for inactive targets).
+  if (s.brain.enabled && s.farmTune.enabled && now >= (schedule.profilesAt || 0)) {
+    const who = playersToCheck(data, now, 4, Math.max(RADIUS_MIN, s.farmTune.radius + 5));
+    if (who.length) jobs.push({ type: 'profiles', uids: who.map((p) => p.uid), label: t('job.profiles', { n: who.length }) });
   }
   // A build waiting for resources the hero carries in the bag.
   if (auto && ap.heroBag) {
@@ -2246,7 +2349,7 @@ async function runJobs(tabId, jobs, s, force) {
   return true;
 }
 
-const DATA_KEYS = ['settings', 'villages', 'tasks', 'training', 'raids', 'farms', 'escapes', 'schedule', 'account', 'status', 'expansion', 'valleys', 'mapVillages', 'oases'];
+const DATA_KEYS = ['settings', 'villages', 'tasks', 'training', 'raids', 'farms', 'escapes', 'schedule', 'account', 'status', 'expansion', 'valleys', 'mapVillages', 'oases', 'players'];
 let running = false;
 let rerunForced = false; // "Check now" pressed while a run was in progress
 let rerunSoon = false;   // a dashboard request (e.g. map scan) arrived during a run
@@ -2360,7 +2463,10 @@ async function tick(force = false, soon = false) {
     const tabId = await ensureWorkerTab(s.server);
     if (await runJobs(tabId, refreshJobs, s, force)) {
       const fresh = await read(DATA_KEYS);
-      await runJobs(tabId, planActions(s, fresh, Date.now()), s, force);
+      const acts = planActions(s, fresh, Date.now());
+      // What this round runs and what it holds back (the Empire page shows it).
+      await update(['empire'], (d) => { d.empire = { at: Date.now(), run: acts.map((j) => ({ type: j.type, label: j.label })), held: acts.held || [] }; });
+      await runJobs(tabId, acts, s, force);
     }
     await restoreUserVillage(tabId, s);
     await setStatus({ state: 'idle', note: '', lastRunAt: Date.now() });
@@ -2495,6 +2601,11 @@ const COMMANDS = {
       }
     });
     return { added, skipped };
+  },
+  // A suggested farm the player turned down: not suggested again.
+  async ignoreFarmSuggestion({ key }) {
+    if (!/^-?\d+\|-?\d+$/.test(String(key || ''))) return;
+    await update(['farmIgnore'], (d) => { d.farmIgnore = [...new Set([...(d.farmIgnore || []), key])].slice(-500); });
   },
   async updateFarmTarget({ listId, targetId, patch }) {
     const clean = { ...patch };

@@ -8,7 +8,7 @@ import { escapeStatus, donateStatus } from './escape.js';
 
 export { escapeStatus };
 
-export const STORAGE_KEYS = ['settings', 'villages', 'account', 'tasks', 'training', 'raids', 'farms', 'escapes', 'oases', 'schedule', 'status', 'log', 'device', 'syncState', 'history', 'health', 'stats', 'mapVillages', 'valleys', 'expansion', 'diag'];
+export const STORAGE_KEYS = ['settings', 'villages', 'account', 'tasks', 'training', 'raids', 'farms', 'escapes', 'oases', 'schedule', 'status', 'log', 'device', 'syncState', 'history', 'health', 'stats', 'mapVillages', 'valleys', 'expansion', 'diag', 'players', 'empire', 'farmIgnore'];
 
 export async function loadAll() {
   const data = await chrome.storage.local.get(STORAGE_KEYS);

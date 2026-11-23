@@ -117,6 +117,46 @@ you're away:
   brain trains until the village has them and stops (troops at home and in
   training count; the highest count of the last 12 hours stands in for
   troops out raiding).
+- **Empire page and one coordinator** (page *Empire*) — the whole account
+  on one page: what the villages make, the army against its targets, what
+  the farms bring an hour (an estimate), supply villages and shipments on
+  the way, the hero, inactive players found, and each village's role, next
+  build, troops, buildings/army split and state. Every round, one
+  coordinator puts all the jobs in one order — what you asked for, then
+  defence (escape, donation, help), building, resources between villages,
+  training, research and the hero, adventures and tasks, farms, then
+  reading — and holds back what would clash, with the reason shown on the
+  page: no farm round from a village under attack, no shipment to or from
+  it, a supply village doesn't train troops with the resources it is
+  sending, no profile reading during an attack, no adventure while the hero
+  is dead or before their new points are spent.
+- **Supply villages** *(on by default, with the brain)* — economy villages
+  with a marketplace send their army share (keeping 5 % of their storage)
+  to the army village until it reaches its troop targets, and don't train
+  troops themselves meanwhile (they do when attacked, and when there is no
+  army village). Per village, the Brain page's split table can switch it on
+  or off. Great Barracks and Great Stable train too, sharing the village's
+  targets.
+- **Farms that tune themselves** — the raid reports are read on their own
+  once farms exist (with the brain on): a target that came back full gets a
+  quarter more troops (up to four times what you set), one that came back
+  empty twice gets a quarter fewer, and four empty raids in a row pause it.
+  Each list and target shows its estimated loot (full and half loads ×
+  what the troops carry) and loot per hour. **Suggestions**: inactive
+  villages near your villages that aren't in a list yet, with one click to
+  add them (with the list's usual troops) or turn them down — nothing is
+  added without you.
+- **Inactive players from profiles** — where the map gives no population
+  (it doesn't on every server), the brain opens the profiles of players
+  near your villages (a few a round, each one again after 12 hours) and
+  stores their villages' population, so the inactive finder and the farm
+  suggestions work there too *(experimental: the profile page hasn't been
+  checked against a saved page)*.
+- **Hero points and revival** — when the hero levels up, the 4 new points
+  go where you choose (balanced: 1 fighting strength + 3 resources;
+  fighting strength; or resources) on the hero's attributes page; a dead
+  hero is revived when the button is there *(revival experimental: not
+  checked against a saved page)*. Equipping items stays with you.
 - **Autopilot** — one switch for when you're away. When a village's build
   queue is empty it picks the next upgrade itself (warehouse/granary when
   90% full → crop when the village is short of crop → Main Building up to the
@@ -388,6 +428,10 @@ src/merchants.js       Resource balance between villages: suggestions, and the b
 src/attacks.js         Incoming attacks: speed range, likely units, help or escape
 src/buildplan.js       The brain's build orders and prerequisites
 src/budget.js          Each village's army / buildings split and troop targets
+src/coordinator.js     One order for every round's jobs; holds back what would clash, with the reason
+src/supply.js          Supply villages: their army share to the army village
+src/farmtune.js        Farm loot estimates, troop tuning from reports, farm suggestions
+src/players.js         Players near your villages: whose profile to read, their population history
 src/culture.js         Culture points: per-building values and costs, best picks, celebrations, pace
 src/expansion.js       New villages: who builds a Residence, trains settlers, where to found
 src/mapHook.js         On the map page only: passes on the map tiles the game loads
@@ -398,7 +442,10 @@ dashboard/             Full dashboard (also the extension's options page); dashb
                        grouped menu and each page's related links, overview.js renders the
                        Overview, autopilot.js the Autopilot and Oasis raids pages, farms.js the
                        farm lists, escape.js the Defense page, finder.js the inactive finder,
-                       culture.js the Culture page, health.js the Health page, minimap.js the map,
+                       culture.js the Culture page, health.js the Health page, empire.js the
+                       Empire page, minimap.js the map,
                        chart.js the 24-hour stock chart, art.js the village/hero drawings
 icons/                 Extension icons
+tests/                 Developer tests (not part of the extension): node tests/unit-empire.mjs,
+                       node tests/keys.mjs, and browser tests against a local copy of game pages
 ```

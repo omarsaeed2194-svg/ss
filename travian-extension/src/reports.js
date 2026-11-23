@@ -34,9 +34,11 @@ export function applyReports(farms, villages, reports, seen = [], now = Date.now
     const hit = matchReport(r.subject, lists, villages);
     if (!hit) continue;
     const tg = hit.target;
-    const st = tg.stats = { raids: 0, full: 0, empty: 0, losses: 0, ...(tg.stats || {}) };
+    const st = tg.stats = { raids: 0, full: 0, half: 0, empty: 0, losses: 0, ...(tg.stats || {}) };
     st.raids += 1;
+    if (!st.firstAt) st.firstAt = now;
     if (r.carry === 'full') st.full += 1;
+    if (r.carry === 'half') st.half = (st.half || 0) + 1;
     if (r.carry === 'empty') st.empty += 1;
     st.lossStreak = r.result === 1 ? 0 : (st.lossStreak || 0) + 1;
     if (r.result !== 1) st.losses += 1;

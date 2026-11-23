@@ -611,6 +611,47 @@
     },
   };
 
+  // React-made inputs (the hero page) need the value set the native way.
+  function setNative(input, value) {
+    const proto = Object.getPrototypeOf(input);
+    const desc = Object.getOwnPropertyDescriptor(proto, 'value') || Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+    input.focus();
+    if (desc && desc.set) desc.set.call(input, String(value)); else input.value = String(value);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  // Hero attributes: add the points to each input, then save.
+  actions.heroPoints = async ({ add }) => {
+    const box = document.querySelector('#heroV2 .attributeBox .heroAttributes .attributes.formV2') || document.querySelector('#heroV2 .heroAttributes') || document.querySelector('.heroAttributes');
+    if (!box) return { ok: false, code: 'noHeroAttributes' };
+    let changed = 0;
+    for (const [name, n] of Object.entries(add || {})) {
+      const input = box.querySelector(`input[name="${name}"]`);
+      if (!input || !(n > 0)) continue;
+      const cur = Number(String(input.value || '0').replace(/[^\d]/g, '')) || 0;
+      setNative(input, cur + n);
+      changed += 1;
+      await sleep(rand(250, 600));
+    }
+    if (!changed) return { ok: false, code: 'noHeroAttributes' };
+    const save = box.querySelector('button#savePoints') || document.getElementById('savePoints');
+    if (!usable(save)) return { ok: false, code: 'noSavePoints' };
+    await sleep(rand(400, 900));
+    // Answer first: saving may load the page again.
+    setTimeout(() => save.click(), 50);
+    return { ok: true };
+  };
+
+  // A dead hero: the revive button on the hero's page.
+  actions.heroRevive = async () => {
+    const btn = Array.from(document.querySelectorAll('#heroV2 button, .heroRevive button, button.revive'))
+      .find((b) => /reviv|wiederbeleb|إحياء|احياء/i.test(`${b.className} ${b.id} ${b.textContent}`));
+    if (!usable(btn)) return { ok: false, code: 'noReviveButton' };
+    setTimeout(() => btn.click(), 50);
+    return { ok: true };
+  };
+
   // Just the page's outline, asked for when a page couldn't be read.
   actions.probe = async () => ({ ok: true, probe: probe() });
 

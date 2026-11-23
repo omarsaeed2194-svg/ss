@@ -102,7 +102,7 @@ function renderSplit(now) {
   const s = data.settings;
   const base = tribeBase(data.villages);
   const plan = brainPlan(data, s, now, base);
-  const head = ['th.village', 'brain.split.army', 'brain.split.purses', ...KIND_LIST.map((k) => `brain.kind.${k}`)].map((k) => `<th>${esc(t(k))}</th>`).join('');
+  const head = ['th.village', 'brain.split.army', 'brain.split.supply', 'brain.split.purses', ...KIND_LIST.map((k) => `brain.kind.${k}`)].map((k) => `<th>${esc(t(k))}</th>`).join('');
   const rows = plan.map((p) => {
     const v = p.v;
     const cfg = villageCfg(s, v.id);
@@ -120,6 +120,8 @@ function renderSplit(now) {
       <td>${esc(v.name)}<br><small class="muted">${esc(t(`brain.role.${p.role}`))}</small></td>
       <td><input type="number" min="0" max="100" step="5" class="num" data-split="${esc(v.id)}" data-key="army" value="${esc(cfg.army ?? '')}" placeholder="${auto}"> %
         <br><small class="muted">${esc(t('brain.split.rest', { b: 100 - armyPct(v, p.role, s, villageStage(v)) }))}</small></td>
+      <td>${p.role === 'economy' ? `<select data-split="${esc(v.id)}" data-key="supply">${[['', t('brain.split.supplyAuto', { on: t(s.brain.supply ? 'brain.split.yes' : 'brain.split.no') })], ['true', t('brain.split.yes')], ['false', t('brain.split.no')]]
+        .map(([val, n]) => `<option value="${val}" ${String(cfg.supply ?? '') === val ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>${p.supplies ? '<br><small class="muted">🚚</small>' : ''}` : '<span class="muted">—</span>'}</td>
       <td class="small">${pu ? esc(t('brain.split.purseText', { a: fmtNum(sum(pu.army)), b: fmtNum(sum(pu.build)) })) : '—'}</td>
       ${KIND_LIST.map(cell).join('')}
     </tr>`;
@@ -155,11 +157,12 @@ $('brainSplit').addEventListener('change', (e) => {
   const all = { ...(data.settings.brain.villages || {}) };
   const cfg = { ...(all[id] || {}) };
   let val = e.target.value;
-  if (e.target.type === 'number') {
+  if (key === 'supply') val = val === '' ? null : val === 'true';
+  else if (e.target.type === 'number') {
     val = String(val).trim() === '' ? null : Math.max(0, Math.floor(Number(val)) || 0);
     if (key === 'army' && val != null) val = Math.min(100, val);
   }
-  if (val === null || val === '') delete cfg[key]; else cfg[key] = val;
+  if (val === null || val === '' || val === undefined) delete cfg[key]; else cfg[key] = val;
   if (Object.keys(cfg).length) all[id] = cfg; else delete all[id];
   data.settings = { ...data.settings, brain: { ...data.settings.brain, villages: all } };
   command('saveSettings', { settings: { brain: { villages: all } } });

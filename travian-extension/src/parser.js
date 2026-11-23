@@ -50,6 +50,8 @@
     if (/\/position_details(\.php)?$/.test(p)) return 'tile';
     if (p.startsWith('/hero/adventures')) return 'adventures';
     if (p.startsWith('/hero/inventory')) return 'inventory';
+    if (p.startsWith('/hero/attributes') || (p === '/hero' && qs(doc, '#heroV2 .heroAttributes'))) return 'heroAttributes';
+    if (p.startsWith('/profile') || p.endsWith('/spieler.php')) return 'profile';
     if ((p.startsWith('/report') || p.endsWith('/berichte.php')) && !q('id')) return 'reports';
     if (p === '/tasks' || p.startsWith('/tasks/')) return 'tasks';
     // Old addresses (…php) are what they say; any newer one by what it shows.
@@ -228,6 +230,8 @@
       image: img && /^https?:/.test(img.src || '') ? img.src : null,
       adventures: adv ? num(text(qs(adv, '.content'))) || 0 : 0,
       home: !!qs(status, 'i.heroHome'),
+      // Dead (to be revived in the hero's page): the status icon says so.
+      dead: !!qs(status, 'i.heroDead, i.heroIsDead, i.dead'),
       statusText: status ? (qs(status, 'a') ? qs(status, 'a').getAttribute('title') || '' : '') : '',
       // Unspent attribute points after a level-up.
       levelUp: !!qs(doc, 'i.levelUp.show'),
@@ -625,7 +629,10 @@
         return m ? strip(m[1]) : null;
       };
       const pop = num(field('einwohner'));
-      if (pop == null) continue;
+      // Servers whose tiles carry only the ids (no names, no population):
+      // the village still counts; its population comes from its owner's
+      // profile (src/players.js).
+      if (pop == null && !(tile.uid > 0 && tile.did > 0)) continue;
       const player = field('spieler') || '';
       // The title is the village's name, unless it is the region's ("{k.regionTooltip} …").
       const title = String(tile.title || '');
@@ -638,6 +645,48 @@
       });
     }
     return out;
+  }
+
+  // A player's profile (/profile/<uid>, formerly spieler.php?uid=): the
+  // player's name, total population and villages with their coordinates
+  // and population. Read from the coordinates the game always marks up;
+  // the population is the number cell of the same row.
+  function parseProfile(doc, url) {
+    const m = (url.pathname + url.search).match(/(?:profile\/|uid=)(\d+)/);
+    const out = { uid: m ? Number(m[1]) : null, name: '', pop: null, villages: [] };
+    const title = qs(doc, '.titleInHeader') || qs(doc, 'h1');
+    out.name = text(title).replace(/^.*?[-–:]\s*/, '').trim() || text(title);
+    for (const row of qsa(doc, '#content tr, #villages tr, table.villages tr')) {
+      const cx = qs(row, '.coordinateX');
+      const cy = qs(row, '.coordinateY');
+      if (!cx || !cy) continue;
+      const x = num(text(cx));
+      const y = num(text(cy));
+      if (x == null || y == null) continue;
+      const popCell = qs(row, 'td.inhabitants, td.population, td.pop') ||
+        qsa(row, 'td').filter((td) => !qs(td, '.coordinateX') && /^\s*[\d.,\u202a-\u202e\u200e\u200f\s]+\s*$/.test(td.textContent)).pop();
+      const nameEl = qs(row, 'td.name a, td.name, a[href*="karte"], a[href*="position_details"]');
+      out.villages.push({ x, y, pop: popCell ? num(text(popCell)) : null, name: nameEl ? text(nameEl) : '' });
+    }
+    // Total population: the details table's row, else the villages' sum.
+    for (const row of qsa(doc, '#details tr, table.transparent tr, .playerDetails tr')) {
+      if (/population|inhabitants|السكان|سكان|Einwohner/i.test(text(qs(row, 'th') || row))) { out.pop = num(text(qs(row, 'td') || row)); break; }
+    }
+    if (out.pop == null && out.villages.length && out.villages.every((v) => v.pop != null)) out.pop = out.villages.reduce((n, v) => n + v.pop, 0);
+    return out;
+  }
+
+  // The hero's attribute page (#heroV2): the four inputs (fighting
+  // strength, attack and defence bonus, resource production) with their
+  // values, and the save button.
+  function parseHeroAttributes(doc) {
+    const box = qs(doc, '#heroV2 .attributeBox .heroAttributes .attributes.formV2') || qs(doc, '#heroV2 .heroAttributes') || qs(doc, '.heroAttributes');
+    if (!box) return null;
+    const val = (name) => { const i = qs(box, `input[name="${name}"]`); return i ? num(i.value || i.getAttribute('value')) || 0 : null; };
+    return {
+      power: val('power'), offBonus: val('offBonus'), defBonus: val('defBonus'), productionPoints: val('productionPoints'),
+      save: !!qs(box, 'button#savePoints') || !!qs(doc, '#savePoints'),
+    };
   }
 
   // The Hospital (46) or, for Spartans, the Asclepeion (48); a building
@@ -772,6 +821,8 @@
     if (type === 'build') out.buildPage = parseBuildPage(doc, url);
     if (type === 'farmlist') out.farmLists = parseFarmLists(doc);
     if (type === 'tile') out.tile = parseTile(doc, url);
+    if (type === 'profile') out.profile = parseProfile(doc, url);
+    if (type === 'heroAttributes') out.heroAttributes = parseHeroAttributes(doc);
     if (type === 'send') out.sendPage = parseSendPage(doc);
     if (type === 'rally') out.incoming = parseIncoming(doc);
     if (type === 'market') out.market = parseMarket(doc);
@@ -784,7 +835,7 @@
   const api = {
     num, parsePage, parseResources, parseVillages, parseBuildQueue, parseFields, parseBuildings, parseMovements,
     parseBuildPage, parseFarmLists, parseHero, pageType, parseTroops, parseTrainingQueue, parseTile, parseSendPage,
-    oasesFromTiles, villagesFromTiles, valleysFromTiles, tileSummary, findTiles, shapeOf, unitOf, parseNewBuildings, buildingNeeds, parseResearch, parseIncoming, parseMarket, upgradeButton, parseQuests, parseInventory, parseReports, parseExpansion,
+    oasesFromTiles, villagesFromTiles, valleysFromTiles, tileSummary, findTiles, shapeOf, unitOf, parseNewBuildings, buildingNeeds, parseResearch, parseIncoming, parseMarket, upgradeButton, parseProfile, parseHeroAttributes, parseQuests, parseInventory, parseReports, parseExpansion,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TravianParser = api;

@@ -7,6 +7,7 @@ import { renderFinder } from './finder.js';
 import { renderCulture } from './culture.js';
 import { renderEscapes } from './escape.js';
 import { renderBrain } from './brain.js';
+import { renderEmpire } from './empire.js';
 import { leaseIsFresh } from '../src/sync.js';
 import { webBase } from '../src/web.js';
 import { unitIcon, tribeBase } from '../src/units.js';
@@ -26,17 +27,18 @@ initTheme();
 // The menu, in groups. Every page has an icon and a few related pages, shown
 // as links under its title so features that work together stay one click apart.
 const NAV = [
-  { tabs: ['overview'] },
+  { tabs: ['overview', 'empire'] },
   { group: 'nav.gEconomy', tabs: ['build', 'culture'] },
   { group: 'nav.gArmy', tabs: ['troops', 'defense', 'farms', 'oasis'] },
   { group: 'nav.gAuto', tabs: ['brain', 'autopilot', 'hero'] },
   { group: 'nav.gSystem', tabs: ['alerts', 'settings', 'health', 'log'] },
 ];
 const ICONS = {
-  overview: '🏠', build: '🏗', culture: '🏛', troops: '⚔', defense: '🛡', farms: '🐎', oasis: '🌿',
+  overview: '🏠', empire: '👑', build: '🏗', culture: '🏛', troops: '⚔', defense: '🛡', farms: '🐎', oasis: '🌿',
   brain: '🧠', autopilot: '🤖', hero: '🦸', alerts: '🔔', settings: '⚙', health: '🩺', log: '📜',
 };
 const RELATED = {
+  empire: ['brain', 'farms', 'overview'],
   build: ['culture', 'autopilot'],
   culture: ['build', 'autopilot'],
   troops: ['defense', 'farms', 'oasis'],
@@ -52,7 +54,7 @@ const RELATED = {
   log: ['health'],
 };
 // Simple mode: only the pages someone who lets the brain play needs.
-const SIMPLE = new Set(['overview', 'brain', 'defense', 'alerts', 'settings', 'health']);
+const SIMPLE = new Set(['overview', 'empire', 'brain', 'defense', 'alerts', 'settings', 'health']);
 // Pages that moved: old links still land in the right place.
 const ALIASES = { raids: 'farms', escape: 'defense' };
 const label = (tab) => `<span class="nav-ic" aria-hidden="true">${ICONS[tab]}</span><span data-i18n="nav.${tab}"></span>`;
@@ -541,6 +543,7 @@ function render() {
   safely('finder', () => renderFinder(data, now));
   safely('escapes', () => renderEscapes(data, now));
   safely('brain', () => renderBrain(data, now));
+  safely('empire', () => renderEmpire(data, now));
   safely('raids', () => renderRaids(now));
   safely('log', () => renderLog());
   fillSettings();

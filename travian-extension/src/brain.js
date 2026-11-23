@@ -10,6 +10,7 @@ import { troopsHome, unitField } from './autopilot.js';
 import { nextBuild } from './buildplan.js';
 import { fieldKind } from './units.js';
 import { armyPct, armyRatio, targetsOf, KINDS } from './budget.js';
+import { isSupplier } from './supply.js';
 
 export const BARRACKS = 19;
 export const STABLE = 20;
@@ -92,11 +93,13 @@ export const upkeepOf = (field, base) => UPKEEP[fieldKind(field, base)] || 1;
 // the kinds still short of theirs, never past them. Defence in economy
 // villages and under attack, attack units in the army village, the
 // player's own unit where they chose one; never more than the crop feeds.
-export function trainPick(v, role, base, s, now = Date.now()) {
+export function trainPick(v, role, base, s, now = Date.now(), ctx = {}) {
   if (role === 'off') return { skip: 'roleOff' };
   const fill = storageFill(v, now);
   if (fill == null) return { skip: 'noStock' };
   const attacked = !!v.underAttack;
+  // A supply village sends its army's part to the army village instead.
+  if (!attacked && isSupplier(v, role, s, !!ctx.hasArmy)) return { skip: 'supplies', pct: armyPct(v, role, s, villageStage(v)) };
   const stage = villageStage(v);
   const pct = armyPct(v, role, s, stage);
   const targets = targetsOf(v, s, base, now);
@@ -119,21 +122,22 @@ export function trainPick(v, role, base, s, now = Date.now()) {
   const short = aimed && !attacked;
   const cats = short ? Object.keys(targets).filter((k) => targets[k].left > 0) : military && kind === 'off' ? ['cav', 'inf'] : ['inf', 'cav'];
   const builds = [];
-  for (const cat of cats) {
-    const gid = KINDS[cat][0];
+  // The great barracks and stable too, where built (they cost three times as much).
+  const pairs = cats.flatMap((cat) => KINDS[cat].map((gid) => [cat, gid]));
+  for (const [cat, gid] of pairs) {
     if (level(v, gid) < 1) continue;
     if (busyFor(v, gid, now) > 2 * 3600000) continue; // two hours of training already queued
     const chosen = short && targets[cat].unit;
     let fields;
     if (chosen) fields = [chosen];
     else {
-      const known = ((v.units || {})[gid] || []).map((u) => u.field);
-      const prefs = gid === WORKSHOP ? ['t7', 't8'] : unitPrefs(base, kind, gid);
+      const known = ((v.units || {})[gid] || (v.units || {})[KINDS[cat][0]] || []).map((u) => u.field);
+      const prefs = gid === WORKSHOP ? ['t7', 't8'] : unitPrefs(base, kind, KINDS[cat][0]);
       // Never scouts (the brain doesn't scout), chiefs or settlers; for
       // defence never an attack unit.
       fields = known.length ? [...prefs.filter((f) => known.includes(f)), ...known.filter((f) => !prefs.includes(f) && armyUnit(f, base, gid === WORKSHOP ? 'off' : kind))] : prefs;
     }
-    if (fields.length) builds.push({ gid, fields, left: short ? targets[cat].left : null, kind: gid === WORKSHOP ? 'off' : kind, exact: !!chosen });
+    if (fields.length) builds.push({ gid, cat, fields, left: short ? targets[cat].left : null, kind: gid === WORKSHOP ? 'off' : kind, exact: !!chosen });
   }
   if (!builds.length) return { skip: level(v, BARRACKS) < 1 && !aimed ? 'noBarracks' : 'queueFull', pct };
   const why = attacked ? 'attacked' : aimed ? 'target' : military ? 'army' : 'share';
@@ -200,13 +204,16 @@ const skipsOf = (v, now) => (v.autoSkip && v.autoSkip.until > now ? v.autoSkip :
 export function brainPlan(data, s, now = Date.now(), base = null) {
   const list = sortedVillages(data.villages || {});
   const learned = (data.account || {}).buildReqs || {};
+  const roles = Object.fromEntries(list.map((v) => [v.id, villageRole(v, list, s)]));
+  const hasArmy = Object.values(roles).includes('military');
   return list.map((v) => {
-    const role = villageRole(v, list, s);
+    const role = roles[v.id];
     const sk = skipsOf(v, now);
     return {
       id: v.id, v, role, stage: villageStage(v), fieldsMax: fieldTarget(v),
       build: role === 'off' ? null : nextBuild(v, { role, base, learned, skipSlots: sk.slots || [], skipGids: sk.gids || [] }),
-      train: trainPick(v, role, base, s, now),
+      train: trainPick(v, role, base, s, now, { hasArmy }),
+      supplies: isSupplier(v, role, s, hasArmy),
       research: [ACADEMY, SMITHY].map((gid) => ({ gid, ...researchPick(v, role, base, gid, now) })),
       defense: defensePlan(v, base),
     };

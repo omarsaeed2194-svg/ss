@@ -4,7 +4,7 @@
 // background does the uploading.
 
 // The same keys the dashboard reads (ui.js STORAGE_KEYS).
-export const SNAPSHOT_KEYS = ['settings', 'villages', 'account', 'tasks', 'training', 'raids', 'farms', 'escapes', 'oases', 'schedule', 'status', 'log', 'device', 'syncState', 'history', 'health', 'stats', 'mapVillages', 'valleys', 'expansion'];
+export const SNAPSHOT_KEYS = ['settings', 'villages', 'account', 'tasks', 'training', 'raids', 'farms', 'escapes', 'oases', 'schedule', 'status', 'log', 'device', 'syncState', 'history', 'health', 'stats', 'mapVillages', 'valleys', 'expansion', 'players', 'empire', 'farmIgnore'];
 
 // Commands the web app may send. Backups, wiping, taking over and the web
 // link itself stay in the extension's own dashboard.
@@ -12,7 +12,7 @@ export const REMOTE_COMMANDS = new Set([
   'saveSettings', 'addTask', 'removeTask', 'moveTask',
   'addTraining', 'updateTraining', 'removeTraining',
   'addRaid', 'updateRaid', 'removeRaid', 'addRaidTarget', 'removeRaidTarget',
-  'addFarmList', 'updateFarmList', 'removeFarmList', 'addFarmTargets', 'updateFarmTarget', 'removeFarmTarget', 'setFarmTroops', 'sendFarmNow',
+  'addFarmList', 'updateFarmList', 'removeFarmList', 'addFarmTargets', 'updateFarmTarget', 'removeFarmTarget', 'setFarmTroops', 'sendFarmNow', 'ignoreFarmSuggestion',
   'saveEscape', 'updateEscape', 'removeEscape', 'testDonate',
   'scanOases', 'finderScan', 'finderStop', 'finderClear', 'expansionMark',
   'pauseAll', 'resumeAll', 'sendAllFarms', 'escapeNow', 'runNow', 'sendSummary', 'clearLog',
